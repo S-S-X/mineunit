@@ -88,6 +88,7 @@ fixture("mineunit/common/misc_helpers")
 fixture("mineunit/common/vector")
 fixture("mineunit/common/serialize")
 
+fixture("mineunit/metadata")
 fixture("mineunit/itemstack")
 
 _G.minetest.registered_nodes = {}

@@ -29,3 +29,13 @@ function MetaDataRef:from_table(t) error("NOT IMPLEMENTED") end
 function MetaDataRef:equals(other) error("NOT IMPLEMENTED") end
 setmetatable(MetaDataRef, { __call = function(value) return MetaDataRef._create_instance(value) end })
 _G.MetaDataRef = MetaDataRef
+
+-- FIXME: Node metadata should be integrated with world layout to handle set_node and its friends
+local worldmeta = {}
+_G.minetest.get_meta = function(pos)
+	local nodeid = minetest.hash_node_position(pos)
+	if not worldmeta[nodeid] then
+		worldmeta[nodeid] = MetaDataRef()
+	end
+	return worldmeta[nodeid]
+end
