@@ -1,5 +1,5 @@
 
-fixture("minetest/core")
+fixture("mineunit/core")
 
 _G.ProtectedPos = function()
 	return { x = 123, y = 123, z = 123 }

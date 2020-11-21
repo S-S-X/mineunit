@@ -1,5 +1,5 @@
 
-fixture("minetest/metadata")
+fixture("mineunit/metadata")
 
 local ItemStack = {}
 setmetatable(ItemStack, { __call = function(value) return ItemStack._create_instance(value) end })

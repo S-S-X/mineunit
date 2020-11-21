@@ -33,7 +33,6 @@ end
 _G.core = {}
 _G.minetest = _G.core
 
-local configuration_file = fixture_path("minetest.cfg")
 _G.Settings = function(fname)
 	local settings = {
 		_data = {},
@@ -78,18 +77,18 @@ _G.Settings = function(fname)
 	end
 	return settings
 end
-_G.core.settings = _G.Settings(configuration_file)
+_G.core.settings = _G.Settings(fixture_path("minetest.cfg"))
 
 _G.core.register_on_joinplayer = noop
 _G.core.register_on_leaveplayer = noop
 
-fixture("minetest/game/item")
-fixture("minetest/game/misc")
-fixture("minetest/common/misc_helpers")
-fixture("minetest/common/vector")
-fixture("minetest/common/serialize")
+fixture("mineunit/game/item")
+fixture("mineunit/game/misc")
+fixture("mineunit/common/misc_helpers")
+fixture("mineunit/common/vector")
+fixture("mineunit/common/serialize")
 
-fixture("minetest/itemstack")
+fixture("mineunit/itemstack")
 
 _G.minetest.registered_nodes = {}
 
@@ -126,9 +125,7 @@ end
 
 _G.minetest.get_worldpath = function(...) return "./spec/fixtures" end
 _G.minetest.get_modpath = function(...) return "./spec/fixtures" end
-_G.minetest.get_current_modname = function() return "technic" end
-
---_G.minetest.get_pointed_thing_position = dummy_coords
+_G.minetest.get_current_modname = function() return _G.mineunit_modname or "mineunit" end
 
 --
 -- Minetest default noop table
