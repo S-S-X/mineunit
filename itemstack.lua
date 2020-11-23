@@ -1,5 +1,5 @@
 
-fixture("mineunit/metadata")
+mineunit("metadata")
 
 local ItemStack = {}
 --* `is_empty()`: returns `true` if stack is empty.

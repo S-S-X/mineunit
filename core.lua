@@ -92,14 +92,14 @@ _G.core.settings = _G.Settings(fixture_path("minetest.cfg"))
 _G.core.register_on_joinplayer = noop
 _G.core.register_on_leaveplayer = noop
 
-fixture("mineunit/game/item")
-fixture("mineunit/game/misc")
-fixture("mineunit/common/misc_helpers")
-fixture("mineunit/common/vector")
-fixture("mineunit/common/serialize")
+mineunit("game/item")
+mineunit("game/misc")
+mineunit("common/misc_helpers")
+mineunit("common/vector")
+mineunit("common/serialize")
 
-fixture("mineunit/metadata")
-fixture("mineunit/itemstack")
+mineunit("metadata")
+mineunit("itemstack")
 
 _G.minetest.registered_nodes = {}
 

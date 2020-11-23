@@ -1,5 +1,5 @@
 
-fixture("mineunit/core")
+mineunit("core")
 
 local players = {}
 
@@ -31,7 +31,7 @@ end
 -- Mineunit player fixture API
 --
 
-fixture("mineunit/metadata")
+mineunit("metadata")
 
 local Player = {}
 --
