@@ -27,17 +27,44 @@ _G.minetest.get_player_by_name = function(name)
 	return players[name]
 end
 
-_G.Player = function(name, privs)
-	local player = {
-		_name = name or "SX",
-		_privs = privs or { server = 1, test_priv=1 },
-		get_player_control = function(self)
-			return {}
-		end,
-		get_player_name = function(self)
-			return self._name
-		end
-	}
-	players[player._name] = player
-	return player
+--
+-- Mineunit player fixture API
+--
+
+fixture("mineunit/metadata")
+
+local Player = {}
+--
+-- Mineunit player API methods
+--
+function Player:_set_player_control_state(control, value)
+	self._controls[control] = value and value
 end
+function Player:_reset_player_controls()
+	self._controls = {}
+end
+
+--
+-- Minetest player API methods
+--
+function Player:get_player_control()
+	return table.copy(self._controls)
+end
+function Player:get_player_name()
+	return self._name
+end
+
+mineunit_export_object(Player, {
+	name = "Player",
+	constructor = function(self, name, privs)
+		local obj = {
+			_name = name or "SX",
+			_privs = privs or { server = 1, test_priv=1 },
+			_controls = {},
+			_meta = MetaDataRef(),
+		}
+		players[obj._name] = obj
+		setmetatable(obj, Player)
+		return obj
+	end,
+})

@@ -2,26 +2,6 @@
 fixture("mineunit/metadata")
 
 local ItemStack = {}
-setmetatable(ItemStack, { __call = function(value) return ItemStack._create_instance(value) end })
-function ItemStack._create_instance(value)
-	local obj
-	if value == nil then
-		obj = {}
-	elseif type(value) == "string" then
-		error("NOT IMPLEMENTED")
-	elseif type(value) == "table" then
-		 obj = table.copy(value)
-	else
-		error("NOT IMPLEMENTED")
-	end
-	obj._name        = obj._name or nil
-	obj._description = obj._description or nil
-	obj._count       = obj._count or 0
-	obj._wear        = obj._wear or 0
-	obj._meta        = obj._meta or MetaDataRef()
-	setmetatable(obj, ItemStack)
-	return obj
-end
 --* `is_empty()`: returns `true` if stack is empty.
 function ItemStack:is_empty() return self._count < 1 end
 --* `get_name()`: returns item name (e.g. `"default:stone"`).
@@ -37,7 +17,9 @@ function ItemStack:set_count(count) self._count = count end
 function ItemStack:get_wear() return self._wear end
 --* `set_wear(wear)`: returns boolean indicating whether item was cleared
 --    `wear`: number, unsigned 16 bit integer
-function ItemStack:set_wear(wear) self._wear = wear end
+function ItemStack:set_wear(wear)
+	self._wear = math.min(65535, math.max(0, wear))
+end
 --* `get_meta()`: returns ItemStackMetaRef. See section for more details
 function ItemStack:get_meta() return self._meta end
 --* `get_metadata()`: (DEPRECATED) Returns metadata (a string attached to an item stack).
@@ -50,7 +32,11 @@ function ItemStack:set_metadata(metadata) DEPRECATED("Using deprecated ItemStack
 --        `description` in item metadata (See [Item Metadata].)
 --        `description` in item definition
 --        item name
-function ItemStack:get_description() return self._description end
+function ItemStack:get_description()
+	local value = self:get_meta():get("description")
+	if value then return value end
+	return self:get_definition().description
+end
 --* `get_short_description()`: returns the short description.
 --    Unlike the description, this does not include new lines.
 --    The engine uses the same as this function for short item descriptions.
@@ -58,8 +44,14 @@ function ItemStack:get_description() return self._description end
 --        `short_description` in item metadata (See [Item Metadata].)
 --        `short_description` in item definition
 --        first line of the description (See `get_description()`.)
--- FIXME: This is wrong
-function ItemStack:get_short_description() return self._description end
+function ItemStack:get_short_description()
+	local value = self:get_meta():get("short_description")
+	if value then return value end
+	value = self:get_definition().short_description
+	if value then return value end
+	value = self:get_description()
+	if value then return value:gmatch("[^\r\n]+")() end
+end
 --* `clear()`: removes all items from the stack, making it empty.
 function ItemStack:clear() self._count = 0 end
 --* `replace(item)`: replace the contents of this stack.
@@ -77,17 +69,19 @@ function ItemStack:to_table()
 end
 --* `get_stack_max()`: returns the maximum size of the stack (depends on the item).
 function ItemStack:get_stack_max()
-	error("NOT IMPLEMENTED")
+	return self:is_known() and (self:get_definition().stack_max or 99) or 99
 end
 --* `get_free_space()`: returns `get_stack_max() - get_count()`.
-function ItemStack:get_free_space() return self:get_stack_max() - self:get_count() end
+function ItemStack:get_free_space()
+	return self:get_stack_max() - self:get_count()
+end
 --* `is_known()`: returns `true` if the item name refers to a defined item type.
 function ItemStack:is_known()
-	error("NOT IMPLEMENTED")
+	return not not minetest.registered_items[self._name]
 end
 --* `get_definition()`: returns the item definition table.
 function ItemStack:get_definition()
-	error("NOT IMPLEMENTED")
+	return minetest.registered_items[self._name] or {}
 end
 --* `get_tool_capabilities()`: returns the digging properties of the item,
 --    or those of the hand if none are defined for this item type.
@@ -98,7 +92,7 @@ end
 --    Increases wear by `amount` if the item is a tool
 --    `amount`: number, integer
 function ItemStack:add_wear(amount)
-	error("NOT IMPLEMENTED")
+	self:set_wear(self._wear + amount)
 end
 --* `add_item(item)`: returns leftover `ItemStack`
 --    Put some item or stack onto this stack
@@ -113,7 +107,11 @@ end
 --    Take (and remove) up to `n` items from this stack
 --    `n`: number, default: `1`
 function ItemStack:take_item(n)
-	error("NOT IMPLEMENTED")
+	n = math.min(self:get_count(), n or 1)
+	self:set_count(self:get_count() - n)
+	local stack = ItemStack(self)
+	stack:set_count(n)
+	return stack
 end
 --* `peek_item(n)`: returns taken `ItemStack`
 --    Copy (don't remove) up to `n` items from this stack
@@ -121,4 +119,32 @@ end
 function ItemStack:peek_item(n)
 	error("NOT IMPLEMENTED")
 end
-_G.ItemStack = ItemStack
+
+mineunit_export_object(ItemStack, {
+	name = "ItemStack",
+	constructor = function(self, value)
+		local obj
+		if value == nil then
+			obj = {}
+		elseif type(value) == "string" then
+			local m = value:gmatch("%S+")
+			obj = {
+				-- This *should* fail if name is empty, do not "fix":
+				_name = m():gsub("^:", ""),
+				_count = (function(v) return v and tonumber(v) end)(m()),
+				_meta = MetaDataRef(m()),
+			}
+		elseif type(value) == "table" then
+			obj = table.copy(value)
+			obj._meta = MetaDataRef(value._meta)
+		else
+			error("NOT IMPLEMENTED")
+		end
+		obj._name = obj._name or nil
+		obj._count = obj._count or 0
+		obj._wear = obj._wear or 0
+		obj._meta = obj._meta or MetaDataRef()
+		setmetatable(obj, ItemStack)
+		return obj
+	end,
+})
