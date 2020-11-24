@@ -1,11 +1,16 @@
 # mineunit
 Minetest core / engine libraries for regression tests
 
+Probably will not currently work with Windows so unless you want to help fixing things use Linux or similar OS.
+
 ### How to use mineunit
 ```bash
-$ cd my_minetest_mod/spec/fixtures
-$ git submodule add git@github.com:mt-mods/mineunit.git
+$ cd ~/.minetest/mods/my_minetest_mod
+$ mkdir spec
+$ git submodule add git@github.com:mt-mods/mineunit.git spec/mineunit
 ```
+
+See examples below.
 
 ### Define world for tests
 
@@ -48,7 +53,7 @@ Following comes with a lot of useless stuff just to show how to use some mineuni
 
 ```lua
 -- Load and configure mineunit
-dofile("../spec/mineunit/init.lua")
+dofile("spec/mineunit/init.lua")
 
 -- Load some mineunit modules
 mineunit("core")
@@ -88,11 +93,11 @@ describe("My test world", function()
 	end)
 
 	it("allows Sam to dig dirt at y 1", function()
-		assert.equals(true, minetest.is_protected({x=0,y=1,z=0}, player1:get_player_name())
+		assert.equals(false, minetest.is_protected({x=0,y=1,z=0}, player1:get_player_name()))
 	end)
 
 	it("protects dirt at y 1 from SX", function()
-		assert.equals(true, minetest.is_protected({x=0,y=1,z=0}, player2:get_player_name())
+		assert.equals(true, minetest.is_protected({x=0,y=1,z=0}, player2:get_player_name()))
 	end)
 
 end)
