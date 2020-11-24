@@ -13,7 +13,7 @@ local default_config = {
 	root = ".",
 	mineunit_path = debug.getinfo(1).source:match("@?(.*)/"),
 	fixture_path = "spec/fixtures",
-	source_path = "..",
+	source_path = ".",
 }
 
 mineunit = {
@@ -53,6 +53,7 @@ function mineunit:config(key)
 	end
 	return default_config[key]
 end
+mineunit._config.source_path = pl.path.normpath(("%s/%s"):format(mineunit:config("root"), mineunit:config("source_path")))
 
 local luaprint = _G.print
 function mineunit:debug(...)   if self:config("verbose") > 3 then luaprint(...) end end
@@ -97,13 +98,9 @@ function fixture(name)
 	_fixtures[name] = true
 end
 
--- FIXME: Not good in any way, only reason is that this works for me...
 function source_path(name)
-	local path = pl.path.normpath(("%s/%s/%s"):format(mineunit:config("root"), mineunit:config("source_path"), name))
-	if not pl.path.isfile(path) then
-		local cwd = debug.getinfo(2).source:match("@?(.*)/"):gsub("/spec/", ""):gsub("/%./", "/")
-		path = pl.path.normpath(("%s/%s"):format(cwd, path))
-	end
+	local source_path = mineunit:config("source_path")
+	local path = pl.path.normpath(("%s/%s"):format(source_path, name))
 	mineunit:debug("source_path", path)
 	return path
 end
