@@ -19,7 +19,8 @@ local default_config = {
 mineunit = {
 	_config = {
 		modpaths = {},
-	}
+	},
+	_on_mods_loaded = {},
 }
 
 local function mineunit_path(name)
@@ -74,6 +75,22 @@ end
 
 function mineunit:get_current_modname()
 	return self:config("modname")
+end
+
+function mineunit:register_on_mods_loaded(func)
+	if type(func) == "function" then
+		table.insert(self._on_mods_loaded, func)
+	end
+end
+
+function mineunit:mods_loaded()
+	if self._on_mods_loaded then
+		mineunit:info("Executing register_on_mods_loaded functions")
+		for _,func in ipairs(self._on_mods_loaded) do func() end
+	else
+		mineunit:warning("Already executed register_on_mods_loaded functions")
+	end
+	self._on_mods_loaded = nil
 end
 
 -- FIXME: Not good in any way, only reason is that this works for me...

@@ -125,7 +125,7 @@ _G.minetest.register_node = function(name, def)
 end
 _G.minetest.register_on_placenode = noop
 _G.minetest.register_on_dignode = noop
-_G.minetest.register_on_mods_loaded = noop
+_G.minetest.register_on_mods_loaded = function(func) mineunit:register_on_mods_loaded(func) end
 _G.minetest.item_drop = noop
 
 _G.minetest.get_us_time = function()
