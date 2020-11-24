@@ -1,7 +1,14 @@
 -- FIXME: Sorry, not exactly nice in its current state
 -- Have extra time and energy? Feel free to clean it a bit
 
+local pl = {
+	path = require 'pl.path',
+	--dir = require 'pl.dir',
+}
+
 local default_config = {
+	verbose = 2,
+	print = true,
 	modname = "mineunit",
 	root = ".",
 	mineunit_path = debug.getinfo(1).source:match("@?(.*)/"),
@@ -9,80 +16,102 @@ local default_config = {
 	source_path = "..",
 }
 
-for k,v in pairs(default_config) do
-	print("DEFAULT CONFIG", k,v)
-end
-
 mineunit = {
-	_config = {}
+	_config = {
+		modpaths = {},
+	}
 }
 
 local function mineunit_path(name)
-	return string.format("%s/%s", mineunit:config("mineunit_path"), name)
+	return pl.path.normpath(string.format("%s/%s", mineunit:config("mineunit_path"), name))
 end
 
 mineunit.__index = mineunit
 local _mineunits = {}
 setmetatable(mineunit, {
 	__call = function(self, name)
-		print("CALL", self, name)
 		if not _mineunits[name] then
-			dofile(mineunit_path(name) .. ".lua")
+			local path = mineunit_path(name .. ".lua")
+			mineunit:debug("Loading mineunit module", name, path)
+			dofile(path)
 		end
 		_mineunits[name] = true
 	end,
 })
 
-function mineunit:config(key)
-	print("CONFIG", self, key)
-	if self._config[key] ~= nil then
-		return self._config[key]
-	end
-	return default_config[key]
-end
-
 if mineunit_config then
-	local config_keys = {"modname", "root"}
-	for key in ipairs(config_keys) do
+	for key in pairs(default_config) do
 		if mineunit_config[key] ~= nil then
 			mineunit._config[key] = mineunit_config[key]
 		end
 	end
 end
 
-local pl = {
-	path = require 'pl.path',
-	dir = require 'pl.dir',
-}
+function mineunit:config(key)
+	if self._config[key] ~= nil then
+		return self._config[key]
+	end
+	return default_config[key]
+end
 
+local luaprint = _G.print
+function mineunit:debug(...)   if self:config("verbose") > 3 then luaprint(...) end end
+function mineunit:info(...)    if self:config("verbose") > 2 then luaprint(...) end end
+function mineunit:warning(...) if self:config("verbose") > 1 then luaprint(...) end end
+function mineunit:error(...)   if self:config("verbose") > 0 then luaprint(...) end end
+function mineunit:print(...)   if self:config("print")       then luaprint(...) end end
+_G.print = function(...) mineunit:print(...) end
+
+function mineunit:set_modpath(name, path)
+	mineunit:info("Setting modpath", name, path)
+	self._config.modpaths[name] = path
+end
+
+function mineunit:get_modpath(name)
+	return self._config.modpaths[name] or self:config("fixture_path")
+end
+
+function mineunit:get_current_modname()
+	return self:config("modname")
+end
+
+-- FIXME: Not good in any way, only reason is that this works for me...
 function fixture_path(name)
 	local path = pl.path.normpath(("%s/%s/%s"):format(mineunit:config("root"), mineunit:config("fixture_path"), name))
-	if pl.path.isfile(path) then
-		return path
+	if not pl.path.isfile(path) then
+		path = pl.path.normpath(("%s/%s/%s"):format(mineunit:config("mineunit_path"), "/../fixtures/", name))
 	end
-	return pl.path.normpath(("%s/%s/%s"):format(mineunit:config("mineunit_path"), "/../fixtures/", name))
+	mineunit:debug("fixture_path", path)
+	return path
 end
 
 local _fixtures = {}
 function fixture(name)
+	local path = fixture_path(name .. ".lua")
 	if not _fixtures[name] then
-		print("LOADING", fixture_path(name .. ".lua"))
-		dofile(fixture_path(name .. ".lua"))
+		mineunit:info("Loading fixture", path)
+		dofile(path)
+	else
+		mineunit:debug("Fixture already loaded", path)
 	end
 	_fixtures[name] = true
 end
 
+-- FIXME: Not good in any way, only reason is that this works for me...
 function source_path(name)
-	return string.format("%s/%s/%s", mineunit:config("root"), mineunit:config("source_path"), name)
+	local path = pl.path.normpath(("%s/%s/%s"):format(mineunit:config("root"), mineunit:config("source_path"), name))
+	if not pl.path.isfile(path) then
+		local cwd = debug.getinfo(2).source:match("@?(.*)/"):gsub("/spec/", ""):gsub("/%./", "/")
+		path = pl.path.normpath(("%s/%s"):format(cwd, path))
+	end
+	mineunit:debug("source_path", path)
+	return path
 end
 
 function sourcefile(name)
-	local path = source_path(name) .. ".lua"
-	if pl.path.isfile(path) then
-		dofile(path)
-	end
-	local cwd = debug.getinfo(2).source:match("@?(.*)/"):gsub("/spec/?$", ""):gsub("/%./", "/")
-	dofile(string.format("%s/%s", cwd, path))
+	local path = source_path(name .. ".lua")
+	mineunit:info("Loading source", path)
+	dofile(path)
 end
 
 function timeit(count, func, ...)
@@ -93,7 +122,8 @@ function timeit(count, func, ...)
 	end
 	local diff = (socket.gettime() * 1000) - t1
 	local info = debug.getinfo(func,'S')
-	print(string.format("\nTimeit: %s:%d took %d ticks", info.short_src, info.linedefined, diff))
+	mineunit:info(("\nTimeit: %s:%d took %d ticks"):format(info.short_src, info.linedefined, diff))
+	return diff, info
 end
 
 function count(t)
@@ -104,6 +134,7 @@ function count(t)
 		end
 		return c
 	end
+	mineunit:warning("count(t)", "invalid value", type(t))
 end
 
 local function sequential(t)
@@ -123,6 +154,7 @@ local function tabletype(t)
 			return "hash"
 		end
 	end
+	mineunit:warning("tabletype(t)", "invalid value", type(t))
 end
 
 -- Busted test framework extensions

@@ -22,6 +22,11 @@ local world = _G.world
 _G.world.set_node = function(pos, node)
 	local hash = minetest.hash_node_position(pos)
 	world.nodes[hash] = node
+	local nodedef = minetest.registered_nodes[node.name]
+	-- Execute on_construct callbacks
+	if nodedef and type(nodedef.on_construct) == "function" then
+		nodedef.on_construct(pos)
+	end
 end
 _G.world.clear = function() _G.world.nodes = {} end
 _G.world.layout = function(layout, offset)
@@ -102,6 +107,7 @@ mineunit("metadata")
 mineunit("itemstack")
 
 _G.minetest.registered_nodes = {}
+_G.minetest.registered_items = {}
 
 _G.minetest.registered_chatcommands = {}
 
@@ -110,7 +116,9 @@ _G.minetest.register_abm = noop
 _G.minetest.register_chatcommand = noop
 _G.minetest.chat_send_player = function(...) print(unpack({...})) end
 _G.minetest.register_alias = noop
-_G.minetest.register_craftitem = noop
+_G.minetest.register_craftitem = function(name, def)
+	minetest.registered_items[name] = def
+end
 _G.minetest.register_craft = noop
 _G.minetest.register_node = function(name, def)
 	minetest.registered_nodes[name] = def
@@ -135,8 +143,8 @@ _G.minetest.get_node = function(pos)
 end
 
 _G.minetest.get_worldpath = function(...) return "./spec/fixtures" end
-_G.minetest.get_modpath = function(...) return "./spec/fixtures" end
-_G.minetest.get_current_modname = function() return _G.mineunit_modname or "mineunit" end
+_G.minetest.get_modpath = function(...) return _G.mineunit:get_modpath(...) end
+_G.minetest.get_current_modname = function(...) return _G.mineunit:get_current_modname(...) end
 
 --
 -- Minetest default noop table

@@ -1,18 +1,17 @@
 
 mineunit("core")
 
-_G.ProtectedPos = function()
-	return { x = 123, y = 123, z = 123 }
-end
+local protected_nodes = {}
 
-_G.UnprotectedPos = function()
-	return { x = -123, y = -123, z = -123 }
+function mineunit:protect(pos, name)
+	protected_nodes[minetest.hash_node_position(pos)] = name
 end
 
 minetest.is_protected = function(pos, name)
-	return pos.x == 123 and pos.y == 123 and pos.z == 123
+	local nodeid = minetest.hash_node_position(pos)
+	return protected_nodes[nodeid] ~= nil and protected_nodes[nodeid] ~= name
 end
 
-minetest.record_protection_violation = function(pos, name)
-	-- noop
+minetest.record_protection_violation = function(...)
+	print("minetest.record_protection_violation", ...)
 end
