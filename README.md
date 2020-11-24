@@ -102,3 +102,17 @@ describe("My test world", function()
 
 end)
 ```
+
+### Known projects using mineunit
+
+See following projects for more examples on how to use mineunit and what you can do with it
+
+#### Technic Plus: simple, clean and straightforward tests.
+* Network tests https://github.com/mt-mods/technic/tree/master/technic/spec
+* GitHub workflow https://github.com/mt-mods/technic/blob/master/.github/workflows/busted.yml
+
+#### Metatool: complex test setup. Mineunit development began here.
+* Mineunit and global fixtures https://github.com/S-S-X/metatool/tree/master/spec
+* Metatool API tests https://github.com/S-S-X/metatool/tree/master/metatool/spec
+* Container tool behavior tests https://github.com/S-S-X/metatool/tree/master/containertool/spec
+* GitHub workflow https://github.com/S-S-X/metatool/blob/master/.github/workflows/busted.yml
