@@ -43,6 +43,9 @@ end
 function Player:_reset_player_controls()
 	self._controls = {}
 end
+function Player:_set_is_player(value)
+	self._is_player = not not value
+end
 
 --
 -- Minetest player API methods
@@ -53,12 +56,19 @@ end
 function Player:get_player_name()
 	return self._name
 end
+function Player:is_player()
+	return self._is_player
+end
+function Player:get_wielded_item()
+	return ItemStack()
+end
 
 mineunit_export_object(Player, {
 	name = "Player",
 	constructor = function(self, name, privs)
 		local obj = {
 			_name = name or "SX",
+			_is_player = true,
 			_privs = privs or { server = 1, test_priv=1 },
 			_controls = {},
 			_meta = MetaDataRef(),

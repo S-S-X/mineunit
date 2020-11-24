@@ -9,7 +9,10 @@ end
 
 minetest.is_protected = function(pos, name)
 	local nodeid = minetest.hash_node_position(pos)
-	return protected_nodes[nodeid] ~= nil and protected_nodes[nodeid] ~= name
+	if protected_nodes[nodeid] == nil or protected_nodes[nodeid] == name then
+		return false
+	end
+	return true
 end
 
 minetest.record_protection_violation = function(...)
