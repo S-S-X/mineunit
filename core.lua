@@ -35,7 +35,11 @@ _G.world.layout = function(layout, offset)
 end
 _G.world.add_layout = function(layout, offset)
 	for _, node in ipairs(layout) do
-		local pos = node[1]
+		local pos = {
+			x = node[1].x,
+			y = node[1].y,
+			z = node[1].z,
+		}
 		if offset then
 			pos.x = pos.x + offset.x
 			pos.y = pos.y + offset.y
