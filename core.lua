@@ -52,50 +52,8 @@ end
 _G.core = {}
 _G.minetest = _G.core
 
-_G.Settings = function(fname)
-	local settings = {
-		_data = {},
-		get = function(self, key)
-			return self._data[key]
-		end,
-		get_bool = function(self, key, default)
-			return
-		end,
-		set = function(self, key, value)
-			self._data[key] = value
-		end,
-		set_bool = function(...)end,
-		write = function(...)end,
-		remove = function(self, key)
-			self._data[key] = nil
-			return true
-		end,
-		get_names = function(self)
-			local result = {}
-			for k,_ in pairs(t) do
-				table.insert(result, k)
-			end
-			return result
-		end,
-		to_table = function(self)
-			local result = {}
-			for k,v in pairs(self._data) do
-				result[k] = v
-			end
-			return result
-		end,
-	}
-	-- Not even nearly perfect config parser but should be good enough for now
-	file = io.open(fname, "r")
-	if file then
-		for line in file:lines() do
-			for key, value in string.gmatch(line, "([^=%s]+)%s*=%s*(.-)$") do
-				settings._data[key] = value
-			end
-		end
-	end
-	return settings
-end
+mineunit("settings")
+
 _G.core.settings = _G.Settings(fixture_path("minetest.cfg"))
 
 _G.core.register_on_joinplayer = noop
