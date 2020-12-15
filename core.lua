@@ -85,6 +85,7 @@ _G.minetest.register_craft = noop
 _G.minetest.register_node = function(name, def)
 	minetest.registered_nodes[name] = def
 end
+_G.minetest.register_on_player_receive_fields = noop
 _G.minetest.register_on_placenode = noop
 _G.minetest.register_on_dignode = noop
 _G.minetest.register_on_mods_loaded = function(func) mineunit:register_on_mods_loaded(func) end
