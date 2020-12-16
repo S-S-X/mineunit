@@ -16,6 +16,10 @@ end
 
 local function noop(...) end
 local function dummy_coords(...) return { x = 123, y = 123, z = 123 } end
+local noop_object = {
+	__call = function(self,...) return self end,
+	__index = function(...) return function(...)end end,
+}
 
 _G.world = { nodes = {} }
 local world = _G.world
@@ -104,6 +108,8 @@ end
 _G.minetest.get_node = function(pos)
 	return minetest.get_node_or_nil(pos) or {name="IGNORE",param2=0}
 end
+_G.minetest.get_node_timer = {}
+setmetatable(_G.minetest.get_node_timer, noop_object)
 
 _G.minetest.get_worldpath = function(...) return "./spec/fixtures" end
 _G.minetest.get_modpath = function(...) return _G.mineunit:get_modpath(...) end
@@ -112,6 +118,5 @@ _G.minetest.get_current_modname = function(...) return _G.mineunit:get_current_m
 --
 -- Minetest default noop table
 --
-local default = { __index = function(...) return function(...)end end }
 _G.default = {}
-setmetatable(_G.default, default)
+setmetatable(_G.default, noop_object)
