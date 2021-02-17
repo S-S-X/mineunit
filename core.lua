@@ -53,7 +53,14 @@ _G.world.add_layout = function(layout, offset)
 	end
 end
 
-_G.core = {}
+_G.core = {
+	get_worldpath = function(...) return "./spec/fixtures" end,
+	get_modpath = function(...) return _G.mineunit:get_modpath(...) end,
+	get_current_modname = function(...) return _G.mineunit:get_current_modname(...) end,
+	register_item_raw = noop,
+	unregister_item_raw = noop,
+	register_alias_raw = noop,
+}
 _G.minetest = _G.core
 
 mineunit("settings")
@@ -65,6 +72,7 @@ _G.core.register_on_leaveplayer = noop
 
 mineunit("game/item")
 mineunit("game/misc")
+mineunit("game/register")
 mineunit("common/misc_helpers")
 mineunit("common/vector")
 mineunit("common/serialize")
@@ -72,23 +80,10 @@ mineunit("common/serialize")
 mineunit("metadata")
 mineunit("itemstack")
 
-_G.minetest.registered_nodes = {}
-_G.minetest.registered_items = {}
-
 _G.minetest.registered_chatcommands = {}
-
-_G.minetest.register_lbm = noop
-_G.minetest.register_abm = noop
 _G.minetest.register_chatcommand = noop
 _G.minetest.chat_send_player = function(...) print(unpack({...})) end
-_G.minetest.register_alias = noop
-_G.minetest.register_craftitem = function(name, def)
-	minetest.registered_items[name] = def
-end
 _G.minetest.register_craft = noop
-_G.minetest.register_node = function(name, def)
-	minetest.registered_nodes[name] = def
-end
 _G.minetest.register_on_player_receive_fields = noop
 _G.minetest.register_on_placenode = noop
 _G.minetest.register_on_dignode = noop
@@ -110,10 +105,6 @@ _G.minetest.get_node = function(pos)
 end
 _G.minetest.get_node_timer = {}
 setmetatable(_G.minetest.get_node_timer, noop_object)
-
-_G.minetest.get_worldpath = function(...) return "./spec/fixtures" end
-_G.minetest.get_modpath = function(...) return _G.mineunit:get_modpath(...) end
-_G.minetest.get_current_modname = function(...) return _G.mineunit:get_current_modname(...) end
 
 --
 -- Minetest default noop table
