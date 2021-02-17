@@ -57,10 +57,10 @@ end
 mineunit._config.source_path = pl.path.normpath(("%s/%s"):format(mineunit:config("root"), mineunit:config("source_path")))
 
 local luaprint = _G.print
-function mineunit:debug(...)   if self:config("verbose") > 3 then luaprint(...) end end
-function mineunit:info(...)    if self:config("verbose") > 2 then luaprint(...) end end
-function mineunit:warning(...) if self:config("verbose") > 1 then luaprint(...) end end
-function mineunit:error(...)   if self:config("verbose") > 0 then luaprint(...) end end
+function mineunit:debug(...)   if self:config("verbose") > 3 then luaprint("D:",...) end end
+function mineunit:info(...)    if self:config("verbose") > 2 then luaprint("I:",...) end end
+function mineunit:warning(...) if self:config("verbose") > 1 then luaprint("W:",...) end end
+function mineunit:error(...)   if self:config("verbose") > 0 then luaprint("E:",...) end end
 function mineunit:print(...)   if self:config("print")       then luaprint(...) end end
 _G.print = function(...) mineunit:print(...) end
 
@@ -127,6 +127,27 @@ function sourcefile(name)
 	mineunit:info("Loading source", path)
 	dofile(path)
 end
+
+(function () -- Read mineunit config file
+	local configpath = pl.path.normpath(("%s/%s"):format(mineunit:config("mineunit_path"), "/../mineunit.conf"))
+	local configenv = {}
+	local configfile, err = loadfile(configpath)
+	if configfile then
+		setfenv(configfile, configenv)
+		configfile()
+		mineunit:info("Mineunit configuration loaded")
+	else
+		mineunit:warning("Mineunit configuration failed: " .. err)
+	end
+	for key,value in pairs(configenv) do
+		if default_config[key] then
+			mineunit._config[key] = value
+			mineunit:debug("configuration: " .. key .. " = " .. value)
+		else
+			mineunit:warning("invalid configuration key " .. key)
+		end
+	end
+end)()
 
 function timeit(count, func, ...)
 	local socket = require 'socket'
