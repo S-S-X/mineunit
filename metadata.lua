@@ -79,7 +79,7 @@ function InvRef:get_location()
 	error("NOT IMPLEMENTED")
 end
 
-mineunit_export_object(InvRef, {
+mineunit.export_object(InvRef, {
 	name = "InvRef",
 	constructor = function(self, value)
 		local obj
@@ -113,7 +113,7 @@ function MetaDataRef:to_table() error("NOT IMPLEMENTED") end
 function MetaDataRef:from_table(t) error("NOT IMPLEMENTED") end
 function MetaDataRef:equals(other) error("NOT IMPLEMENTED") end
 
-mineunit_export_object(MetaDataRef, {
+mineunit.export_object(MetaDataRef, {
 	name = "MetaDataRef",
 	constructor = function(self, value)
 		local obj
@@ -135,7 +135,7 @@ local NodeMetaRef = table.copy(MetaDataRef)
 function NodeMetaRef:get_inventory() return self._inventory end
 function NodeMetaRef:mark_as_private(...) mineunit:info("NodeMetaRef:mark_as_private", ...) end
 
-mineunit_export_object(NodeMetaRef, {
+mineunit.export_object(NodeMetaRef, {
 	name = "NodeMetaRef",
 	constructor = function(self, value)
 		local obj

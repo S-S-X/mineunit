@@ -1,19 +1,3 @@
-local function DEPRECATED(msg)
-	-- TODO: Add configurable behavior to fail or warn when deprectaed things are used
-	-- Now it has to be fail. Warnings are for pussies, hard fail for serious Sam.
-	error(msg or "Attempted to use deprecated method")
-end
-
-function mineunit_export_object(obj, def)
-	if _G[def.name] == nil then
-		obj.__index = obj
-		setmetatable(obj, { __call = def.constructor })
-		_G[def.name] = obj
-	else
-		error("Error: mineunit_export_object object name is already reserved:" .. (def.name or "?"))
-	end
-end
-
 local function noop(...) end
 local function dummy_coords(...) return { x = 123, y = 123, z = 123 } end
 local noop_object = {

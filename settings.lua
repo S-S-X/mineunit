@@ -42,7 +42,7 @@ function Settings:to_table()
 	return result
 end
 
-mineunit_export_object(Settings, {
+mineunit.export_object(Settings, {
 	name = "Settings",
 	constructor = function(self, fname)
 		local settings = {}

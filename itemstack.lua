@@ -120,7 +120,7 @@ function ItemStack:peek_item(n)
 	error("NOT IMPLEMENTED")
 end
 
-mineunit_export_object(ItemStack, {
+mineunit.export_object(ItemStack, {
 	name = "ItemStack",
 	constructor = function(self, value)
 		local obj
