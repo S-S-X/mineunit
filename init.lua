@@ -12,7 +12,10 @@ local default_config = {
 	modname = "mineunit",
 	root = ".",
 	mineunit_path = debug.getinfo(1).source:match("@?(.*)/"),
-	fixture_path = "spec/fixtures",
+	spec_path = "spec",
+	fixture_paths = {
+		"spec/fixtures"
+	},
 	source_path = ".",
 }
 
@@ -32,9 +35,8 @@ local _mineunits = {}
 setmetatable(mineunit, {
 	__call = function(self, name)
 		if not _mineunits[name] then
-			local path = mineunit_path(name .. ".lua")
-			mineunit:debug("Loading mineunit module", name, path)
-			dofile(path)
+			mineunit:debug("Loading mineunit module", name)
+			require("mineunit." .. name:gsub("/", "."))
 		end
 		_mineunits[name] = true
 	end,
@@ -70,11 +72,15 @@ function mineunit:set_modpath(name, path)
 end
 
 function mineunit:get_modpath(name)
-	return self._config.modpaths[name] or self:config("fixture_path")
+	return self._config.modpaths[name] or self:config("fixture_paths")[1]
 end
 
 function mineunit:get_current_modname()
 	return self:config("modname")
+end
+
+function mineunit:get_worldpath()
+	return self:config("fixture_paths")[1]
 end
 
 function mineunit:register_on_mods_loaded(func)
@@ -93,13 +99,34 @@ function mineunit:mods_loaded()
 	self._on_mods_loaded = nil
 end
 
--- FIXME: Not good in any way, only reason is that this works for me...
-function fixture_path(name)
-	local path = pl.path.normpath(("%s/%s/%s"):format(mineunit:config("root"), mineunit:config("fixture_path"), name))
-	if not pl.path.isfile(path) then
-		path = pl.path.normpath(("%s/%s/%s"):format(mineunit:config("mineunit_path"), "/../fixtures/", name))
+local function spec_path(name)
+	local path = pl.path.normpath(("%s/%s/%s"):format(mineunit:config("root"), mineunit:config("spec_path"), name))
+	if pl.path.isfile(path) then
+		mineunit:debug("spec_path", path)
+		return path
 	end
-	mineunit:debug("fixture_path", path)
+	mineunit:debug("spec_path, file not found:", path)
+end
+
+function fixture_path(name)
+	local index = name:find(mineunit:get_worldpath(), nil, true)
+	if index then
+		-- Remove worldpath from name, worldpath should be in search_paths.
+		-- This is to allow using search_paths when mod creates Settings object from worldpath.
+		name = name:sub(1, index - 1) .. name:sub(index + #mineunit:get_worldpath())
+	end
+	local root = mineunit:config("root")
+	local search_paths = mineunit:config("fixture_paths")
+	for _,search_path in ipairs(search_paths) do
+		local path = pl.path.normpath(("%s/%s/%s"):format(root, search_path, name))
+		if pl.path.isfile(path) then
+			return path
+		else
+			mineunit:debug("fixture_path, file not found:", path)
+		end
+	end
+	local path = pl.path.normpath(("%s/%s/%s"):format(root, search_paths[1], name))
+	mineunit:info("File not found:", path)
 	return path
 end
 
@@ -108,6 +135,7 @@ function fixture(name)
 	local path = fixture_path(name .. ".lua")
 	if not _fixtures[name] then
 		mineunit:info("Loading fixture", path)
+		assert(pl.path.isfile(path), "Fixture not found: " .. path)
 		dofile(path)
 	else
 		mineunit:debug("Fixture already loaded", path)
@@ -115,7 +143,7 @@ function fixture(name)
 	_fixtures[name] = true
 end
 
-function source_path(name)
+local function source_path(name)
 	local source_path = mineunit:config("source_path")
 	local path = pl.path.normpath(("%s/%s"):format(source_path, name))
 	mineunit:debug("source_path", path)
@@ -125,27 +153,99 @@ end
 function sourcefile(name)
 	local path = source_path(name .. ".lua")
 	mineunit:info("Loading source", path)
+	assert(pl.path.isfile(path), "Source file not found: " .. path)
 	dofile(path)
 end
 
-(function () -- Read mineunit config file
-	local configpath = pl.path.normpath(("%s/%s"):format(mineunit:config("mineunit_path"), "/../mineunit.conf"))
-	local configenv = {}
-	local configfile, err = loadfile(configpath)
-	if configfile then
-		setfenv(configfile, configenv)
-		configfile()
-		mineunit:info("Mineunit configuration loaded")
+function DEPRECATED(msg)
+	-- TODO: Add configurable behavior to fail or warn when deprectaed things are used
+	-- Now it has to be fail. Warnings are for pussies, hard fail for serious Sam.
+	error(msg or "Attempted to use deprecated method")
+end
+
+function mineunit.export_object(obj, def)
+	if _G[def.name] == nil then
+		obj.__index = obj
+		setmetatable(obj, { __call = def.constructor })
+		_G[def.name] = obj
 	else
-		mineunit:warning("Mineunit configuration failed: " .. err)
+		error("Error: mineunit.export_object object name is already reserved:" .. (def.name or "?"))
 	end
-	for key,value in pairs(configenv) do
-		if default_config[key] then
-			mineunit._config[key] = value
-			mineunit:debug("configuration: " .. key .. " = " .. value)
-		else
-			mineunit:warning("invalid configuration key " .. key)
+end
+
+local function sequential(t)
+	local p = 1
+	for i,_ in pairs(t) do
+		if i ~= p then return false end
+		p = p +1
+	end
+	return true
+end
+
+function mineunit.deep_merge(data, target, defaults)
+	if sequential(data) then
+		assert(sequential(defaults), "Configuration: attempt to merge indexed table with hash table")
+		-- Indexed arrays merge strategy: discard keys, add unique values
+		local seen = {}
+		for _,value in ipairs(defaults) do
+			table.insert(target, value)
+			seen[value] = true
 		end
+		for _,value in ipairs(data) do
+			assert(type(value) ~= "table", "Configuration: tables not supported in indexed arrays")
+			if not seen[value] then
+				table.insert(target, value)
+				mineunit:debug("\t", #target, " = ", tostring(value))
+			else
+				mineunit:debug("\tSkipping duplicate value: ", tostring(value))
+			end
+		end
+	else
+		-- Hash tables merge strategy: preserve keys, override values
+		for key,value in pairs(data) do
+			if defaults[key] then
+				assert(type(value) == type(defaults[key]), "Configuration: invalid data type for key", key)
+				if type(value) == "table" then
+					target[key] = {}
+					mineunit:debug("Configuration: merging indexed array", key)
+					mineunit.deep_merge(value, target[key], defaults[key])
+				else
+					target[key] = value
+				end
+				mineunit:debug("Configuration: ", key, tostring(value))
+			else
+				mineunit:warning("Configuration: invalid key", key)
+			end
+		end
+	end
+end
+
+(function () -- Read mineunit config file
+	local configpath = spec_path("mineunit.conf")
+	if not configpath then
+		mineunit:info("configpath, file not found:", configpath)
+		local fallback_path = fixture_path("mineunit.conf")
+		if fallback_path then
+			configpath = fallback_path
+		else
+			mineunit:info("configpath, file not found:", fallback_path)
+		end
+	end
+	if configpath then
+		local configfile, err = loadfile(configpath)
+		if configfile then
+			local configenv = {}
+			setfenv(configfile, configenv)
+			configfile()
+			mineunit.deep_merge(configenv, mineunit._config, default_config)
+		else
+			mineunit:warning("Mineunit configuration failed: " .. err)
+		end
+	else
+		mineunit:warning("Mineunit configuration file not found")
+	end
+	if configfile then
+		mineunit:info("Mineunit configuration loaded from", configpath)
 	end
 end)()
 
@@ -170,15 +270,6 @@ function count(t)
 		return c
 	end
 	mineunit:warning("count(t)", "invalid value", type(t))
-end
-
-local function sequential(t)
-	local p = 1
-	for i,_ in pairs(t) do
-		if i ~= p then return false end
-		p = p +1
-	end
-	return true
 end
 
 local function tabletype(t)

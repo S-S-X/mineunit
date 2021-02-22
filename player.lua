@@ -63,7 +63,7 @@ function Player:get_wielded_item()
 	return ItemStack()
 end
 
-mineunit_export_object(Player, {
+mineunit.export_object(Player, {
 	name = "Player",
 	constructor = function(self, name, privs)
 		local obj = {
