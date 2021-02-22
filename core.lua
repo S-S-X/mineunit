@@ -38,7 +38,7 @@ _G.world.add_layout = function(layout, offset)
 end
 
 _G.core = {
-	get_worldpath = function(...) return "./spec/fixtures" end,
+	get_worldpath = function(...) return _G.mineunit:get_worldpath(...) end,
 	get_modpath = function(...) return _G.mineunit:get_modpath(...) end,
 	get_current_modname = function(...) return _G.mineunit:get_current_modname(...) end,
 	register_item_raw = noop,

@@ -42,18 +42,28 @@ function Settings:to_table()
 	return result
 end
 
+local function load_conf_file(fname, target)
+	file = io.open(fname, "r")
+	if file then
+		for line in file:lines() do
+			for key, value in string.gmatch(line, "([^=%s]+)%s*=%s*(.-)$") do
+				target[key] = value
+			end
+		end
+		mineunit:info("Settings object created from:", fname)
+		return true
+	end
+end
+
 mineunit.export_object(Settings, {
 	name = "Settings",
 	constructor = function(self, fname)
 		local settings = {}
 		settings._data = {}
 		-- Not even nearly perfect config parser but should be good enough for now
-		file = io.open(fname, "r")
-		if file then
-			for line in file:lines() do
-				for key, value in string.gmatch(line, "([^=%s]+)%s*=%s*(.-)$") do
-					settings._data[key] = value
-				end
+		if not load_conf_file(fname, settings._data) then
+			if not load_conf_file(fixture_path(fname), settings._data) then
+				mineunit:info("File not found, creating empty Settings object:", fname)
 			end
 		end
 		setmetatable(settings, Settings)
