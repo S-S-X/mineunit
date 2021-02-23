@@ -66,7 +66,6 @@ mineunit("itemstack")
 _G.minetest.registered_chatcommands = {}
 _G.minetest.register_chatcommand = noop
 _G.minetest.chat_send_player = function(...) print(unpack({...})) end
-_G.minetest.register_craft = noop
 _G.minetest.register_on_player_receive_fields = noop
 _G.minetest.register_on_placenode = noop
 _G.minetest.register_on_dignode = noop

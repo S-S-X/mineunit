@@ -1,16 +1,31 @@
 
 local Settings = {}
 
+-- https://github.com/minetest/minetest/blob/master/src/util/string.h
+local function is_yes(value)
+	if tonumber(value) then
+		return tonumber(value) ~= 0
+	end
+	value = tostring(value):lower()
+	return (value == "y" or value == "yes" or value == "true")
+end
+
 function Settings:get(key)
+	mineunit:debug("Settings:get(...)", key, self._data[key])
 	return self._data[key]
 end
 
 function Settings:get_bool(key, default)
-	return
+	local value = self._data[key]
+	mineunit:debug("Settings:get_bool(...)", key, value and is_yes(value) or value, default)
+	if value == nil then
+		return default
+	end
+	return is_yes(value)
 end
 
 function Settings:set(key, value)
-	self._data[key] = value
+	self._data[key] = tostring(value)
 end
 
 function Settings:set_bool(key, value)
@@ -19,9 +34,11 @@ end
 
 function Settings:write(...)
 	-- noop / not implemented
+	mineunit:info("Settings:write(...) called, no operation")
 end
 
 function Settings:remove(key)
+	mineunit:debug("Settings:remove(...)", key, self._data[key])
 	self._data[key] = nil
 	return true
 end
@@ -45,8 +62,10 @@ end
 local function load_conf_file(fname, target)
 	file = io.open(fname, "r")
 	if file then
+		mineunit:debug("Settings object loading values from:", fname)
 		for line in file:lines() do
 			for key, value in string.gmatch(line, "([^=%s]+)%s*=%s*(.-)$") do
+				mineunit:debug("\t", key, "=", value)
 				target[key] = value
 			end
 		end

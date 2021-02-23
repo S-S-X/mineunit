@@ -1,8 +1,6 @@
 -- FIXME: Sorry, not exactly nice in its current state
 -- Have extra time and energy? Feel free to clean it a bit
 
-require("mineunit.globals")
-
 local pl = {
 	path = require 'pl.path',
 	--dir = require 'pl.dir',
@@ -26,7 +24,10 @@ mineunit = {
 		modpaths = {},
 	},
 	_on_mods_loaded = {},
+	_on_mods_loaded_exec_count = 0,
 }
+
+require("mineunit.globals")
 
 local function mineunit_path(name)
 	return pl.path.normpath(string.format("%s/%s", mineunit:config("mineunit_path"), name))
@@ -86,6 +87,9 @@ function mineunit:get_worldpath()
 end
 
 function mineunit:register_on_mods_loaded(func)
+	if self._on_mods_loaded_exec_count > 0 then
+		mineunit:warning("mineunit:register_on_mods_loaded: Registering after register_on_mods_loaded executed")
+	end
 	if type(func) == "function" then
 		table.insert(self._on_mods_loaded, func)
 	end
@@ -94,11 +98,12 @@ end
 function mineunit:mods_loaded()
 	if self._on_mods_loaded then
 		mineunit:info("Executing register_on_mods_loaded functions")
+		if self._on_mods_loaded_exec_count > 0 then
+			mineunit:warning("mineunit:mods_loaded: Callbacks already executed " .. self._on_mods_loaded_exec_count .. " times")
+		end
 		for _,func in ipairs(self._on_mods_loaded) do func() end
-	else
-		mineunit:warning("Already executed register_on_mods_loaded functions")
+		self._on_mods_loaded_exec_count = self._on_mods_loaded_exec_count + 1
 	end
-	self._on_mods_loaded = nil
 end
 
 local function spec_path(name)
