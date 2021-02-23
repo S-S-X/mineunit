@@ -1,6 +1,8 @@
 -- FIXME: Sorry, not exactly nice in its current state
 -- Have extra time and energy? Feel free to clean it a bit
 
+require("mineunit.globals")
+
 local pl = {
 	path = require 'pl.path',
 	--dir = require 'pl.dir',
@@ -72,7 +74,7 @@ function mineunit:set_modpath(name, path)
 end
 
 function mineunit:get_modpath(name)
-	return self._config.modpaths[name] or self:config("fixture_paths")[1]
+	return self._config.modpaths[name]
 end
 
 function mineunit:get_current_modname()
@@ -247,6 +249,7 @@ end
 	if configfile then
 		mineunit:info("Mineunit configuration loaded from", configpath)
 	end
+	mineunit:set_modpath(mineunit:config("modname"), mineunit:config("root"))
 end)()
 
 function timeit(count, func, ...)

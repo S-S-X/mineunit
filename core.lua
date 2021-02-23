@@ -37,14 +37,12 @@ _G.world.add_layout = function(layout, offset)
 	end
 end
 
-_G.core = {
-	get_worldpath = function(...) return _G.mineunit:get_worldpath(...) end,
-	get_modpath = function(...) return _G.mineunit:get_modpath(...) end,
-	get_current_modname = function(...) return _G.mineunit:get_current_modname(...) end,
-	register_item_raw = noop,
-	unregister_item_raw = noop,
-	register_alias_raw = noop,
-}
+_G.core.get_worldpath = function(...) return _G.mineunit:get_worldpath(...) end
+_G.core.get_modpath = function(...) return _G.mineunit:get_modpath(...) end
+_G.core.get_current_modname = function(...) return _G.mineunit:get_current_modname(...) end
+_G.core.register_item_raw = noop
+_G.core.unregister_item_raw = noop
+_G.core.register_alias_raw = noop
 _G.minetest = _G.core
 
 mineunit("settings")
@@ -54,6 +52,7 @@ _G.core.settings = _G.Settings(fixture_path("minetest.cfg"))
 _G.core.register_on_joinplayer = noop
 _G.core.register_on_leaveplayer = noop
 
+mineunit("game/constants")
 mineunit("game/item")
 mineunit("game/misc")
 mineunit("game/register")
