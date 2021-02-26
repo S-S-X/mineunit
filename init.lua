@@ -161,7 +161,7 @@ function sourcefile(name)
 	local path = source_path(name .. ".lua")
 	mineunit:info("Loading source", path)
 	assert(pl.path.isfile(path), "Source file not found: " .. path)
-	dofile(path)
+	return dofile(path)
 end
 
 function DEPRECATED(msg)
