@@ -227,7 +227,7 @@ function mineunit.deep_merge(data, target, defaults)
 	end
 end
 
-(function () -- Read mineunit config file
+do -- Read mineunit config file
 	local configpath = spec_path("mineunit.conf")
 	if not configpath then
 		mineunit:info("configpath, file not found:", configpath)
@@ -245,17 +245,40 @@ end
 			setfenv(configfile, configenv)
 			configfile()
 			mineunit.deep_merge(configenv, mineunit._config, default_config)
+			mineunit:info("Mineunit configuration loaded from", configpath)
 		else
 			mineunit:warning("Mineunit configuration failed: " .. err)
 		end
 	else
 		mineunit:warning("Mineunit configuration file not found")
 	end
-	if configfile then
-		mineunit:info("Mineunit configuration loaded from", configpath)
+end
+
+do -- Read mod.conf config file
+	local modconfpath = source_path("mod.conf")
+	if not modconfpath then
+		mineunit:info("mod.conf not found:", modconfpath)
+		return
 	end
-	mineunit:set_modpath(mineunit:config("modname"), mineunit:config("root"))
-end)()
+	local configfile = io.open(modconfpath, "r")
+	if configfile then
+		for line in configfile:lines() do
+			local key, value = string.gmatch(line, "([^=%s]+)%s*=%s*(.-)%s*$")()
+			if key == "name" then
+				if mineunit._config["modname"] then
+					mineunit:warning("Mod name defined in both mod.conf and mineunit.conf, using mineunit.conf")
+				else
+					mineunit._config["modname"] = value
+				end
+			end
+		end
+		mineunit:info("Mod configuration loaded from", modconfpath)
+	else
+		mineunit:warning("Loading file mod.conf failed")
+	end
+end
+
+mineunit:set_modpath(mineunit:config("modname"), mineunit:config("root"))
 
 function timeit(count, func, ...)
 	local socket = require 'socket'
@@ -303,3 +326,5 @@ assert:register("assertion", "is_indexed", is_array, "assertion.is_indexed.negat
 local function is_hash(_,args) return tabletype(args[1]) == "hash" end
 say:set("assertion.is_hashed.negative", "Expected %s to be hash table")
 assert:register("assertion", "is_hashed", is_hash, "assertion.is_hashed.negative")
+
+mineunit:info("Mineunit initialized, current modname is", mineunit:get_current_modname())

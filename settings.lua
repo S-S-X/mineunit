@@ -64,7 +64,7 @@ local function load_conf_file(fname, target)
 	if file then
 		mineunit:debug("Settings object loading values from:", fname)
 		for line in file:lines() do
-			for key, value in string.gmatch(line, "([^=%s]+)%s*=%s*(.-)$") do
+			for key, value in string.gmatch(line, "([^=%s]+)%s*=%s*(.-)%s*$") do
 				mineunit:debug("\t", key, "=", value)
 				target[key] = value
 			end
