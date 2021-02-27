@@ -63,6 +63,14 @@ mineunit("common/serialize")
 mineunit("metadata")
 mineunit("itemstack")
 
+local mod_storage
+_G.minetest.get_mod_storage = function()
+	if not mod_storage then
+		mod_storage = MetaDataRef()
+	end
+	return mod_storage
+end
+
 _G.minetest.registered_chatcommands = {}
 _G.minetest.register_chatcommand = noop
 _G.minetest.chat_send_player = function(...) print(unpack({...})) end
@@ -77,6 +85,8 @@ _G.minetest.get_us_time = function()
 	-- FIXME: Returns the time in seconds, relative to the origin of the universe.
 	return socket.gettime() * 1000 * 1000
 end
+
+_G.minetest.after = noop
 
 _G.minetest.get_node_or_nil = function(pos)
 	local hash = minetest.hash_node_position(pos)
