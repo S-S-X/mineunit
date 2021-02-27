@@ -6,6 +6,11 @@ local pl = {
 	--dir = require 'pl.dir',
 }
 
+local lua_dofile = dofile
+function _G.dofile(path, ...)
+	return lua_dofile(pl.path.normpath(path), ...)
+end
+
 local default_config = {
 	verbose = 2,
 	print = true,
