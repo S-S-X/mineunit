@@ -190,7 +190,7 @@ local function sequential(t)
 end
 
 function mineunit.deep_merge(data, target, defaults)
-	if sequential(data) then
+	if sequential(data) and #data > 0 then
 		assert(sequential(defaults), "Configuration: attempt to merge indexed table with hash table")
 		-- Indexed arrays merge strategy: discard keys, add unique values
 		local seen = {}
