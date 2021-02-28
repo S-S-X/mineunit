@@ -1,0 +1,40 @@
+#!/usr/bin/env lua
+
+-- Mineunit cli runner
+
+if arg[1] == "-V" or arg[1] == "--version" then
+	print("Mineunit v0.1-works-for-me")
+	return
+end
+
+do -- execute tests
+	local busted_runner = require("busted.runner")
+	local busted_options = {
+		output = "utfTerminal",
+		coverage = true,
+		standalone = false
+	}
+	require("mineunit")
+	rawset(_G, "arg", { "-c" })
+	busted_runner(busted_options)
+end
+
+do -- generate luacov report
+	local pl = { path = require 'pl.path', }
+	local runner = require("luacov.runner")
+	local configuration = runner.load_config()
+
+	configuration.include = configuration.include or {}
+	configuration.exclude = configuration.exclude or {}
+
+	runner.load_config(configuration)
+
+	local reporter = require("luacov.reporter")
+
+	local run_file = reporter.ReporterBase._run_file
+	function reporter.ReporterBase._run_file(self, filename, ...)
+		return run_file(self, pl.path.normpath(filename), ...)
+	end
+
+	reporter.report()
+end

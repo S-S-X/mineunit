@@ -1,5 +1,5 @@
 package = "mineunit"
-version = "scm-1"
+version = "scm-2"
 source = {
 	url = "git://github.com/mt-mods/mineunit.git",
 }
@@ -10,12 +10,14 @@ description = {
 }
 dependencies = {
 	"lua >= 5.1",
-	"busted >= 2.0"
+	"busted >= 2.0",
+	"luacov >= 0.14"
 }
 build = {
 	type = 'make',
 	build_variables = {
 		INSTALL="1",
+		BINDIR="$(BINDIR)",
 		LUADIR="$(LUADIR)/mineunit",
 		CFLAGS="$(CFLAGS)"
 	},
