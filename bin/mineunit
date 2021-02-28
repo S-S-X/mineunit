@@ -7,6 +7,12 @@ if arg[1] == "-V" or arg[1] == "--version" then
 	return
 end
 
+local pl = { path = require 'pl.path' }
+local lua_dofile = dofile
+function _G.dofile(path, ...)
+	return lua_dofile(pl.path.normpath(path), ...)
+end
+
 do -- execute tests
 	local busted_runner = require("busted.runner")
 	local busted_options = {
@@ -14,7 +20,6 @@ do -- execute tests
 		coverage = true,
 		standalone = false
 	}
-	require("mineunit")
 	rawset(_G, "arg", { "-c" })
 	busted_runner(busted_options)
 end
