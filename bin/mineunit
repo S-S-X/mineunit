@@ -1,11 +1,31 @@
 #!/usr/bin/env lua
 
--- Mineunit cli runner
-
-if arg[1] == "-V" or arg[1] == "--version" then
-	print("Mineunit v0.1-works-for-me")
-	return
-end
+local args = {
+	verbose = false,
+	output = "utfTerminal",
+	coverage = false,
+	report = false,
+	luacov = {
+		--deletestats = true,
+		includeuntestedfiles = true,
+		include = {},
+		exclude = {
+			"spec/",
+			"/\.?luarocks/",
+			"/share/lua/",
+			"busted_bootstrap$",
+			"busted%.",
+			"luassert%.",
+			"say%.",
+			"pl%.",
+		},
+	},
+	runs = 1,
+	fail_fast = false,
+	loaders = { "lua", "moonscript" },
+	Xhelper = {},
+	Xoutput = {},
+}
 
 local pl = { path = require 'pl.path' }
 local lua_dofile = dofile
@@ -13,33 +33,215 @@ function _G.dofile(path, ...)
 	return lua_dofile(pl.path.normpath(path), ...)
 end
 
-do -- execute tests
-	local busted_runner = require("busted.runner")
-	local busted_options = {
-		output = "utfTerminal",
-		coverage = true,
-		standalone = false
+local function run_report()
+	local force_config = {
+		deletestats = true,
 	}
-	rawset(_G, "arg", { "-c" })
-	busted_runner(busted_options)
-end
+	local luacov_defaults = require("luacov.defaults")
+	local luacov_config = {}
+	for k,v in pairs(luacov_defaults) do luacov_config[k] = v end
+	for k,v in pairs(args.luacov) do luacov_config[k] = v end
+	for k,v in pairs(force_config) do luacov_config[k] = v end
 
-do -- generate luacov report
-	local pl = { path = require 'pl.path', }
 	local runner = require("luacov.runner")
-	local configuration = runner.load_config()
-
-	configuration.include = configuration.include or {}
-	configuration.exclude = configuration.exclude or {}
-
-	runner.load_config(configuration)
+	runner.load_config(luacov_config)
 
 	local reporter = require("luacov.reporter")
 
+	-- Clean input filenames, luacov ReporterBase causes duplicates otherwise
 	local run_file = reporter.ReporterBase._run_file
 	function reporter.ReporterBase._run_file(self, filename, ...)
 		return run_file(self, pl.path.normpath(filename), ...)
 	end
 
-	reporter.report()
+	-- Create DefaultReporter instance for reporting
+	local rep, err = reporter.DefaultReporter:new(luacov_config)
+	if not rep then
+		print(err)
+		print("Run your Lua program with -lluacov and then rerun luacov.")
+		os.exit(1)
+	end
+
+	-- Clean filenames, luacov ReporterBase causes duplicates otherwise
+	local uniq_files = {}
+	for i=1,#rep._files do uniq_files[pl.path.normpath(rep._files[i])] = true end
+	rep._files = {}
+	for fname,_ in pairs(uniq_files) do table.insert(rep._files, fname) end
+	table.sort(rep._files)
+	local data = {}
+	local function merge(a, b)
+		local result = {}
+		for k,v in pairs(a or {}) do result[k] = v end
+		for k,v in pairs(b or {}) do result[k] = (result[k] or 0) + v end
+		return result
+	end
+	for k,v in pairs(rep._data) do
+		data[pl.path.normpath(k)] = merge(data[pl.path.normpath(k)], v)
+	end
+	rep._data = data
+
+	-- Execute reporter and cleanup
+	rep:run()
+	rep:close()
+	os.remove(luacov_config.statsfile)
 end
+
+local function read_mineunit_conf()
+	local configpath = "spec/mineunit.conf"
+	local configfile, err = loadfile(configpath)
+	if configfile then
+		local configenv = {}
+		setfenv(configfile, configenv)
+		configfile()
+		if configenv.exclude then
+			for _,v in ipairs(configenv.exclude) do
+				table.insert(args.luacov.exclude, v)
+			end
+		end
+	end
+end
+
+-- Mineunit cli runner
+
+do -- Parse cli args
+	local i = 1
+	while arg[i] do
+		local v = arg[i]
+		if v == "-V" or v == "--version" or v == "-h" or v == "--help" then
+			print("Mineunit v0.1-works-for-me")
+			print("mineunit [-c|--coverage]")
+			return
+		elseif v == "-c" or v == "--coverage" then
+			args.coverage = true
+		elseif v == "-r" or v == "--report" then
+			args.report = true
+		elseif v == "-v" or v == "--verbose" then
+			args.verbose = true
+		elseif v == "-x" or v == "--exclude" then
+			i = i + 1
+			if not arg[i] then
+				print("Missing value for " .. v)
+				return
+			end
+			table.insert(args.luacov.exclude, arg[i])
+		end
+		i = i + 1
+	end
+end
+
+read_mineunit_conf()
+
+if args.report then
+	run_report()
+	return
+end
+
+local function load_luacov()
+	local luacov_defaults = require("luacov.defaults")
+	local luacov_config = {}
+	for k,v in pairs(luacov_defaults) do luacov_config[k] = v end
+	for k,v in pairs(args.luacov) do luacov_config[k] = v end
+
+	local luacov = require("luacov.runner")
+	luacov(luacov_config)
+	luacov.configuration = luacov_config
+end
+
+local busted = require("busted.core")()
+local filterLoader = require("busted.modules.filter_loader")()
+local helperLoader = require("busted.modules.helper_loader")()
+local outputHandlerLoader = require("busted.modules.output_handler_loader")()
+
+require("busted")(busted)
+local exit = require("busted.compatibility").exit
+
+if args.coverage then
+	load_luacov()
+end
+
+-- watch for test errors and failures
+local failures = 0
+local errors = 0
+
+busted.subscribe({ 'error', 'output' }, function(element, parent, message)
+	io.stderr:write(appName .. ': error: Cannot load output library: ' .. element.name .. '\n' .. message .. '\n')
+	return nil, true
+end)
+
+busted.subscribe({ 'error', 'helper' }, function(element, parent, message)
+	io.stderr:write(appName .. ': error: Cannot load helper script: ' .. element.name .. '\n' .. message .. '\n')
+	return nil, true
+end)
+
+busted.subscribe({ 'error' }, function(element, parent, message)
+	errors = errors + 1
+	busted.skipAll = args.fail_fast
+	return nil, true
+end)
+
+busted.subscribe({ 'failure' }, function(element, parent, message)
+	if element.descriptor == 'it' then
+		failures = failures + 1
+	else
+		errors = errors + 1
+	end
+	busted.skipAll = args.fail_fast
+	return nil, true
+end)
+
+-- Set up randomization options
+--busted.sort = args.sort
+busted.randomseed = os.time()
+
+-- Set up output handler to listen to events
+outputHandlerLoader(busted, args.output, {
+	defaultOutput = args.output,
+	enableSound = false,
+	verbose = args.verbose,
+	suppressPending = false,
+	language = "en",
+	deferPrint = false,
+	arguments = args.Xoutput,
+})
+
+-- Pre-load the LuaJIT 'ffi' module if applicable
+--require("busted.luajit")()
+
+-- Load tag and test filters
+filterLoader(busted, {
+	tags = nil,
+	excludeTags = nil,
+	filter = nil,
+	filterOut = nil,
+	list = nil,
+	nokeepgoing = false,
+	suppressPending = false,
+})
+
+-- Load test directories/files
+local testFileLoader = require("busted.modules.test_file_loader")(busted, args.loaders)
+testFileLoader({"spec"}, {"_spec"}, {
+	excludes = {},
+	verbose = args.verbose,
+	recursive = nil,
+})
+
+local execute = require("busted.execute")(busted)
+execute(args.runs, {
+	seed = nil,
+	shuffle = false,
+	sort = false,
+})
+
+busted.publish({ 'exit' })
+
+if args.coverage then
+	require("luacov.runner").shutdown()
+end
+
+if failures > 0 or errors > 0 then
+	exit(failures + errors, forceExit)
+end
+
+-- Run report requires clean env, add to TODO list.
+-- For now collect first and run again to report.
