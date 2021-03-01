@@ -237,12 +237,6 @@ do -- Read mineunit config file
 	local configpath = spec_path("mineunit.conf")
 	if not configpath then
 		mineunit:info("configpath, file not found:", configpath)
-		local fallback_path = fixture_path("mineunit.conf")
-		if fallback_path then
-			configpath = fallback_path
-		else
-			mineunit:info("configpath, file not found:", fallback_path)
-		end
 	end
 	if configpath then
 		local configfile, err = loadfile(configpath)
