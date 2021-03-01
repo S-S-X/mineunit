@@ -225,7 +225,8 @@ function mineunit.deep_merge(data, target, defaults)
 					target[key] = value
 				end
 				mineunit:debug("Configuration: ", key, tostring(value))
-			else
+			elseif key ~= "exclude" then
+				-- Excluding "exclude" is hack and on todo list, mineunit cli runner uses this configuration key
 				mineunit:warning("Configuration: invalid key", key)
 			end
 		end
