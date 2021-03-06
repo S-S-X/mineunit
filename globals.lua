@@ -40,3 +40,7 @@ _G.core.clear_craft = function(t)
 	assert.not_nil(t.output or t.input, "core.clear_craft: input or output required")
 	assert.is_nil(t.output and t.input, "core.clear_craft: please specify only input or output but not both")
 end
+
+local origin
+_G.core.get_last_run_mod = function() return origin end
+_G.core.set_last_run_mod = function(v) origin = v end
