@@ -5,37 +5,7 @@ local noop_object = {
 	__index = function(...) return function(...)end end,
 }
 
-_G.world = { nodes = {} }
-local world = _G.world
-_G.world.set_node = function(pos, node)
-	local hash = minetest.hash_node_position(pos)
-	world.nodes[hash] = node
-	local nodedef = minetest.registered_nodes[node.name]
-	-- Execute on_construct callbacks
-	if nodedef and type(nodedef.on_construct) == "function" then
-		nodedef.on_construct(pos)
-	end
-end
-_G.world.clear = function() _G.world.nodes = {} end
-_G.world.layout = function(layout, offset)
-	_G.world.clear()
-	_G.world.add_layout(layout, offset)
-end
-_G.world.add_layout = function(layout, offset)
-	for _, node in ipairs(layout) do
-		local pos = {
-			x = node[1].x,
-			y = node[1].y,
-			z = node[1].z,
-		}
-		if offset then
-			pos.x = pos.x + offset.x
-			pos.y = pos.y + offset.y
-			pos.z = pos.z + offset.z
-		end
-		_G.world.set_node(pos, {name=node[2], param2=0})
-	end
-end
+_G.world = mineunit("world")
 
 _G.core.get_worldpath = function(...) return _G.mineunit:get_worldpath(...) end
 _G.core.get_modpath = function(...) return _G.mineunit:get_modpath(...) end

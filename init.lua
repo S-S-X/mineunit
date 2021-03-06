@@ -42,11 +42,13 @@ mineunit.__index = mineunit
 local _mineunits = {}
 setmetatable(mineunit, {
 	__call = function(self, name)
+		local res
 		if not _mineunits[name] then
 			mineunit:debug("Loading mineunit module", name)
-			require("mineunit." .. name:gsub("/", "."))
+			res = require("mineunit." .. name:gsub("/", "."))
 		end
 		_mineunits[name] = true
+		return res
 	end,
 })
 
