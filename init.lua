@@ -89,6 +89,14 @@ function mineunit:get_current_modname()
 	return self:config("modname")
 end
 
+function mineunit:set_current_modname(name)
+	self._config.modname = name
+end
+
+function mineunit:restore_current_modname()
+	self._config.modname = self:config("original_modname")
+end
+
 function mineunit:get_worldpath()
 	return self:config("fixture_paths")[1]
 end
@@ -280,6 +288,8 @@ do -- Read mod.conf config file
 	end
 end
 
+-- Save original modname and set modpath
+mineunit._config["original_modname"] = mineunit:config("modname")
 mineunit:set_modpath(mineunit:config("modname"), mineunit:config("root"))
 
 function timeit(count, func, ...)
