@@ -26,9 +26,11 @@ mineunit("game/constants")
 mineunit("game/item")
 mineunit("game/misc")
 mineunit("game/register")
+mineunit("game/privileges")
 mineunit("common/misc_helpers")
 mineunit("common/vector")
 mineunit("common/serialize")
+mineunit("common/fs")
 
 mineunit("metadata")
 mineunit("itemstack")
@@ -67,6 +69,20 @@ _G.minetest.get_node = function(pos)
 end
 _G.minetest.get_node_timer = {}
 setmetatable(_G.minetest.get_node_timer, noop_object)
+
+local max_content_id = 0
+local content_ids = {}
+_G.minetest.get_content_id = function(name)
+	-- check if the node exists
+	assert(minetest.registered_nodes[name], "node " .. name .. " is not registered")
+
+	-- create and increment
+	if not content_ids[name] then
+		content_ids[name] = max_content_id
+		max_content_id = max_content_id + 1
+	end
+	return content_ids[name]
+end
 
 --
 -- Minetest default noop table
