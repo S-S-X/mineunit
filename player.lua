@@ -46,6 +46,9 @@ end
 function Player:_set_is_player(value)
 	self._is_player = not not value
 end
+function Player:_chat(message, channel)
+	mineunit:execute_modchannel_message(channel, self:get_player_name(), message)
+end
 
 --
 -- Minetest player API methods
@@ -60,7 +63,7 @@ function Player:is_player()
 	return self._is_player
 end
 function Player:get_wielded_item()
-	return ItemStack()
+	return self._wield_item
 end
 
 mineunit.export_object(Player, {
@@ -71,6 +74,7 @@ mineunit.export_object(Player, {
 			_is_player = true,
 			_privs = privs or { server = 1, test_priv=1 },
 			_controls = {},
+			_wield_item = ItemStack(),
 			_meta = MetaDataRef(),
 		}
 		players[obj._name] = obj
