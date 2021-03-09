@@ -105,10 +105,10 @@ function MetaDataRef:set_string(key, value)
 	self._data[key] = value ~= "" and value
 end
 function MetaDataRef:get_string(key) return self._data[key] or "" end
-function MetaDataRef:set_int(key, value) self:set_string(key, value) end
+function MetaDataRef:set_int(key, value) self:set_string(key, math.floor(value)) end
 function MetaDataRef:get_int(key) return math.floor(tonumber(self._data[key]) or 0) end
-function MetaDataRef:set_float(key, value) error("NOT IMPLEMENTED") end
-function MetaDataRef:get_float(key) error("NOT IMPLEMENTED") end
+function MetaDataRef:set_float(key, value) self:set_string(key, value) end
+function MetaDataRef:get_float(key) return tonumber(self._data[key]) or 0 end
 function MetaDataRef:to_table() error("NOT IMPLEMENTED") end
 function MetaDataRef:from_table(t) error("NOT IMPLEMENTED") end
 function MetaDataRef:equals(other) error("NOT IMPLEMENTED") end

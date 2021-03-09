@@ -86,6 +86,10 @@ end
 
 --
 -- Minetest default noop table
+-- FIXME: default should not be here, it should be separate file and not loaded with core
 --
-_G.default = {}
+_G.default = {
+	LIGHT_MAX = 14,
+	get_translator = string.format,
+}
 setmetatable(_G.default, noop_object)

@@ -65,8 +65,8 @@ end
 
 _G.core.clear_craft = function(t)
 	assert.is_table(t, "core.clear_craft: table expected, got " .. type(t))
-	assert.not_nil(t.recipe or t.input, "core.clear_craft: recipe or output required")
-	assert.is_nil(t.recipe and t.input, "core.clear_craft: please specify only recipe or output but not both")
+	assert.not_nil(t.recipe or t.output, "core.clear_craft: recipe or output required")
+	assert.is_nil(t.recipe and t.output, "core.clear_craft: please specify only recipe or output but not both")
 end
 
 local origin

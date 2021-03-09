@@ -20,9 +20,11 @@ end
 
 -- set_node sets world node without callbacks
 function world.set_node(pos, node)
+	node = type(node) == "table" and node or { name = node, param2 = 0 }
+	assert(type(node.name) == "string", "Invalid node name, expected string but got " .. tostring(node.name))
 	local hash = minetest.hash_node_position(pos)
 	world.nodes[hash] = node
-	local nodedef = minetest.registered_nodes[node.name]
+	local nodedef = core.registered_nodes[node.name]
 	if nodedef then
 		call(nodedef.on_construct, pos)
 	end
@@ -33,8 +35,9 @@ end
 -- If return true no item is taken from itemstack.
 function world.place_node(pos, node, placer, itemstack, pointed_thing)
 	world.set_node(pos, node)
-	local nodedef = minetest.registered_nodes[node.name]
-	if nodedef then
+	local nodedef = core.registered_nodes[node.name]
+	assert(nodedef, "Invalid nodedef for " .. tostring(node.name))
+	if nodedef.after_place_node then
 		itemstack = itemstack or ItemStack(node.name .. " 1")
 		pointed_thing = pointed_thing or get_pointed_thing(pos)
 		call(nodedef.after_place_node, pos, placer, itemstack, pointed_thing)

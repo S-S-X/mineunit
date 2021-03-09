@@ -60,8 +60,14 @@ function ItemStack:replace(item)
 	error("NOT IMPLEMENTED")
 end
 --* `to_string()`: returns the stack in itemstring form.
+-- https://github.com/minetest/minetest/blob/5.4.0/src/inventory.cpp#L59-L85
 function ItemStack:to_string()
-	error("NOT IMPLEMENTED")
+	-- FIXME: Does not currently serialize metadata
+	return ("%s %d %d"):format(
+		self:get_name(),
+		self:get_count(),
+		self:get_wear()
+	)
 end
 --* `to_table()`: returns the stack in Lua table form.
 function ItemStack:to_table()
@@ -117,7 +123,11 @@ end
 --    Copy (don't remove) up to `n` items from this stack
 --    `n`: number, default: `1`
 function ItemStack:peek_item(n)
-	error("NOT IMPLEMENTED")
+	n = n or 1
+	assert(n >= 0, "ItemStack:peek_item negative count not acceptable")
+	local res = ItemStack(self)
+	res:set_count(math.max(0, math.min(self:get_count(), n)))
+	return res
 end
 
 mineunit.export_object(ItemStack, {
@@ -132,6 +142,7 @@ mineunit.export_object(ItemStack, {
 				-- This *should* fail if name is empty, do not "fix":
 				_name = m():gsub("^:", ""),
 				_count = (function(v) return v and tonumber(v) end)(m()),
+				_wear = (function(v) return v and tonumber(v) end)(m()),
 				_meta = MetaDataRef(m()),
 			}
 		elseif type(value) == "table" then

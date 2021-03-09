@@ -1,4 +1,23 @@
 
+--
+-- Storage for node timers
+--
+
+mineunit("nodetimer")
+
+local world_nodetimers = {}
+_G.core.get_node_timer = function(pos)
+	local node_id = core.hash_node_position(pos)
+	if not world_nodetimers[node_id] then
+		world_nodetimers[node_id] = NodeTimerRef()
+	end
+	return world_nodetimers[node_id]
+end
+
+--
+-- Execute callbacks
+--
+
 local RunCallbacksMode = {
 	RUN_CALLBACKS_MODE_FIRST = 0,
 	RUN_CALLBACKS_MODE_LAST = 1,
@@ -11,10 +30,14 @@ local RunCallbacksMode = {
 function mineunit:execute_globalstep(dtime)
 	-- Default server step is 0.1 seconds
 	assert(dtime == nil or type(dtime) == "number", "Invalid call to mineunit:execute_globalstep")
+	dtime = dtime or 0.1
+	for node_id, timer in pairs(world_nodetimers) do
+		timer:_step(dtime, core.get_position_from_hash(node_id))
+	end
 	return core.run_callbacks(
 		core.registered_globalsteps,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
-		dtime or 0.1
+		dtime
 	)
 end
 
