@@ -259,6 +259,12 @@ do -- Read mineunit config file
 			setfenv(configfile, configenv)
 			configfile()
 			mineunit.deep_merge(configenv, mineunit._config, default_config)
+			-- Override config
+			if mineunit_conf_override then
+				for k, v in pairs(mineunit_conf_override) do
+					mineunit._config[k] = v
+				end
+			end
 			mineunit:info("Mineunit configuration loaded from", configpath)
 		else
 			mineunit:warning("Mineunit configuration failed: " .. err)

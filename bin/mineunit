@@ -117,6 +117,8 @@ do -- Parse cli args
 			args.report = true
 		elseif v == "-v" or v == "--verbose" then
 			args.verbose = true
+		elseif v == "-q" or v == "--quiet" then
+			mineunit_conf_override = { print = false, verbose = 1 }
 		elseif v == "-x" or v == "--exclude" then
 			i = i + 1
 			if not arg[i] then
