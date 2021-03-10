@@ -30,6 +30,15 @@ function world.set_node(pos, node)
 	end
 end
 
+-- swap_node sets world node without callbacks
+function world.swap_node(pos, node)
+	local hash = minetest.hash_node_position(pos)
+	node = type(node) == "table" and node or { name = node }
+	node.param2 = world.nodes[hash] and world.nodes[hash].param2 or 0
+	assert(type(node.name) == "string", "Invalid node name, expected string but got " .. tostring(node.name))
+	world.nodes[hash] = node
+end
+
 -- Called after constructing node when node was placed using
 -- minetest.item_place_node / minetest.place_node.
 -- If return true no item is taken from itemstack.

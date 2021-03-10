@@ -186,23 +186,27 @@ function DEPRECATED(msg)
 end
 
 function mineunit.export_object(obj, def)
-	if _G[def.name] == nil then
+	if _G[def.name] == nil or def.private then
 		obj.__index = obj
-		setmetatable(obj, { __call = def.constructor })
-		_G[def.name] = obj
+		setmetatable(obj, {
+			__call = function(...)
+				local obj = def.constructor(...)
+				obj._mineunit_typename = def.name
+				return obj
+			end
+		})
+		if not def.private then
+			_G[def.name] = obj
+		end
 	else
 		error("Error: mineunit.export_object object name is already reserved:" .. (def.name or "?"))
 	end
 end
 
-local function sequential(t)
-	local p = 1
-	for i,_ in pairs(t) do
-		if i ~= p then return false end
-		p = p +1
-	end
-	return true
-end
+mineunit.utils = mineunit("assert")
+local sequential = mineunit.utils.sequential
+-- FIXME: Required for some existing tests
+count = mineunit.utils.count
 
 function mineunit.deep_merge(data, target, defaults)
 	if sequential(data) and #data > 0 then
@@ -303,40 +307,5 @@ function timeit(count, func, ...)
 	mineunit:info(("\nTimeit: %s:%d took %d ticks"):format(info.short_src, info.linedefined, diff))
 	return diff, info
 end
-
-function count(t)
-	if type(t) == "table" or type(t) == "userdata" then
-		local c = 0
-		for a,b in pairs(t) do
-			c = c + 1
-		end
-		return c
-	end
-	mineunit:warning("count(t)", "invalid value", type(t))
-end
-
-local function tabletype(t)
-	if type(t) == "table" or type(t) == "userdata" then
-		if count(t) == #t and sequential(t) then
-			return "array"
-		else
-			return "hash"
-		end
-	end
-	mineunit:warning("tabletype(t)", "invalid value", type(t))
-end
-
--- Busted test framework extensions
-
-local assert = require('luassert.assert')
-local say = require("say")
-
-local function is_array(_,args) return tabletype(args[1]) == "array" end
-say:set("assertion.is_indexed.negative", "Expected %s to be indexed array")
-assert:register("assertion", "is_indexed", is_array, "assertion.is_indexed.negative")
-
-local function is_hash(_,args) return tabletype(args[1]) == "hash" end
-say:set("assertion.is_hashed.negative", "Expected %s to be hash table")
-assert:register("assertion", "is_hashed", is_hash, "assertion.is_hashed.negative")
 
 mineunit:info("Mineunit initialized, current modname is", mineunit:get_current_modname())
