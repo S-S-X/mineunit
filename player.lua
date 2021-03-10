@@ -5,7 +5,7 @@ local players = {}
 
 _G.minetest.check_player_privs = function(player_or_name, ...)
 	local player_privs
-	if type(player_or_name) == "table" then
+	if type(player_or_name) == "table" or mineunit.utils.type(player_or_name) == "Player" then
 		player_privs = player_or_name._privs
 	else
 		player_privs = players[player_or_name]._privs
