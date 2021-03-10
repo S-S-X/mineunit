@@ -160,7 +160,11 @@ function InvRef:set_list(listname, list)
 end
 -- * `get_lists()`: returns list of inventory lists
 function InvRef:get_lists()
-	error("NOT IMPLEMENTED")
+	local results = {}
+	for listname,_ in pairs(self._lists) do
+		table.insert(results, listname)
+	end
+	return results
 end
 -- * `set_lists(lists)`: sets inventory lists (size will not change)
 function InvRef:set_lists(lists)

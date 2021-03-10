@@ -53,18 +53,13 @@ end
 --
 -- Minetest player API methods
 --
-function Player:get_player_control()
-	return table.copy(self._controls)
-end
-function Player:get_player_name()
-	return self._name
-end
-function Player:is_player()
-	return self._is_player
-end
-function Player:get_wielded_item()
-	return self._wield_item
-end
+
+function Player:get_player_control() return table.copy(self._controls) end
+function Player:get_player_name() return self._name end
+function Player:is_player() return self._is_player end
+function Player:get_wielded_item() return self._wield_item end
+function Player:get_meta() return self._meta end
+function Player:get_inventory() return self._inv end
 
 mineunit.export_object(Player, {
 	name = "Player",
@@ -76,6 +71,7 @@ mineunit.export_object(Player, {
 			_controls = {},
 			_wield_item = ItemStack(),
 			_meta = MetaDataRef(),
+			_inv = InvRef(),
 		}
 		players[obj._name] = obj
 		setmetatable(obj, Player)
