@@ -3,11 +3,35 @@ mineunit("core")
 
 local players = {}
 
-_G.minetest.check_player_privs = function(player_or_name, ...)
+function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
+
+function _G.core.get_player_privs(name)
+	assert.is_string(name, "core.get_player_privs: name: expected string, got "..type(name))
+	assert.is_Player(players[name], "core.get_player_privs: player not found: "..name)
+	local results = {}
+	for k, v in pairs(players[name]._privs) do
+		results[k] = v and true
+	end
+	return results
+end
+
+function _G.core.set_player_privs(name, privs)
+	assert.is_string(name, "core.set_player_privs: name: expected string, got "..type(name))
+	assert.is_table(privs, "core.set_player_privs: privs: expected table, got "..type(privs))
+	local new_privs = {}
+	for k, v in pairs(privs) do
+		new_privs[k] = v and true
+	end
+	players[name]._privs = new_privs
+end
+
+function _G.minetest.check_player_privs(player_or_name, ...)
 	local player_privs
 	if type(player_or_name) == "table" or mineunit.utils.type(player_or_name) == "Player" then
+		-- FIXME: This should use players[player_or_name:get_player_name()] instead of direct _privs
 		player_privs = player_or_name._privs
 	else
+		assert.is_string(name, "minetest.check_player_privs: player_or_name: expected string or Player")
 		player_privs = players[player_or_name]._privs
 	end
 	local missing_privs = {}
@@ -23,8 +47,12 @@ _G.minetest.check_player_privs = function(player_or_name, ...)
 	return has_priv, missing_privs
 end
 
-_G.minetest.get_player_by_name = function(name)
+function _G.minetest.get_player_by_name(name)
 	return players[name]
+end
+
+function _G.core.get_player_ip(...)
+	return "127.1.2.7"
 end
 
 --

@@ -87,7 +87,8 @@ local mineunit_types = {
 	"InvList",
 	"InvRef",
 	"MetaDataRef",
-	"NodeMetaRef"
+	"NodeMetaRef",
+	"Player"
 }
 for _, typename in ipairs(mineunit_types) do
 	local assertname = "is_" .. typename

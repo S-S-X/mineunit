@@ -63,6 +63,7 @@ end
 
 _G.minetest.after = noop
 
+_G.minetest.find_nodes_with_meta = _G.world.find_nodes_with_meta
 _G.minetest.get_node_or_nil = function(pos)
 	local hash = minetest.hash_node_position(pos)
 	return world.nodes[hash]

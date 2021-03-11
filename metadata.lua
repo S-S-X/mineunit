@@ -288,13 +288,3 @@ mineunit.export_object(NodeMetaRef, {
 		return obj
 	end,
 })
-
--- FIXME: Node metadata should be integrated with world layout to handle set_node and its friends
-local worldmeta = {}
-_G.minetest.get_meta = function(pos)
-	local nodeid = minetest.hash_node_position(pos)
-	if not worldmeta[nodeid] then
-		worldmeta[nodeid] = NodeMetaRef()
-	end
-	return worldmeta[nodeid]
-end
