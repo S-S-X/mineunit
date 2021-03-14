@@ -7,6 +7,9 @@ local noop_object = {
 
 _G.world = mineunit("world")
 
+_G.core.set_node = world.set_node
+_G.core.swap_node = world.swap_node
+
 _G.core.get_worldpath = function(...) return _G.mineunit:get_worldpath(...) end
 _G.core.get_modpath = function(...) return _G.mineunit:get_modpath(...) end
 _G.core.get_current_modname = function(...) return _G.mineunit:get_current_modname(...) end
@@ -60,6 +63,7 @@ end
 
 _G.minetest.after = noop
 
+_G.minetest.find_nodes_with_meta = _G.world.find_nodes_with_meta
 _G.minetest.get_node_or_nil = function(pos)
 	local hash = minetest.hash_node_position(pos)
 	return world.nodes[hash]

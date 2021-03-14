@@ -7,7 +7,15 @@ function ItemStack:is_empty() return self._count < 1 end
 --* `get_name()`: returns item name (e.g. `"default:stone"`).
 function ItemStack:get_name() return self._name end
 --* `set_name(item_name)`: returns a boolean indicating whether the item was cleared.
-function ItemStack:set_name(item_name) self._name = item_name end
+function ItemStack:set_name(item_name)
+	assert.is_string(item_name, "ItemStack:set_name expected item_name to be string")
+	self._name = item_name
+	if item_name == "" then
+		self:set_count(0)
+		return true
+	end
+	return false
+end
 --* `get_count()`: Returns number of items on the stack.
 function ItemStack:get_count() return self._count end
 --* `set_count(count)`: returns a boolean indicating whether the item was cleared
@@ -103,11 +111,29 @@ end
 --* `add_item(item)`: returns leftover `ItemStack`
 --    Put some item or stack onto this stack
 function ItemStack:add_item(item)
-	error("NOT IMPLEMENTED")
+	local stack = ItemStack(item)
+	local leftover = ItemStack(item)
+	local count = self:get_count()
+	local space = self._stack_max - count
+	if stack:get_count() > space then
+		self:set_count(self._stack_max)
+		leftover:set_count(stack:get_count() - space)
+	else
+		self:set_count(count + stack:get_count())
+		leftover:set_count(0)
+	end
+	return leftover
 end
 --* `item_fits(item)`: returns `true` if item or stack can be fully added to this one.
 function ItemStack:item_fits(item)
-	error("NOT IMPLEMENTED")
+	if self:is_empty() or self:get_name() == "" then
+		return true
+	end
+	local stack = ItemStack(item)
+	if self:get_name() == stack:get_name() then
+		return self:get_free_space() >= stack:get_count()
+	end
+	return false
 end
 --* `take_item(n)`: returns taken `ItemStack`
 --    Take (and remove) up to `n` items from this stack
@@ -130,6 +156,11 @@ function ItemStack:peek_item(n)
 	return res
 end
 
+function ItemStack:__tostring()
+	local count = self:get_count()
+	return 'ItemStack("' .. self:get_name() .. (count > 1 and " "..count or "") .. '")'
+end
+
 mineunit.export_object(ItemStack, {
 	name = "ItemStack",
 	constructor = function(self, value)
@@ -145,16 +176,18 @@ mineunit.export_object(ItemStack, {
 				_wear = (function(v) return v and tonumber(v) end)(m()),
 				_meta = MetaDataRef(m()),
 			}
-		elseif type(value) == "table" then
+		elseif mineunit.utils.type(value) == "ItemStack" then
 			obj = table.copy(value)
 			obj._meta = MetaDataRef(value._meta)
 		else
-			error("NOT IMPLEMENTED")
+			error("NOT IMPLEMENTED: " .. type(value))
 		end
-		obj._name = obj._name or nil
-		obj._count = obj._count or 0
+		local itemdef = obj._name and core.registered_items[obj._name]
+		obj._count = obj._count or (obj._name and 1 or 0)
+		obj._name = obj._name or ""
 		obj._wear = obj._wear or 0
 		obj._meta = obj._meta or MetaDataRef()
+		obj._stack_max = itemdef and itemdef.stack_max or 99
 		setmetatable(obj, ItemStack)
 		return obj
 	end,
