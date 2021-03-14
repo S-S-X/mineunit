@@ -1,6 +1,8 @@
 # mineunit
 Minetest core / engine libraries for regression tests
 
+![mineunit](https://mineunit-badges.000webhostapp.com/mt-mods/mineunit/coverage)
+
 Probably will not currently work with Windows so unless you want to help fixing things use Linux or similar OS.
 
 ### How to use mineunit
