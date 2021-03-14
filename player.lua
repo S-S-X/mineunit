@@ -1,6 +1,4 @@
 
-mineunit("core")
-
 local players = {}
 
 function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
@@ -25,13 +23,13 @@ function _G.core.set_player_privs(name, privs)
 	players[name]._privs = new_privs
 end
 
-function _G.minetest.check_player_privs(player_or_name, ...)
+function _G.core.check_player_privs(player_or_name, ...)
 	local player_privs
 	if type(player_or_name) == "table" or mineunit.utils.type(player_or_name) == "Player" then
 		-- FIXME: This should use players[player_or_name:get_player_name()] instead of direct _privs
 		player_privs = player_or_name._privs
 	else
-		assert.is_string(name, "minetest.check_player_privs: player_or_name: expected string or Player")
+		assert.is_string(name, "core.check_player_privs: player_or_name: expected string or Player")
 		player_privs = players[player_or_name]._privs
 	end
 	local missing_privs = {}
@@ -47,7 +45,7 @@ function _G.minetest.check_player_privs(player_or_name, ...)
 	return has_priv, missing_privs
 end
 
-function _G.minetest.get_player_by_name(name)
+function _G.core.get_player_by_name(name)
 	return players[name]
 end
 
