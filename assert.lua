@@ -70,17 +70,24 @@ local function is_hash(_,args) return tabletype(args[1]) == "hash" end
 say:set("assertion.is_hashed.negative", "Expected %s to be hash table")
 assert:register("assertion", "is_hashed", is_hash, "assertion.is_hashed.negative")
 
-local function more(_,args) return args[1] > args[2] end
-say:set("assertion.more.negative", "Expected %s to be more than %s")
-assert:register("assertion", "more", more, "assertion.more.negative")
+local function greaterthan(_,args) return args[1] > args[2] end
+say:set("assertion.gt.negative", "Expected %s to be more than %s")
+assert:register("assertion", "gt", greaterthan, "assertion.gt.negative")
 
-local function less(_,args) return args[1] < args[2] end
-say:set("assertion.less.negative", "Expected %s to be less than %s")
-assert:register("assertion", "less", less, "assertion.less.negative")
+local function lessthan(_,args) return args[1] < args[2] end
+say:set("assertion.lt.negative", "Expected %s to be less than %s")
+assert:register("assertion", "lt", lessthan, "assertion.lt.negative")
 
 local function check_in_array(_,args) return in_array(args[1], args[2]) end
 say:set("assertion.in_array.negative", "Expected %s to be in array %s")
 assert:register("assertion", "in_array", check_in_array, "assertion.in_array.negative")
+
+-- TODO: Check this one, should it actually check for mineunit_type Player instead of tble or userdata
+local function player_or_name(_,args)
+	return (type(args[1]) == "string" and args[1] ~= "") or in_array(type(args[1]), {"table", "userdata"})
+end
+say:set("assertion.player_or_name.negative", "Expected %s to be player or name")
+assert:register("assertion", "player_or_name", player_or_name, "assertion.player_or_name.negative")
 
 local mineunit_types = {
 	"ItemStack",

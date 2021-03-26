@@ -63,6 +63,7 @@ function MineunitHTTPServer:read(handle)
 		self._handles[handle] = false
 		return tablecopy(self._response)
 	end
+	mineunit:error("MineunitHTTPServer:read() invalid handle")
 end
 
 function MineunitHTTPServer:write(req)

@@ -25,24 +25,21 @@ end
 
 function _G.core.check_player_privs(player_or_name, ...)
 	local player_privs
-	if type(player_or_name) == "table" or mineunit.utils.type(player_or_name) == "Player" then
-		-- FIXME: This should use players[player_or_name:get_player_name()] instead of direct _privs
-		player_privs = player_or_name._privs
-	else
-		assert.is_string(name, "core.check_player_privs: player_or_name: expected string or Player")
+	assert.player_or_name(player_or_name, "core.check_player_privs: player_or_name: expected string or Player")
+	if type(player_or_name) == "string" then
+		assert.not_nil(players[player_or_name], "core.check_player_privs: player does not exist")
 		player_privs = players[player_or_name]._privs
+	else
+		player_privs = player_or_name._privs
 	end
 	local missing_privs = {}
-	local has_priv = false
 	local arg={...}
-	for _,priv in ipairs(arg) do
-		if player_privs[priv] then
-			has_priv = true
-		else
+	for _,priv in ipairs(type(arg[1]) == "table" and arg[1] or arg) do
+		if not player_privs[priv] then
 			table.insert(missing_privs, priv)
 		end
 	end
-	return has_priv, missing_privs
+	return #missing_privs == 0, missing_privs
 end
 
 function _G.core.get_player_by_name(name)
@@ -72,8 +69,8 @@ end
 function Player:_set_is_player(value)
 	self._is_player = not not value
 end
-function Player:_chat(message, channel)
-	mineunit:execute_modchannel_message(channel, self:get_player_name(), message)
+function Player:send_chat_message(message)
+	return mineunit:execute_on_chat_message(self:get_player_name(), message)
 end
 
 --
