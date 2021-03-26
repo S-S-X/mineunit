@@ -40,6 +40,7 @@ local assert = require('luassert.assert')
 -- Constants
 
 os.setlocale("C")
+INIT = "client"
 PLATFORM = "Linux"
 DIR_DELIM = "/"
 
@@ -50,6 +51,11 @@ _G.core = core
 
 function core.log(...) mineunit:info(...) end
 function core.request_http_api(...) end
+
+function core.gettext(value)
+	assert.is_string(value, "core.gettext: expected string, got " .. type(value))
+	return value
+end
 
 function core.get_timeofday()
 	return 0.5

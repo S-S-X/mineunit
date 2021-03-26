@@ -4,6 +4,8 @@
 --
 
 mineunit("nodetimer")
+mineunit("common/chatcommands")
+mineunit("game/chat")
 
 local world_nodetimers = {}
 _G.core.get_node_timer = function(pos)
@@ -45,6 +47,17 @@ function mineunit:execute_shutdown()
 	return core.run_callbacks(
 		core.registered_on_shutdown,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST
+	)
+end
+
+function mineunit:execute_on_chat_message(sender, message)
+	assert(type(sender) == "string", "Invalid call to mineunit:execute_modchannel_message")
+	assert(type(message) == "string", "Invalid call to mineunit:execute_modchannel_message")
+	return core.run_callbacks(
+		core.registered_on_chat_messages,
+		RunCallbacksMode.RUN_CALLBACKS_MODE_OR_SC,
+		sender,
+		message
 	)
 end
 
