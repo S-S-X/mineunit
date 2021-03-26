@@ -53,7 +53,20 @@ function type(value)
 	return mineunit_type(value) and "userdata" or lua_type(value)
 end
 
+--
 -- Mineunit luassert extensions
+--
+
+-- Patch spy.on method, see https://github.com/Olivine-Labs/luassert/pull/174
+local spy = require('luassert.spy')
+function spy.on(target_table, target_key)
+	local s = spy.new(target_table[target_key])
+	rawset(target_table, target_key, s)
+	-- store original data
+	s.target_table = target_table
+	s.target_key = target_key
+	return s
+end
 
 local assert = require('luassert.assert')
 local say = require("say")
