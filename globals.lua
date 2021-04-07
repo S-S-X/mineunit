@@ -66,6 +66,10 @@ function core.get_node_light(pos, timeofday)
 	return mineunit.utils.round(math.sin(timeofday * 3.14) * 15)
 end
 
+local json = require('mineunit.lib.json')
+core.write_json = json.encode
+core.parse_json = json.decode
+
 function core.register_craft(t)
 	assert.is_table(t, "core.register_craft: table expected, got " .. type(t))
 	if t.type == nil then

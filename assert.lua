@@ -60,6 +60,7 @@ end
 -- Patch spy.on method, see https://github.com/Olivine-Labs/luassert/pull/174
 local spy = require('luassert.spy')
 function spy.on(target_table, target_key)
+	assert(target_table, "Invalid argument #1 for spy.on(target_table, target_key)")
 	local s = spy.new(target_table[target_key])
 	rawset(target_table, target_key, s)
 	-- store original data
