@@ -92,6 +92,9 @@ function Player:get_wielded_item() return self._wield_item end
 function Player:get_meta() return self._meta end
 function Player:get_inventory() return self._inv end
 
+function Player:set_pos(pos) self._pos = table.copy(pos) end
+function Player:get_pos() return table.copy(self._pos) end
+
 mineunit.export_object(Player, {
 	name = "Player",
 	constructor = function(self, name, privs)
@@ -103,6 +106,7 @@ mineunit.export_object(Player, {
 			_wield_item = ItemStack(),
 			_meta = MetaDataRef(),
 			_inv = InvRef(),
+			_pos = {x=0,y=0,z=0},
 		}
 		players[obj._name] = obj
 		setmetatable(obj, Player)
