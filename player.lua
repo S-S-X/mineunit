@@ -50,6 +50,14 @@ function _G.core.get_player_ip(...)
 	return "127.1.2.7"
 end
 
+_G.core.get_connected_players = function()
+	local result = {}
+	for _,player in pairs(players) do
+		table.insert(result, player)
+	end
+	return result
+end
+
 --
 -- Mineunit player fixture API
 --

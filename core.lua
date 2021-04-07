@@ -46,6 +46,10 @@ _G.minetest.get_mod_storage = function()
 	return mod_storage
 end
 
+_G.minetest.sound_play = noop
+_G.minetest.sound_stop = noop
+_G.minetest.sound_fade = noop
+
 _G.minetest.registered_chatcommands = {}
 _G.minetest.register_chatcommand = noop
 _G.minetest.chat_send_player = function(...) print(unpack({...})) end
