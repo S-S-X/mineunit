@@ -20,7 +20,29 @@ _G.minetest = _G.core
 
 mineunit("settings")
 
-_G.core.settings = _G.Settings(fixture_path("minetest.cfg"))
+do
+	local file = io.open(fixture_path("minetest.cfg"), "r")
+	if file then
+		io.close(file)
+		-- Complain in a way that will not be easily ignored
+		-- FIXME: Remove this and ignore minetest.cfg in later versions
+		mineunit:error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		mineunit:error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		mineunit:error("")
+		mineunit:error("INVALID MINETEST CONFIGURATION FILE PATH FOUND:")
+		mineunit:error(fixture_path("minetest.cfg"))
+		mineunit:error("")
+		mineunit:error("PLEASE CHANGE NAME OF FILE TO BE minetest.conf:")
+		mineunit:error(fixture_path("minetest.conf"))
+		mineunit:error("")
+		mineunit:error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		mineunit:error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		-- Use that file anyway for now to not break existing projects
+		_G.core.settings = _G.Settings(fixture_path("minetest.cfg"))
+	else
+		_G.core.settings = _G.Settings(fixture_path("minetest.conf"))
+	end
+end
 
 _G.core.register_on_joinplayer = noop
 _G.core.register_on_leaveplayer = noop

@@ -108,8 +108,9 @@ do -- Parse cli args
 	while arg[i] do
 		local v = arg[i]
 		if v == "-V" or v == "--version" or v == "-h" or v == "--help" then
-			print("Mineunit v0.1-works-for-me")
-			print("mineunit [-c|--coverage]")
+			print("Mineunit v0.2-still-works-for-me")
+			print("mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>]")
+			print("mineunit -r|--report")
 			return
 		elseif v == "-c" or v == "--coverage" then
 			args.coverage = true
