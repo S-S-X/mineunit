@@ -234,8 +234,8 @@ local MetaDataRef = {}
 function MetaDataRef:contains(key) return self._data[key] ~= nil end
 function MetaDataRef:get(key) return self._data[key] end
 function MetaDataRef:set_string(key, value)
-	value = value ~= nil and tostring(value)
-	self._data[key] = value ~= "" and value
+	value = value ~= nil and tostring(value) or ""
+	self._data[key] = value ~= "" and value or nil
 end
 function MetaDataRef:get_string(key) return self._data[key] or "" end
 function MetaDataRef:set_int(key, value) self:set_string(key, math.floor(value)) end
