@@ -81,6 +81,63 @@ function Player:send_chat_message(message)
 	return mineunit:execute_on_chat_message(self:get_player_name(), message)
 end
 
+-- TODO: do_metadata_inventory_put does not follow exact engine behavior but should be fine for testing simple inv moves
+function Player:do_metadata_inventory_put(pos, listname, index, stack)
+	-- Test if items can be moved
+	local def = core.registered_nodes[core.get_node(pos).name]
+	stack = ItemStack(stack)
+	local can_put_count = stack:get_count()
+	if def.allow_metadata_inventory_put then
+		can_put_count = def.allow_metadata_inventory_put(pos, listname, index, stack, self)
+	end
+	-- Move items
+	if can_put_count > 0 then
+		local playerinv = self:get_inventory()
+		local inv = core.get_meta(pos):get_inventory()
+		local oldstack = inv:get_stack(listname, index)
+		if not oldstack:is_empty() and playerinv:room_for_item("main", oldstack) then
+			-- Old stack to player inventory if there's enough space
+			playerinv:add_item("main", oldstack)
+		end
+		-- Place stack into inventory
+		inv:set_stack(listname, index, stack:take_item(can_put_count))
+		-- Return leftovers to player inventory
+		if not stack:is_empty() and playerinv:room_for_item("main", stack) then
+			-- Leftovers to player inventory if there's enough space
+			playerinv:add_item("main", stack)
+		end
+		-- Callbacks
+		if def.on_metadata_inventory_put then
+			def.on_metadata_inventory_put(pos, listname, index, stack, self)
+		end
+	end
+end
+
+function Player:do_metadata_inventory_take(pos, listname, index)
+	-- Test if items can be moved
+	local def = core.registered_nodes[core.get_node(pos).name]
+	local inv = core.get_meta(pos):get_inventory()
+	local stack = inv:get_stack(listname, index)
+	local can_take_count = stack:get_count()
+	if def.allow_metadata_inventory_take then
+		can_take_count = math.min(def.allow_metadata_inventory_take(pos, listname, index, stack, self), can_take_count)
+	end
+	-- Move items
+	if can_take_count > 0 then
+		local playerinv = self:get_inventory()
+		if playerinv:room_for_item("main", stack) then
+			-- Stack to player inventory if there's enough space
+			playerinv:add_item("main", stack)
+		end
+		-- Remove stack from inventory
+		inv:set_stack(listname, index, ItemStack())
+		-- Callbacks
+		if def.on_metadata_inventory_put then
+			def.on_metadata_inventory_take(pos, listname, index, stack, self)
+		end
+	end
+end
+
 --
 -- Minetest player API methods
 --
