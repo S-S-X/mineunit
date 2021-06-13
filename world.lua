@@ -9,6 +9,20 @@ local function call(fn, ...)
 	end
 end
 
+-- FIXME: Node metadata should be integrated with world layout to handle set_node and its friends
+local worldmeta = {}
+function _G.core.get_meta(pos)
+	local nodeid = minetest.hash_node_position(pos)
+	if not worldmeta[nodeid] then
+		worldmeta[nodeid] = NodeMetaRef()
+	end
+	return worldmeta[nodeid]
+end
+
+function world.clear_meta(pos)
+	worldmeta[minetest.hash_node_position(pos)] = nil
+end
+
 -- Static pointed_thing
 local function get_pointed_thing(pos, pointed_thing_type)
 	return {
@@ -20,6 +34,7 @@ end
 
 -- set_node sets world node without callbacks
 function world.set_node(pos, node)
+	world.clear_meta(pos)
 	node = type(node) == "table" and node or { name = node, param2 = 0 }
 	assert(type(node.name) == "string", "Invalid node name, expected string but got " .. tostring(node.name))
 	local hash = minetest.hash_node_position(pos)
@@ -51,16 +66,6 @@ function world.place_node(pos, node, placer, itemstack, pointed_thing)
 		pointed_thing = pointed_thing or get_pointed_thing(pos)
 		call(nodedef.after_place_node, pos, placer, itemstack, pointed_thing)
 	end
-end
-
--- FIXME: Node metadata should be integrated with world layout to handle set_node and its friends
-local worldmeta = {}
-function _G.core.get_meta(pos)
-	local nodeid = minetest.hash_node_position(pos)
-	if not worldmeta[nodeid] then
-		worldmeta[nodeid] = NodeMetaRef()
-	end
-	return worldmeta[nodeid]
 end
 
 local function has_meta(pos)
@@ -99,6 +104,10 @@ function world.find_nodes_with_meta(p1, p2)
 		end
 	end
 	return results
+end
+
+function world.remove_node(pos, node, placer, itemstack, pointed_thing)
+	world.set_node(pos, {name="air"})
 end
 
 function world.clear()
