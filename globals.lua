@@ -130,6 +130,14 @@ function core.get_craft_result(t)
 		assert(#t.items > 0, "core.get_craft_result: t.items is empty")
 		for k, v in ipairs(t.items) do
 			assert.is_ItemStack(v, "core.get_craft_result: t.items["..k.."] ItemStack expected")
+			--assert(#v:get_name() > 0, "core.get_craft_result: t.items["..k.."] invalid ItemStack")
+			if #v:get_name() == 0 then
+				return
+			end
+		end
+	else
+		if #t.items:get_name() == 0 then
+			return
 		end
 	end
 	local items = is_ItemStack(t.items) and {t.items} or t.items
@@ -154,7 +162,7 @@ function core.get_craft_result(t)
 				}
 		end
 	end
-	error("FAILED")
+	error("core.get_craft_result failed, input was: "..dump(t))
 	return {
 		item = ItemStack(),
 		time = 0,

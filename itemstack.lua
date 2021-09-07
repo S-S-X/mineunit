@@ -79,7 +79,13 @@ function ItemStack:to_string()
 end
 --* `to_table()`: returns the stack in Lua table form.
 function ItemStack:to_table()
-	error("NOT IMPLEMENTED")
+	-- FIXME: Format is probably wrong, missing something or has too much something. Check actual spec and fix.
+	return {
+		name = self:get_name(),
+		count = self:get_count(),
+		wear = self:get_wear(),
+		meta = self:get_meta():to_table(),
+	}
 end
 --* `get_stack_max()`: returns the maximum size of the stack (depends on the item).
 function ItemStack:get_stack_max()
