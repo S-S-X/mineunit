@@ -20,6 +20,9 @@ function _G.core.get_meta(pos)
 end
 
 function world.clear_meta(pos)
+	if mineunit.destroy_nodetimer then
+		mineunit:destroy_nodetimer(pos)
+	end
 	worldmeta[minetest.hash_node_position(pos)] = nil
 end
 
@@ -32,20 +35,28 @@ local function get_pointed_thing(pos, pointed_thing_type)
 	}
 end
 
--- set_node sets world node without callbacks
+-- set_node sets world node without place/dig callbacks
 function world.set_node(pos, node)
-	world.clear_meta(pos)
 	node = type(node) == "table" and node or { name = node, param2 = 0 }
 	assert(type(node.name) == "string", "Invalid node name, expected string but got " .. tostring(node.name))
 	local hash = minetest.hash_node_position(pos)
-	world.nodes[hash] = node
 	local nodedef = core.registered_nodes[node.name]
+	local oldnode = world.nodes[hash]
+	local oldnodedef = oldnode and core.registered_nodes[oldnode.name]
+	if oldnodedef then
+		call(nodedef.on_destruct, pos)
+	end
+	world.clear_meta(pos)
+	world.nodes[hash] = node
+	if oldnodedef then
+		call(nodedef.after_destruct, pos, oldnode)
+	end
 	if nodedef then
 		call(nodedef.on_construct, pos)
 	end
 end
 
--- swap_node sets world node without callbacks
+-- swap_node sets world node without any callbacks
 function world.swap_node(pos, node)
 	local hash = minetest.hash_node_position(pos)
 	node = type(node) == "table" and node or { name = node }
@@ -106,7 +117,7 @@ function world.find_nodes_with_meta(p1, p2)
 	return results
 end
 
-function world.remove_node(pos, node, placer, itemstack, pointed_thing)
+function world.remove_node(pos)
 	world.set_node(pos, {name="air"})
 end
 
