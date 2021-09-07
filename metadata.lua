@@ -242,7 +242,14 @@ function MetaDataRef:set_int(key, value) self:set_string(key, math.floor(value))
 function MetaDataRef:get_int(key) return math.floor(tonumber(self._data[key]) or 0) end
 function MetaDataRef:set_float(key, value) self:set_string(key, value) end
 function MetaDataRef:get_float(key) return tonumber(self._data[key]) or 0 end
-function MetaDataRef:to_table() error("NOT IMPLEMENTED") end
+function MetaDataRef:to_table()
+	-- FIXME: This is wrong almost sure, check actual engine spec and fix it to return correct format.
+	local result = {}
+	for key, value in pairs(self._data) do
+		result[key] = tostring(value)
+	end
+	return result
+end
 function MetaDataRef:from_table(t) error("NOT IMPLEMENTED") end
 function MetaDataRef:equals(other) error("NOT IMPLEMENTED") end
 

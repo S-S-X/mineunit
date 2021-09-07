@@ -9,6 +9,14 @@ local function call(fn, ...)
 	end
 end
 
+local function create_node(node, defaults)
+	node = type(node) == "table" and node or { name = node }
+	return {
+		name = node.name and node.name or (defaults and defaults.name),
+		param2 = node.param2 and node.param2 or (defaults and defaults.param2 or 0),
+	}
+end
+
 -- FIXME: Node metadata should be integrated with world layout to handle set_node and its friends
 local worldmeta = {}
 function _G.core.get_meta(pos)
@@ -37,7 +45,7 @@ end
 
 -- set_node sets world node without place/dig callbacks
 function world.set_node(pos, node)
-	node = type(node) == "table" and node or { name = node, param2 = 0 }
+	node = create_node(node)
 	assert(type(node.name) == "string", "Invalid node name, expected string but got " .. tostring(node.name))
 	local hash = minetest.hash_node_position(pos)
 	local nodedef = core.registered_nodes[node.name]
@@ -59,8 +67,7 @@ end
 -- swap_node sets world node without any callbacks
 function world.swap_node(pos, node)
 	local hash = minetest.hash_node_position(pos)
-	node = type(node) == "table" and node or { name = node }
-	node.param2 = world.nodes[hash] and world.nodes[hash].param2 or 0
+	node = create_node(node, world.nodes[hash])
 	assert(type(node.name) == "string", "Invalid node name, expected string but got " .. tostring(node.name))
 	world.nodes[hash] = node
 end
@@ -69,6 +76,7 @@ end
 -- minetest.item_place_node / minetest.place_node.
 -- If return true no item is taken from itemstack.
 function world.place_node(pos, node, placer, itemstack, pointed_thing)
+	node = create_node(node)
 	world.set_node(pos, node)
 	local nodedef = core.registered_nodes[node.name]
 	assert(nodedef, "Invalid nodedef for " .. tostring(node.name))
