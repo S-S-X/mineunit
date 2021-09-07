@@ -151,7 +151,7 @@ function InvRef:set_stack(listname, i, stack)
 end
 -- * `get_list(listname)`: return full list
 function InvRef:get_list(listname)
-	mineunit:warning("InvRef:get_list returning list "..listname.." as reference, this can lead to unxpected results")
+	mineunit:debug("InvRef:get_list returning list "..listname.." as reference, this can lead to unxpected results")
 	return self._lists[listname]
 end
 -- * `set_list(listname, list)`: set full list (size will not change)
