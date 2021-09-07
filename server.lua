@@ -16,6 +16,70 @@ _G.core.get_node_timer = function(pos)
 	return world_nodetimers[node_id]
 end
 
+function mineunit:destroy_nodetimer(pos)
+	local node_id = core.hash_node_position(pos)
+	if world_nodetimers[node_id] then
+		world_nodetimers[node_id] = nil
+	end
+end
+
+local function match_nodenames(needle, strings)
+	if type(strings) == "table" then
+		for _,name in pairs(strings) do
+			if name:sub(1,6) == "group:" then
+				local group = name:sub(7)
+				for _,nodedef in pairs(core.registered_nodes) do
+					if nodedef.groups[group] then
+						return true
+					end
+				end
+			elseif name == needle then
+				return true
+			end
+		end
+	elseif strings:sub(1,6) == "group:" then
+		local group = strings:sub(7)
+		for _,nodedef in pairs(core.registered_nodes) do
+			if nodedef.groups[group] then
+				return true
+			end
+		end
+	elseif strings == needle then
+		return true
+	end
+	return false
+end
+
+local function match_neighbor(pos, nodenames)
+	-- TODO: Make sure this is how engine actually looks for neighbors
+	for x=-1,1 do
+		for y=-1,1 do
+			for z=-1,1 do
+				-- Skip pos itself
+				if not (x == 0 and y == 0 and z == 0) then
+					local node = world.nodes[core.hash_node_position({x=x,y=y,z=z})]
+					if node and match_nodenames(node.name, nodenames) then
+						return true
+					end
+				end
+			end
+		end
+	end
+end
+
+local function run_abm(spec)
+	for id, node in pairs(world.nodes) do
+		-- TODO: Allow spec.chance tests here? Ignored to keep results consistent and reproducible
+		if match_nodenames(node.name, spec.nodenames) then
+			local pos = core.get_position_from_hash(id)
+			if not spec.neighbors or match_neighbor(pos, spec.neighbors) then
+				-- FIXME: active_object_count, active_object_count_wider. Entities not supported by mineunit.
+				spec.action(pos, node, 0, 0)
+			end
+		end
+	end
+end
+
 --
 -- Execute callbacks
 --
@@ -35,6 +99,13 @@ function mineunit:execute_globalstep(dtime)
 	dtime = dtime or 0.1
 	for node_id, timer in pairs(world_nodetimers) do
 		timer:_step(dtime, core.get_position_from_hash(node_id))
+	end
+	for _,spec in pairs(core.registered_abms) do
+		spec._dtime = spec._dtime and spec._dtime + dtime or dtime
+		if spec._dtime >= spec.interval then
+			run_abm(spec)
+			spec._dtime = 0
+		end
 	end
 	return core.run_callbacks(
 		core.registered_globalsteps,
