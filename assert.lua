@@ -50,7 +50,11 @@ local function mineunit_type(obj)
 end
 
 function type(value)
-	return mineunit_type(value) and "userdata" or lua_type(value)
+	local typename = mineunit_type(value)
+	if typename then
+		return typename == "table" and "table" or "userdata"
+	end
+	return lua_type(value)
 end
 
 --
@@ -105,7 +109,6 @@ assert:register("assertion", "player_or_name", player_or_name, "assertion.player
 
 local mineunit_types = {
 	"ItemStack",
-	"InvList",
 	"InvRef",
 	"MetaDataRef",
 	"NodeMetaRef",

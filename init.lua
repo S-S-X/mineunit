@@ -191,7 +191,7 @@ function mineunit.export_object(obj, def)
 		setmetatable(obj, {
 			__call = function(...)
 				local obj = def.constructor(...)
-				obj._mineunit_typename = def.name
+				obj._mineunit_typename = def.typename or def.name
 				return obj
 			end
 		})

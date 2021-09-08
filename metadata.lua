@@ -87,6 +87,7 @@ end
 mineunit.export_object(InvList, {
 	private = true,
 	name = "InvList",
+	typename = "table",
 	constructor = function(self, value)
 		local obj = {
 			_count = 0,
