@@ -88,10 +88,24 @@ _G.minetest.clear_registered_ores = function(...) error("MINEUNIT UNSUPPORTED CO
 _G.minetest.register_decoration = noop
 _G.minetest.clear_registered_decorations = function(...) error("MINEUNIT UNSUPPORTED CORE METHOD") end
 
-_G.minetest.get_us_time = function()
-	local socket = require 'socket'
-	-- FIXME: Returns the time in seconds, relative to the origin of the universe.
-	return socket.gettime() * 1000 * 1000
+do
+	local time_step = tonumber(mineunit:config("time_step"))
+	assert(time_step, "Invalid configuration value for time_step. Number expected.")
+	if time_step < 0 then
+		mineunit:info("Running default core.get_us_time using real world wall clock.")
+		_G.minetest.get_us_time = function()
+			local socket = require 'socket'
+			-- FIXME: Returns the time in seconds, relative to the origin of the universe.
+			return socket.gettime() * 1000 * 1000
+		end
+	else
+		mineunit:info("Running custom core.get_us_time with step increment: "..tostring(time_step))
+		local time_now = 0
+		_G.minetest.get_us_time = function()
+			time_now = time_now + time_step
+			return time_now
+		end
+	end
 end
 
 _G.minetest.after = noop

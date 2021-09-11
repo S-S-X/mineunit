@@ -22,6 +22,7 @@ local default_config = {
 		"spec/fixtures"
 	},
 	source_path = ".",
+	time_step = -1,
 }
 
 mineunit = {
