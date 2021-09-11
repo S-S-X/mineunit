@@ -81,6 +81,13 @@ _G.minetest.register_on_dignode = noop
 _G.minetest.register_on_mods_loaded = function(func) mineunit:register_on_mods_loaded(func) end
 _G.minetest.item_drop = noop
 
+_G.minetest.register_biome = noop
+_G.minetest.clear_registered_biomes = function(...) error("MINEUNIT UNSUPPORTED CORE METHOD") end
+_G.minetest.register_ore = noop
+_G.minetest.clear_registered_ores = function(...) error("MINEUNIT UNSUPPORTED CORE METHOD") end
+_G.minetest.register_decoration = noop
+_G.minetest.clear_registered_decorations = function(...) error("MINEUNIT UNSUPPORTED CORE METHOD") end
+
 _G.minetest.get_us_time = function()
 	local socket = require 'socket'
 	-- FIXME: Returns the time in seconds, relative to the origin of the universe.
