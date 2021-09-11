@@ -14,7 +14,7 @@ end
 local InvList = {}
 InvList.__index = InvList
 
-function InvList:set_size(size)
+function InvList:_set_size(size)
 	assert(size >= 0, "InvList:set_size: Negative size not acceptable")
 	if size < #self then
 		for i = #self, size + 1, -1 do
@@ -28,25 +28,19 @@ function InvList:set_size(size)
 	end
 end
 
-function InvList:get_size()
-	return #self
-end
-
-function InvList:get_count()
+function InvList:_get_count()
+	-- FIXME: should go through items and execute is_empty for each, possibly remove completely
 	return self._count
 end
 
-function InvList:is_empty()
-	return self:get_count() < 1
+function InvList:_is_empty()
+	-- FIXME: should go through items and execute is_empty for each, possibly remove completely
+	return self:_get_count() < 1
 end
 
-function InvList:get_stack(index)
-	assert_invlist_index(index, self:get_size())
-	return ItemStack(self[index])
-end
-
-function InvList:set_stack(index, itemstack)
-	assert_invlist_index(index, self:get_size())
+function InvList:_set_stack(index, itemstack)
+	-- FIXME: tracking item count is inaccurate if data is modified directly, remove method and only allow direct access
+	assert_invlist_index(index, #self)
 	local stack = ItemStack(itemstack)
 	local self_empty = self[index]:is_empty()
 	local stack_empty = stack:is_empty()
@@ -60,12 +54,12 @@ function InvList:set_stack(index, itemstack)
 	self[index] = stack
 end
 
-function InvList:add_stack(itemstack)
+function InvList:_add_stack(itemstack)
 	if not ItemStack(itemstack):is_empty() then
-		for index = 1, self:get_size() do
+		for index = 1, #self do
 			if self[index]:is_empty() then
 				-- Empty slot found
-				self:set_stack(index, itemstack)
+				self:_set_stack(index, itemstack)
 				return true
 			elseif self[index]:item_fits(itemstack) then
 				-- Slot with enough space found
@@ -81,7 +75,7 @@ function InvList:__tostring()
 	for _, item in ipairs(self) do
 		table.insert(items, tostring(item))
 	end
-	return ('InvList({%s}, %d, %d)'):format(table.concat(items, ","), self:get_count(), self:get_size())
+	return ('InvList({%s}, %d, %d)'):format(table.concat(items, ","), self:_get_count(), #self)
 end
 
 mineunit.export_object(InvList, {
@@ -93,10 +87,10 @@ mineunit.export_object(InvList, {
 			_count = 0,
 		}
 		setmetatable(obj, InvList)
-		if mineunit.utils.type(value) == "InvList" or type(value) == "table" then
-			obj:set_size(#value)
+		if type(value) == "table" then
+			obj:_set_size(#value)
 			for _, stack in ipairs(value) do
-				obj:add_stack(stack)
+				obj:_add_stack(stack)
 			end
 		elseif value ~= nil then
 			error("TYPE NOT IMPLEMENTED: " .. type(value))
@@ -112,11 +106,11 @@ mineunit.export_object(InvList, {
 local InvRef = {}
 -- * `is_empty(listname)`: return `true` if list is empty
 function InvRef:is_empty(listname)
-	return (not self._lists[listname]) or self._lists[listname]:is_empty()
+	return (not self._lists[listname]) or self._lists[listname]:_is_empty()
 end
 -- * `get_size(listname)`: get size of a list
 function InvRef:get_size(listname)
-	return self._lists[listname] and self._lists[listname]:get_size() or 0
+	return self._lists[listname] and #self._lists[listname] or 0
 end
 -- * `set_size(listname, size)`: set size of a list
 --    * returns `false` on error (e.g. invalid `listname` or `size`)
@@ -125,7 +119,7 @@ function InvRef:set_size(listname, size)
 		if not self._lists[listname] then
 			self._lists[listname] = InvList()
 		end
-		self._lists[listname]:set_size(size)
+		self._lists[listname]:_set_size(size)
 		return true
 	end
 	return false
@@ -139,16 +133,17 @@ function InvRef:set_width(listname, width)
 	error("NOT IMPLEMENTED")
 end
 -- * `get_stack(listname, i)`: get a copy of stack index `i` in list
-function InvRef:get_stack(listname, i)
+function InvRef:get_stack(listname, index)
 	local list = self:get_list(listname)
 	assert(list, "InvRef:set_stack: Invalid inventory list " .. tostring(list))
-	return list:get_stack(i)
+	assert_invlist_index(index, #list)
+	return ItemStack(list[index])
 end
 -- * `set_stack(listname, i, stack)`: copy `stack` to index `i` in list
 function InvRef:set_stack(listname, i, stack)
 	local list = self:get_list(listname)
 	assert(list, "InvRef:set_stack: Invalid inventory list " .. tostring(list))
-	list:set_stack(i, stack)
+	list:_set_stack(i, stack)
 end
 -- * `get_list(listname)`: return full list
 function InvRef:get_list(listname)
@@ -177,7 +172,7 @@ end
 function InvRef:add_item(listname, stack)
 	local list = self:get_list(listname)
 	assert(list, "InvRef:set_stack: Invalid inventory list " .. tostring(list))
-	list:add_stack(stack)
+	list:_add_stack(stack)
 end
 -- * `room_for_item(listname, stack)`: returns `true` if the stack of items can be fully added to the list
 function InvRef:room_for_item(listname, stack)
