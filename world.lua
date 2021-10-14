@@ -104,13 +104,71 @@ local function has_meta(pos)
 	end
 end
 
+-- FIXME: Does not handle node groups at all, groups are completely ignored
+function world.find_nodes_in_area(p1, p2, nodenames, grouped)
+	assert.is_table(p1, "Invalid p1, table expected")
+	assert.is_table(p2, "Invalid p2, table expected")
+	local sx, sy, sz = math.min(p1.x, p2.x), math.min(p1.y, p2.y), math.min(p1.z, p2.z)
+	local ex, ey, ez = math.max(p1.x, p2.x), math.max(p1.y, p2.y), math.max(p1.z, p2.z)
+	assert((sx - ex) * (sy - ey) * (sz - ez) <= 4096000, "find_nodes_in_area area limit exceeded, see documentation")
+
+	-- Create lookup table for nodenames
+	local names = {}
+	if type(nodenames) == "table" then
+		for _, name in ipairs(nodenames) do
+			names[name] = true
+		end
+	else
+		names = { [nodenames] = true }
+	end
+
+	-- Find nodes
+	if grouped then
+		local results = {}
+		for x = sx, ex do
+			for y = sy, ey do
+				for z = sz, ez do
+					local hash = minetest.hash_node_position({x=x, y=y, z=z})
+					local node = world.nodes[hash]
+					if node and node.name and names[node.name] then
+						if not results[node.name] then
+							results[node.name] = {}
+						end
+						table.insert(results[node.name], pos)
+					end
+				end
+			end
+		end
+		return results
+	else
+		local positions = {}
+		local counts = {}
+		for x = sx, ex do
+			for y = sy, ey do
+				for z = sz, ez do
+					local hash = minetest.hash_node_position({x=x, y=y, z=z})
+					local node = world.nodes[hash]
+					if node and node.name and names[node.name] then
+						table.insert(positions, pos)
+						if not counts[node.name] then
+							counts[node.name] = 1
+						end
+						counts[node.name] = counts[node.name] + 1
+					end
+				end
+			end
+		end
+		return positions, counts
+	end
+	error("world.find_nodes_in_area unexpected error (yes, bug)")
+end
+
 function world.find_nodes_with_meta(p1, p2)
 	assert.is_table(p1, "Invalid p1, table expected")
 	assert.is_table(p2, "Invalid p2, table expected")
 	local sx, sy, sz = math.min(p1.x, p2.x), math.min(p1.y, p2.y), math.min(p1.z, p2.z)
 	local ex, ey, ez = math.max(p1.x, p2.x), math.max(p1.y, p2.y), math.max(p1.z, p2.z)
 	local get_meta = minetest.get_meta
-	local count = mineunit.utils.count
 	local results = {}
 	for x = sx, ex do
 		for y = sy, ey do
