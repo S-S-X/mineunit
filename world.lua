@@ -135,8 +135,8 @@ function world.find_nodes_in_area(p1, p2, nodenames, grouped)
 		for x = sx, ex do
 			for y = sy, ey do
 				for z = sz, ez do
-					local hash = minetest.hash_node_position({x=x, y=y, z=z})
-					local node = world.nodes[hash]
+					local pos = {x=x, y=y, z=z}
+					local node = minetest.get_node_or_nil(pos)
 					if node and node.name and names[node.name] then
 						if not results[node.name] then
 							results[node.name] = {}
@@ -153,8 +153,8 @@ function world.find_nodes_in_area(p1, p2, nodenames, grouped)
 		for x = sx, ex do
 			for y = sy, ey do
 				for z = sz, ez do
-					local hash = minetest.hash_node_position({x=x, y=y, z=z})
-					local node = world.nodes[hash]
+					local pos = {x=x, y=y, z=z}
+					local node = minetest.get_node_or_nil(pos)
 					if node and node.name and names[node.name] then
 						table.insert(positions, pos)
 						if not counts[node.name] then
