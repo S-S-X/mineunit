@@ -274,6 +274,16 @@ testFileLoader({"spec"}, {"_spec"}, {
 	recursive = nil,
 })
 
+if rawget(_G, "jit") then
+	local prof = require("mineunit.jit-p")
+	busted.subscribe({"test", "start"}, function(e, p)
+		prof.start("-3li1m1", output, function() io.write("# Profiler: "..p.name.." "..e.name.."\n") end)
+	end)
+	busted.subscribe({"test", "end"}, function()
+		prof.stop()
+	end)
+end
+
 local execute = require("busted.execute")(busted)
 execute(args.runs, {
 	seed = nil,
