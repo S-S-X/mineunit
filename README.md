@@ -5,14 +5,20 @@ Minetest core / engine libraries for regression tests
 
 Probably will not currently work with Windows so unless you want to help fixing things use Linux or similar OS.
 
+Github integration is available to automatically execute tests when new code is pushed: https://github.com/marketplace/actions/mineunit-runner
+
 ### How to use mineunit
+
+Install mineunit and create spec directory for tests:
 ```bash
+$ luarocks install --server=https://luarocks.org/dev --local mineunit
 $ cd ~/.minetest/mods/my_minetest_mod
 $ mkdir spec
-$ git submodule add git@github.com:mt-mods/mineunit.git spec/mineunit
 ```
 
-See examples below.
+* Add tests by creating test files inside `spec` directory.
+* File names should match pattern `*_spec.lua`, for example `mymod_spec.lua`.
+* See examples below for possible spec file contents.
 
 ### Define world for tests
 
@@ -145,7 +151,7 @@ end)
 | common/serialize    | Minetest engine library.
 | common/fs           | Minetest engine library.
 
-It is recommended to alway load `core` module instead of selecting individual automatically loaded modules.
+It is recommended to always load `core` module instead of selecting individual automatically loaded modules.
 
 #### Additional modules
 
