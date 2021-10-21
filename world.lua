@@ -27,6 +27,13 @@ function _G.core.get_meta(pos)
 	return worldmeta[nodeid]
 end
 
+-- FIXME: Should also execute other related callbacks
+function world.on_dig(pos, node, digger)
+	node = node or minetest.get_node(pos)
+	local nodedef = minetest.registered_nodes[node.name]
+	return nodedef and call(nodedef.on_dig, pos, node, digger) and true or false
+end
+
 function world.clear_meta(pos)
 	if mineunit.destroy_nodetimer then
 		mineunit:destroy_nodetimer(pos)

@@ -79,7 +79,9 @@ _G.minetest.register_on_player_receive_fields = noop
 _G.minetest.register_on_placenode = noop
 _G.minetest.register_on_dignode = noop
 _G.minetest.register_on_mods_loaded = function(func) mineunit:register_on_mods_loaded(func) end
+
 _G.minetest.item_drop = noop
+_G.minetest.add_item = noop
 
 _G.minetest.register_biome = noop
 _G.minetest.clear_registered_biomes = function(...) error("MINEUNIT UNSUPPORTED CORE METHOD") end
@@ -116,9 +118,10 @@ _G.minetest.get_node_or_nil = function(pos)
 	local hash = minetest.hash_node_position(pos)
 	return world.nodes[hash]
 end
-_G.minetest.get_node = function(pos)
-	return minetest.get_node_or_nil(pos) or {name="IGNORE",param2=0}
-end
+_G.minetest.get_node = function(pos) return minetest.get_node_or_nil(pos) or {name="IGNORE",param2=0} end
+_G.minetest.dig_node = function(pos) return world.on_dig(pos) and true or false end
+_G.minetest.remove_node = world.remove_node
+
 _G.minetest.get_node_timer = {}
 setmetatable(_G.minetest.get_node_timer, noop_object)
 
