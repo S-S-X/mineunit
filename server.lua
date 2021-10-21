@@ -123,6 +123,7 @@ end
 
 function mineunit:execute_on_joinplayer(player, lastlogin)
 	assert.is_Player(player, "Invalid call to mineunit:execute_on_joinplayer")
+	player._online = true
 	return core.run_callbacks(
 		core.registered_on_joinplayers,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
@@ -133,6 +134,7 @@ end
 
 function mineunit:execute_on_leaveplayer(player, timeout)
 	assert.is_Player(player, "Invalid call to mineunit:execute_on_leaveplayer")
+	player._online = false
 	return core.run_callbacks(
 		core.registered_on_leaveplayers,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
