@@ -23,42 +23,30 @@ function mineunit:destroy_nodetimer(pos)
 	end
 end
 
-local function match_nodenames(needle, strings)
-	if type(strings) == "table" then
-		for _,name in pairs(strings) do
-			if name:sub(1,6) == "group:" then
-				local group = name:sub(7)
-				for _,nodedef in pairs(core.registered_nodes) do
-					if nodedef.groups[group] then
-						return true
-					end
-				end
-			elseif name == needle then
-				return true
-			end
-		end
-	elseif strings:sub(1,6) == "group:" then
-		local group = strings:sub(7)
-		for _,nodedef in pairs(core.registered_nodes) do
-			if nodedef.groups[group] then
-				return true
-			end
-		end
-	elseif strings == needle then
+local function match_nodes(nodename, nodegroups, nodes, groups)
+	if nodes[needle] then
 		return true
+	elseif nodegroups then
+		for group,_ in pairs(nodegroups) do
+			if groups[group] then
+				return true
+			end
+		end
 	end
 	return false
 end
 
-local function match_neighbor(pos, nodenames)
+local function match_neighbor(pos, nodes, groups)
 	-- TODO: Make sure this is how engine actually looks for neighbors
+	local rnodes = core.registered_nodes
 	for x=-1,1 do
 		for y=-1,1 do
 			for z=-1,1 do
 				-- Skip pos itself
 				if not (x == 0 and y == 0 and z == 0) then
 					local node = world.nodes[core.hash_node_position({x=x,y=y,z=z})]
-					if node and match_nodenames(node.name, nodenames) then
+					local name = node and node.name
+					if name and match_nodes(name, rnodes[name] and rnodes[name].groups, nodes, groups) then
 						return true
 					end
 				end
@@ -67,12 +55,38 @@ local function match_neighbor(pos, nodenames)
 	end
 end
 
+local function get_nodes_and_groups(list)
+	local nodes, groups = {}, {}
+	for _,name in pairs(type(list) == "table" and list or {list}) do
+		if name:sub(1,6) == "group:" then
+			groups[name:sub(7)] = 1
+		else
+			nodes[name] = 1
+		end
+	end
+	return nodes, groups
+end
+
+local function abm_cache(spec)
+	if not spec._nodenames and spec.nodenames then
+		spec._nodenames, spec._groupnames = get_nodes_and_groups(spec.nodenames)
+		if not spec._neighbors_nodes and spec.neighbors then
+			spec._neighbors_nodes, spec._neighbors_groups = get_nodes_and_groups(spec.neighbors)
+		end
+	end
+end
+
 local function run_abm(spec)
+	abm_cache(spec)
 	for id, node in pairs(world.nodes) do
 		-- TODO: Allow spec.chance tests here? Ignored to keep results consistent and reproducible
-		if match_nodenames(node.name, spec.nodenames) then
+		local nodegroups
+		if spec._groupnames then
+			nodegroups = core.registered_nodes[node.name] and core.registered_nodes[node.name].groups
+		end
+		if match_nodes(node.name, nodegroups, spec._nodenames, spec._groupnames) then
 			local pos = core.get_position_from_hash(id)
-			if not spec.neighbors or match_neighbor(pos, spec.neighbors) then
+			if not spec.neighbors or match_neighbor(pos, spec._neighbors_nodes, spec._neighbors_groups) then
 				-- FIXME: active_object_count, active_object_count_wider. Entities not supported by mineunit.
 				spec.action(pos, node, 0, 0)
 			end
