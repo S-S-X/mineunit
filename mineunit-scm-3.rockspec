@@ -1,11 +1,11 @@
 package = "mineunit"
-version = "scm-2"
+version = "scm-3"
 source = {
-	url = "git://github.com/mt-mods/mineunit.git",
+	url = "git://github.com/S-S-X/mineunit.git",
 }
 description = {
 	summary = "Regression test framework for Minetest mods",
-	homepage = "https://github.com/mt-mods/mineunit",
+	homepage = "https://github.com/S-S-X/mineunit",
 	license = "MIT"
 }
 dependencies = {

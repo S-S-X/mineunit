@@ -159,8 +159,8 @@ end
 -- * `get_lists()`: returns list of inventory lists
 function InvRef:get_lists()
 	local results = {}
-	for listname,_ in pairs(self._lists) do
-		table.insert(results, listname)
+	for listname,list in pairs(self._lists) do
+		results[listname] = table.copy(list)
 	end
 	return results
 end
@@ -188,7 +188,32 @@ end
 --  If `match_meta` is false, only the items names are compared
 --  (default: `false`).
 function InvRef:contains_item(listname, stack, match_meta)
-	error("NOT IMPLEMENTED")
+	local list = self:get_list(listname)
+	stack = type(stack) == "string" and ItemStack(stack) or stack
+	local name = stack:get_name()
+	local count = stack:get_count()
+	local meta1 = match_meta and stack:get_meta():to_table() or nil
+	for _, liststack in ipairs(list) do
+		if liststack:get_name() == name and liststack:get_count() >= count then
+			if not match_meta then
+				return true
+			end
+			local meta2 = liststack:get_meta():to_table()
+			if mineunit.utils.count(meta1) == mineunit.utils.count(meta2) then
+				local matching = true
+				for k,v in pairs(meta1) do
+					if not v == meta2[k] then
+						matching = false
+						break
+					end
+				end
+				if matching then
+					return true
+				end
+			end
+		end
+	end
+	return false
 end
 -- * `remove_item(listname, stack)`: take as many items as specified from the
 --  list, returns the items that were actually removed (as an `ItemStack`)

@@ -24,18 +24,18 @@ function _G.core.set_player_privs(name, privs)
 end
 
 function _G.core.check_player_privs(player_or_name, ...)
-	local player_privs
 	assert.player_or_name(player_or_name, "core.check_player_privs: player_or_name: expected string or Player")
+	local player
 	if type(player_or_name) == "string" then
-		assert.not_nil(players[player_or_name], "core.check_player_privs: player does not exist")
-		player_privs = players[player_or_name]._privs
+		player = core.get_player_by_name(player_or_name)
 	else
-		player_privs = player_or_name._privs
+		player = player_or_name
 	end
+	assert.is_Player(player, "core.check_player_privs: player does not exist or is not online")
 	local missing_privs = {}
 	local arg={...}
 	for _,priv in ipairs(type(arg[1]) == "table" and arg[1] or arg) do
-		if not player_privs[priv] then
+		if not player._privs[priv] then
 			table.insert(missing_privs, priv)
 		end
 	end
@@ -43,17 +43,19 @@ function _G.core.check_player_privs(player_or_name, ...)
 end
 
 function _G.core.get_player_by_name(name)
-	return players[name]
+	return players[name] and players[name]._online and players[name] or nil
 end
 
 function _G.core.get_player_ip(...)
 	return "127.1.2.7"
 end
 
-_G.core.get_connected_players = function()
+function _G.core.get_connected_players()
 	local result = {}
 	for _,player in pairs(players) do
-		table.insert(result, player)
+		if player._online then
+			table.insert(result, player)
+		end
 	end
 	return result
 end
@@ -157,6 +159,8 @@ mineunit.export_object(Player, {
 	constructor = function(self, name, privs)
 		local obj = {
 			_name = name or "SX",
+			-- Players are always online if server module is not loaded
+			_online = not (mineunit.execute_on_joinplayer and true or false),
 			_is_player = true,
 			_privs = privs or { server = 1, test_priv=1 },
 			_controls = {},
@@ -165,6 +169,7 @@ mineunit.export_object(Player, {
 			_inv = InvRef(),
 			_pos = {x=0,y=0,z=0},
 		}
+		obj._inv:set_size("main", 32)
 		players[obj._name] = obj
 		setmetatable(obj, Player)
 		return obj
