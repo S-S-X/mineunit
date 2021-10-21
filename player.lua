@@ -165,6 +165,7 @@ mineunit.export_object(Player, {
 			_inv = InvRef(),
 			_pos = {x=0,y=0,z=0},
 		}
+		obj._inv:set_size("main", 32)
 		players[obj._name] = obj
 		setmetatable(obj, Player)
 		return obj
