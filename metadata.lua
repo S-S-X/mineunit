@@ -265,11 +265,11 @@ function MetaDataRef:set_float(key, value) self:set_string(key, value) end
 function MetaDataRef:get_float(key) return tonumber(self._data[key]) or 0 end
 function MetaDataRef:to_table()
 	-- FIXME: This is wrong almost sure, check actual engine spec and fix it to return correct format.
-	local result = {}
+	local fields = {}
 	for key, value in pairs(self._data) do
-		result[key] = tostring(value)
+		fields[key] = value
 	end
-	return result
+	return { fields = fields }
 end
 function MetaDataRef:from_table(t) error("NOT IMPLEMENTED") end
 function MetaDataRef:equals(other) error("NOT IMPLEMENTED") end
@@ -299,6 +299,12 @@ mineunit.export_object(MetaDataRef, {
 local NodeMetaRef = table.copy(MetaDataRef)
 function NodeMetaRef:get_inventory() return self._inventory end
 function NodeMetaRef:mark_as_private(...) mineunit:info("NodeMetaRef:mark_as_private", ...) end
+
+function NodeMetaRef:to_table()
+	local result = MetaDataRef.to_table(self)
+	result.inventory = self:get_inventory():to_table()
+	return result
+end
 
 mineunit.export_object(NodeMetaRef, {
 	name = "NodeMetaRef",
