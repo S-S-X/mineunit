@@ -107,10 +107,39 @@ local RunCallbacksMode = {
 	RUN_CALLBACKS_MODE_OR_SC = 5,
 }
 
+-- TODO: Add position / area filter. Allow changing collision data.
+local entitystep_collision_data = {
+	touching_ground = false,
+	collides = false,
+	standing_on_object = false,
+	collisions = {}
+}
+function mineunit:execute_entitystep(dtime, filter)
+	if filter then
+		-- Execute on_step for named entities
+		mineunit:debug("Executing entity step", filter)
+		local list = mineunit:get_entities()[filter]
+		for _, entity in ipairs(list) do
+			entity:get_luaentity():on_step(dtime, table.copy(entitystep_collision_data))
+		end
+	else
+		-- Execute on_step for all entities
+		for group, list in pairs(mineunit:get_entities()) do
+			mineunit:debug("Executing entity step", group)
+			for _, entity in ipairs(list) do
+				entity:get_luaentity():on_step(dtime, table.copy(entitystep_collision_data))
+			end
+		end
+	end
+end
+
 function mineunit:execute_globalstep(dtime)
 	-- Default server step is 0.1 seconds
 	assert(dtime == nil or type(dtime) == "number", "Invalid call to mineunit:execute_globalstep")
 	dtime = dtime or 0.1
+	if mineunit:has_module("entity") then
+		mineunit:execute_entitystep(dtime)
+	end
 	for node_id, timer in pairs(world_nodetimers) do
 		timer:_step(dtime, core.get_position_from_hash(node_id))
 	end
