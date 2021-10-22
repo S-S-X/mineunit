@@ -264,7 +264,6 @@ function MetaDataRef:get_int(key) return math.floor(tonumber(self._data[key]) or
 function MetaDataRef:set_float(key, value) self:set_string(key, value) end
 function MetaDataRef:get_float(key) return tonumber(self._data[key]) or 0 end
 function MetaDataRef:to_table()
-	-- FIXME: This is wrong almost sure, check actual engine spec and fix it to return correct format.
 	local fields = {}
 	for key, value in pairs(self._data) do
 		fields[key] = value
