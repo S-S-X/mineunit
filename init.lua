@@ -61,6 +61,10 @@ if mineunit_config then
 	end
 end
 
+function mineunit:has_module(name)
+	return _mineunits[name] and true
+end
+
 function mineunit:config(key)
 	if self._config[key] ~= nil then
 		return self._config[key]

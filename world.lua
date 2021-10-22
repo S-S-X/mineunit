@@ -59,12 +59,12 @@ function world.set_node(pos, node)
 	local oldnode = world.nodes[hash]
 	local oldnodedef = oldnode and core.registered_nodes[oldnode.name]
 	if oldnodedef then
-		call(nodedef.on_destruct, pos)
+		call(oldnodedef.on_destruct, pos)
 	end
 	world.clear_meta(pos)
 	world.nodes[hash] = node
 	if oldnodedef then
-		call(nodedef.after_destruct, pos, oldnode)
+		call(oldnodedef.after_destruct, pos, oldnode)
 	end
 	if nodedef then
 		call(nodedef.on_construct, pos)
@@ -203,19 +203,34 @@ function world.layout(layout, offset)
 	world.add_layout(layout, offset)
 end
 
+local function get_layout_area(def, offset)
+	local p1, p2
+	if def.x and def.y and def.z then
+		p1, p2 = def, def
+	else
+		p1, p2 = def[1], def[2]
+	end
+	local sx, sy, sz = math.min(p1.x, p2.x), math.min(p1.y, p2.y), math.min(p1.z, p2.z)
+	local ex, ey, ez = math.max(p1.x, p2.x), math.max(p1.y, p2.y), math.max(p1.z, p2.z)
+	p1 = {x=sx, y=sy, z=sz}
+	p2 = {x=ex, y=ey, z=ez}
+	if offset then
+		p1 = vector.add(p1, offset)
+		p2 = vector.add(p2, offset)
+	end
+	return p1, p2
+end
+
 function world.add_layout(layout, offset)
 	for _, node in ipairs(layout) do
-		local pos = {
-			x = node[1].x,
-			y = node[1].y,
-			z = node[1].z,
-		}
-		if offset then
-			pos.x = pos.x + offset.x
-			pos.y = pos.y + offset.y
-			pos.z = pos.z + offset.z
+		local p1, p2 = get_layout_area(node[1], offset)
+		for x = p1.x, p2.x do
+			for y = p1.y, p2.y do
+				for z = p1.z, p2.z do
+					world.set_node({x=x, y=y, z=z}, {name=node[2], param2=0})
+				end
+			end
 		end
-		_G.world.set_node(pos, {name=node[2], param2=0})
 	end
 end
 
