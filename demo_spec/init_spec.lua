@@ -11,7 +11,7 @@ fixture("mesecons")
 fixture("digilines")
 fixture("pipeworks")
 
-describe("Mod initialization", function()
+describe("Demo tests", function()
 
 	-- Create world with 100 x 1 x 3 stone layer and 3 nodes high air layer.
 	-- Also add single steel block for demonstration purposes.
@@ -26,7 +26,8 @@ describe("Mod initialization", function()
 
 	-- Execute on mods loaded callbacks to finish loading.
 	mineunit:mods_loaded()
-	-- Tell mods that 1 minute passed already to execute all weird minetest.after hacks.
+
+	-- Tell mods that 1 minute passed already to execute possible weird minetest.after hacks.
 	mineunit:execute_globalstep(60)
 
 	local Sam = Player("Sam")
