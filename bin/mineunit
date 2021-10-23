@@ -108,9 +108,10 @@ do -- Parse cli args
 	while arg[i] do
 		local v = arg[i]
 		if v == "-V" or v == "--version" or v == "-h" or v == "--help" then
-			print("Mineunit v0.2-still-works-for-me")
+			print("Mineunit v0.7-already-pretty-good")
 			print("mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>]")
 			print("mineunit -r|--report")
+			print("mineunit --demo")
 			return
 		elseif v == "-c" or v == "--coverage" then
 			args.coverage = true
@@ -127,6 +128,47 @@ do -- Parse cli args
 				return
 			end
 			table.insert(args.luacov.exclude, arg[i])
+		elseif v == "--demo" then
+			if pl.path.exists("init.lua") then
+				if not pl.path.exists("spec") then
+					-- Terrible hack to find mineunit current source directory using mineunit.scwd
+					-- And also more terrible hacks because penlight seems to be broken with dot directories...
+					local source = pl.path.normpath(require("mineunit.scwd")) .. pl.path.sep .. "demo_spec"
+					local target = pl.path.normpath(pl.path.abspath(pl.path.currentdir())) .. pl.path.sep .. "spec"
+					local pl_dir = require("pl.dir")
+					local success = true
+					if pl_dir.makepath(target) ~= true then
+						success = false
+					else
+						for path in pl_dir.dirtree(source) do
+							local rpath = path:match("^.*%" .. pl.path.sep .. "demo_spec%" .. pl.path.sep .. "(.-)$")
+							if pl.path.isdir(path) then
+								print("Create:", "spec" .. pl.path.sep .. rpath)
+								if pl_dir.makepath(pl.path.join(target, rpath)) ~= true then
+									success = false
+									break
+								end
+							else
+								print("Copy:", "spec" .. pl.path.sep .. rpath)
+								if pl_dir.copyfile(path, pl.path.join(target, rpath)) ~= true then
+									success = false
+									break
+								end
+							end
+						end
+					end
+					if success then
+						print("Demo tests installed to spec directory, you can now execute mineunit")
+					else
+						print("Installing demo tests failed:", source, "->", target)
+					end
+				else
+					print("Refusing to overwrite existing spec directory, delete spec directory and try again.")
+				end
+			else
+				print("Does not look like a Minetest mod directory, file init.lua not found.")
+			end
+			return
 		end
 		i = i + 1
 	end
