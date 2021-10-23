@@ -1,6 +1,10 @@
 
 local players = {}
 
+function mineunit:get_players()
+	return players
+end
+
 function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
 
 function _G.core.get_player_privs(name)
@@ -67,6 +71,11 @@ end
 mineunit("metadata")
 
 local Player = {}
+
+local function get_pointed_thing(pt)
+	return pt.x and { type = "node", above = {x=pt.x,y=pt.y+1,z=pt.z}, under = {x=pt.x,y=pt.y,z=pt.z}, } or pt
+end
+
 --
 -- Mineunit player API methods
 --
@@ -140,19 +149,66 @@ function Player:do_metadata_inventory_take(pos, listname, index)
 	end
 end
 
+function Player:do_set_wieldslot(inv_slot) self._wield_index = inv_slot end
+
+function Player:do_use(pointed_thing)
+	error("NOT IMPLEMENTED")
+end
+
+function Player:do_place(pointed_thing_or_pos)
+	local item, pointed_thing, returnstack = self:get_wielded_item(), get_pointed_thing(pointed_thing_or_pos)
+	local craftitem = minetest.registered_craftitems[item:get_name()]
+	if craftitem and craftitem.on_place then
+		returnstack = craftitem.on_place(item, self, pointed_thing)
+	else
+		returnstack = minetest.item_place(item, self, pointed_thing, nil)
+	end
+	if returnstack then
+		self._inv:set_stack("main", self._wield_index, returnstack)
+	end
+end
+
 --
 -- Minetest player API methods
 --
 
 function Player:get_player_control() return table.copy(self._controls) end
+function Player:get_player_control_bits() error("NOT IMPLEMENTED") end
 function Player:get_player_name() return self._name end
 function Player:is_player() return self._is_player end
-function Player:get_wielded_item() return self._wield_item end
+function Player:get_wielded_item() return self._inv:get_stack("main", self._wield_index) end
 function Player:get_meta() return self._meta end
 function Player:get_inventory() return self._inv end
 
 function Player:set_pos(pos) self._pos = table.copy(pos) end
 function Player:get_pos() return table.copy(self._pos) end
+
+function Player:get_player_velocity() DEPRECATED() end
+function Player:add_player_velocity(vel) DEPRECATED() end
+
+function Player:get_look_dir() return self._look_dir or 0 end
+function Player:get_look_vertical() return self._look_vertical or 0 end
+function Player:get_look_horizontal() return self._look_horizontal or 0 end
+function Player:set_look_vertical(radians) self._look_vertical = radians end
+function Player:set_look_horizontal(radians) self._look_horizontal = radians end
+
+function Player:get_look_pitch() DEPRECATED() end
+function Player:get_look_yaw() DEPRECATED() end
+function Player:set_look_pitch(radians) DEPRECATED() end
+function Player:set_look_yaw(radians) DEPRECATED() end
+
+function Player:get_breath() error("NOT IMPLEMENTED") end
+function Player:set_breath(value) error("NOT IMPLEMENTED") end
+function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMENTED") end
+function Player:get_fov() error("NOT IMPLEMENTED") end
+
+function Player:set_attribute(attribute, value) DEPRECATED() end
+function Player:get_attribute(attribute) DEPRECATED() end
+
+function Player:set_inventory_formspec(formspec) end
+function Player:get_inventory_formspec() return "" end
+function Player:set_formspec_prepend(formspec) end
+function Player:get_formspec_prepend(formspec) return "" end
 
 mineunit.export_object(Player, {
 	name = "Player",
@@ -164,7 +220,7 @@ mineunit.export_object(Player, {
 			_is_player = true,
 			_privs = privs or { server = 1, test_priv=1 },
 			_controls = {},
-			_wield_item = ItemStack(),
+			_wield_index = 1,
 			_meta = MetaDataRef(),
 			_inv = InvRef(),
 			_pos = {x=0,y=0,z=0},

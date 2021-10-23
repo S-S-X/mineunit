@@ -137,6 +137,12 @@ end
 
 function mineunit:execute_on_joinplayer(player, lastlogin)
 	assert.is_Player(player, "Invalid call to mineunit:execute_on_joinplayer")
+	if core.get_auth_handler then
+		local name = player:get_player_name()
+		local data = core.get_auth_handler().get_auth(name)
+		core.set_player_privs(name, data.privileges)
+		mineunit:debug("Auth privileges:", player:get_player_name(), dump(player._privs))
+	end
 	player._online = true
 	return core.run_callbacks(
 		core.registered_on_joinplayers,

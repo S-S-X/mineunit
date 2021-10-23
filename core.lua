@@ -7,6 +7,9 @@ local noop_object = {
 
 _G.world = mineunit("world")
 
+_G.core.is_singleplayer = function() return true end
+_G.core.notify_authentication_modified = noop
+
 _G.core.set_node = world.set_node
 _G.core.add_node = world.set_node
 _G.core.swap_node = world.swap_node
@@ -61,6 +64,8 @@ mineunit("common/fs")
 mineunit("metadata")
 mineunit("itemstack")
 
+_G.core.register_node(":air", {buildable_to = true})
+
 local mod_storage
 _G.minetest.get_mod_storage = function()
 	if not mod_storage then
@@ -72,6 +77,7 @@ end
 _G.minetest.sound_play = noop
 _G.minetest.sound_stop = noop
 _G.minetest.sound_fade = noop
+_G.minetest.add_particlespawner = noop
 
 _G.minetest.registered_chatcommands = {}
 _G.minetest.register_chatcommand = noop
