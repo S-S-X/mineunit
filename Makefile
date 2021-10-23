@@ -4,7 +4,7 @@ ifdef INSTALL
 	@echo "BINDIR (temporary): $(BINDIR)"
 	@echo "LUADIR (temporary): $(LUADIR)"
 	@mkdir -p $(LUADIR)
-	@cp -a *.lua common default game lib $(LUADIR)
+	@cp -a *.lua *.md LICENSE common default game lib demo_spec $(LUADIR)
 	@cp -a bin/mineunit $(BINDIR)
 else
 	@true
