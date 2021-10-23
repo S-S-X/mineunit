@@ -49,6 +49,10 @@ DIR_DELIM = "/"
 local core = {}
 _G.core = core
 
+function core.global_exists(name)
+	return rawget(_G, name) ~= nil
+end
+
 function core.log(...) mineunit:info(...) end
 function core.request_http_api(...) end
 
