@@ -8,6 +8,7 @@ local noop_object = {
 _G.world = mineunit("world")
 
 _G.core.set_node = world.set_node
+_G.core.add_node = world.set_node
 _G.core.swap_node = world.swap_node
 
 _G.core.get_worldpath = function(...) return _G.mineunit:get_worldpath(...) end
