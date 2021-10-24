@@ -20,6 +20,11 @@ $ mkdir spec
 * File names should match pattern `*_spec.lua`, for example `mymod_spec.lua`.
 * See examples below for possible spec file contents.
 
+### Install demo spec, alternative to above `mkdir spec`
+You can install demo `spec` directory containing simple tests and showing some things you can do.<br>
+To install demo spec cd to your mod directory, there must be `init.lua` file and there cannot be existing `spec` directory.
+* Run command: `$ mineunit --demo`
+
 ### Define world for tests
 
 World can be replaced by calling `world.layout` with table containing nodes, this will reset previously created world layout.
@@ -45,15 +50,12 @@ to remove everything from world:
 world.clear()
 ```
 
-### Metadata
+### Using Minetest classes and methods
 
-https://github.com/mt-mods/mineunit/issues/2
-To set node metadata, simply call `minetest.get_meta(pos):set_string("hello", "world")` just like you would do in your mod.
-
-### ItemStack
-
-https://github.com/mt-mods/mineunit/issues/1
-To create ItemStack, simply call `ItemStack("default:cobble 99")` just like you would do in your mod.
+API is not complete yet but issues are getting fixed and more functinoality have been added, create issue if you find problems
+* To set node metadata, simply call `minetest.get_meta(pos):set_string("hello", "world")` just like you would do in your mod.
+* To create ItemStack, simply call `ItemStack("default:cobble 99")` just like you would do in your mod.
+* Any other things similar way, just like you'd do it in Minetest mods.
 
 ### Example mymod/spec/mymod_spec.lua file
 
@@ -115,19 +117,42 @@ describe("My test world", function()
 end)
 ```
 
-### Important Mineunit API functions
+### Useful Mineunit API functions
 
-| Function                             | Description
-| ------------------------------------ | ---------------------
-| `mineunit:debug(...)`                | Prints to console if `verbose` option is higher than 3. Adds `D:` before every printed message.
-| `mineunit:info(...)`                 | Prints to console if `verbose` option is higher than 2. Adds `I:` before every printed message.
-| `mineunit:warning(...)`              | Prints to console if `verbose` option is higher than 1. Adds `W:` before every printed message.
-| `mineunit:error(...)`                | Prints to console if `verbose` option is higher than 0. Adds `E:` before every printed message.
-| `print(...)`                         | Prints to console if `print` option is not disabled.
-| `mineunit:set_modpath(name, path)`   | Set path of mod, affects return value of `minetest.get_modpath(name)`
-| `mineunit:set_current_modname(name)` | Change modname returned by `minetest.get_current_modname()`
-| `mineunit:restore_current_modname()` | Restore original modname after changing it using `mineunit:set_current_modname(name)`
-| `mineunit:mods_loaded()`             | Execute functions registered with `minetest.register_on_mods_loaded(func)`
+Mineunit itself comes with some additional functionality to allow controlled test execution:
+
+| Function                                                        | Description
+| --------------------------------------------------------------- | ----------------------------------------------------
+| `mineunit:set_modpath(name, path)`                              | Set modpath for named mod, `minetest.get_modpath(name)` will then report this path.
+| `mineunit:set_current_modname(name)`                            | Temporarily switch current mod name to another to test code that checks current mod name.
+| `mineunit:restore_current_modname()`                            | Restore original modname after changing it using `mineunit:set_current_modname(name)`.
+| `mineunit:execute_globalstep(dtime)`                            | Execute Minetest globalstep: will trigger registered globalsteps, nodetimers, minetest.after and similar callbacks.
+| `mineunit:mods_loaded()`                                        | Execute functions registered with `minetest.register_on_mods_loaded(func)`.
+| `mineunit:execute_shutdown()`                                   | Simulate server shutdown event.
+| `mineunit:execute_on_joinplayer(player, lastlogin)`             | Simulate `Player` joining the game.
+| `mineunit:execute_on_leaveplayer(player, timeout)`              | Simulate `Player` leaving the game.
+| `mineunit:execute_on_chat_message(sender, message)`             | Simulate `Player` sending chat message.
+| `mineunit:execute_modchannel_message(channel, sender, message)` | Modchannel message handlers.
+| `mineunit:execute_modchannel_signal(channel, signal)`           | Modchannel message handlers.
+| `mineunit:protect(pos, name_or_player)`                         | Add position to protection list to simlate protection without loading protection mods.
+| `mineunit:get_players()`                                        | Get all registered players, when using auth module it will also return players that have not joined the game.
+| `mineunit:has_module(name)`                                     | Tell if Mineunit module has been loaded.
+| `mineunit:config(key)`                                          | Read Mineunit configuration values.
+| `mineunit:debug(...)`                                           | Prints to console if `verbose` option is higher than 3.
+| `mineunit:info(...)`                                            | Prints to console if `verbose` option is higher than 2.
+| `mineunit:warning(...)`                                         | Prints to console if `verbose` option is higher than 1.
+| `mineunit:error(...)`                                           | Prints to console if `verbose` option is higher than 0.
+| `print(...)`                                                    | Prints to console if `print` option is not disabled.
+| `mineunit:destroy_nodetimer(pos)`                               | Use Minetest counterpart instead
+| `mineunit:get_modpath(name)`                                    | Use Minetest counterpart instead
+| `mineunit:get_current_modname()`                                | Use Minetest counterpart instead
+| `mineunit:get_worldpath()`                                      | Use Minetest counterpart instead
+| `mineunit:register_on_mods_loaded(func)`                        | Use Minetest counterpart instead
+| `mineunit.export_object(obj, def)`                              | Internal use
+| `mineunit.deep_merge(data, target, defaults)`                   | Internal use
+| `mineunit.registered_craft_recipe(output, method)`              | Internal use
+
+Mineunit modules will add some functionality like some simple player actions simulation and such.
 
 ### Mineunit modules
 
@@ -163,8 +188,11 @@ It is recommended to always load `core` module instead of selecting individual a
 | protection          | Provides simple node protection API to simulate `minetest.is_protected(pos)` behavior.
 | server              | Provides functionality for globalstep, player, modchannel and chat. Loads `nodetimer`, `common/chatcommands` and `game/chat` as dependencies.
 | voxelmanip          | Provides `VoxelManip` class.
+| auth                | Provides authentication API.
+| entity              | Provides SAO entity API.
 | common/chatcommands | Minetest engine library.
 | game/chat           | Minetest engine library.
+| assert              | Provides custom assertions like `assert.isPlayer(thing)` and `assert.is_ItemStack(thing)`.
 
 ### Known projects using mineunit
 
@@ -172,10 +200,18 @@ See following projects for more examples on how to use mineunit and what you can
 
 #### Technic Plus: simple, clean and straightforward tests.
 * Network tests https://github.com/mt-mods/technic/tree/master/technic/spec
-* GitHub workflow https://github.com/mt-mods/technic/blob/master/.github/workflows/busted.yml
+* CNC tests https://github.com/mt-mods/technic/tree/master/technic_cnc/spec
+* GitHub workflow https://github.com/mt-mods/technic/blob/master/.github/workflows/mineunit.yml
 
 #### Metatool: complex test setup. Mineunit development began here.
-* Mineunit and global fixtures https://github.com/S-S-X/metatool/tree/master/spec
 * Metatool API tests https://github.com/S-S-X/metatool/tree/master/metatool/spec
-* Container tool behavior tests https://github.com/S-S-X/metatool/tree/master/containertool/spec
-* GitHub workflow https://github.com/S-S-X/metatool/blob/master/.github/workflows/busted.yml
+* Sharetool tests https://github.com/S-S-X/metatool/tree/master/sharetool/spec
+* Containertool tests https://github.com/S-S-X/metatool/tree/master/containertool/spec
+* Tubetool tests https://github.com/S-S-X/metatool/tree/master/tubetool/spec
+* GitHub workflow https://github.com/S-S-X/metatool/blob/master/.github/workflows/mineunit.yml
+
+#### Other mods
+* QoS https://github.com/S-S-X/qos/tree/master/spec
+* Machine_parts https://github.com/mt-mods/machine_parts/tree/master/spec
+* Beerchat (chat commands and message delivery) https://github.com/minetest-beerchat/beerchat/tree/master/spec
+* Mapblock_lib https://github.com/BuckarooBanzay/mapblock_lib/tree/master/spec
