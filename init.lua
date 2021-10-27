@@ -192,7 +192,9 @@ end
 
 function mineunit.export_object(obj, def)
 	if _G[def.name] == nil or def.private then
-		obj.__index = obj
+		if not obj.__index then
+			obj.__index = obj
+		end
 		setmetatable(obj, {
 			__call = function(...)
 				local obj = def.constructor(...)

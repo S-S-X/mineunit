@@ -1,5 +1,3 @@
-mineunit("entity")
-
 local players = {}
 
 function mineunit:get_players()
