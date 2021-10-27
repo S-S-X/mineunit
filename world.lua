@@ -50,6 +50,19 @@ local function get_pointed_thing(pos, pointed_thing_type)
 	}
 end
 
+function world.set_default_node(node)
+	local nodes = world.nodes
+	if node then
+		setmetatable(nodes, { __index=function(key) return rawget(nodes, key) or node end })
+	else
+		setmetatable(nodes, nil)
+	end
+end
+
+function world.get_node(pos)
+	return world.nodes[core.hash_node_position(vector.round(pos))]
+end
+
 -- set_node sets world node without place/dig callbacks
 function world.set_node(pos, node)
 	node = create_node(node)

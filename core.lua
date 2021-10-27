@@ -98,13 +98,10 @@ _G.minetest.after = noop
 
 _G.minetest.find_nodes_with_meta = _G.world.find_nodes_with_meta
 _G.minetest.find_nodes_in_area = _G.world.find_nodes_in_area
-_G.minetest.get_node_or_nil = function(pos)
-	local hash = minetest.hash_node_position(pos)
-	return world.nodes[hash]
-end
+_G.minetest.get_node_or_nil = _G.world.get_node
 _G.minetest.get_node = function(pos) return minetest.get_node_or_nil(pos) or {name="IGNORE",param2=0} end
 _G.minetest.dig_node = function(pos) return world.on_dig(pos) and true or false end
-_G.minetest.remove_node = world.remove_node
+_G.minetest.remove_node = _G.world.remove_node
 
 _G.minetest.get_node_timer = {}
 setmetatable(_G.minetest.get_node_timer, noop_object)
