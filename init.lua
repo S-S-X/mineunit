@@ -21,6 +21,14 @@ local default_config = {
 	fixture_paths = {
 		"spec/fixtures"
 	},
+	validate_textures = false,
+	texture_paths = {
+		"textures"
+	},
+	include_textures = {},
+	exclude_textures = {
+		"^%[",
+	},
 	source_path = ".",
 	time_step = -1,
 }
@@ -35,6 +43,15 @@ mineunit = {
 
 require("mineunit.globals")
 
+local state = {
+	state = {},
+	push = function(self, state) table.insert(self.state, state) end,
+	pop = function(self) self.state[#self.state] = nil end,
+}
+setmetatable(state, {
+	__call = function(self, index) return self.state[index and index <= #self.state and index or #self.state] end
+})
+
 local function mineunit_path(name)
 	return pl.path.normpath(string.format("%s/%s", mineunit:config("mineunit_path"), name))
 end
@@ -43,12 +60,14 @@ mineunit.__index = mineunit
 local _mineunits = {}
 setmetatable(mineunit, {
 	__call = function(self, name)
+		state:push("mineunit")
 		local res
 		if not _mineunits[name] then
 			mineunit:debug("Loading mineunit module", name)
 			res = require("mineunit." .. name:gsub("/", "."))
 		end
 		_mineunits[name] = true
+		state:pop()
 		return res
 	end,
 })
@@ -59,6 +78,10 @@ if mineunit_config then
 			mineunit._config[key] = mineunit_config[key]
 		end
 	end
+end
+
+function mineunit:state()
+	return state()
 end
 
 function mineunit:has_module(name)
@@ -159,6 +182,7 @@ end
 
 local _fixtures = {}
 function fixture(name)
+	state:push("fixture")
 	local path = fixture_path(name .. ".lua")
 	if not _fixtures[name] then
 		mineunit:info("Loading fixture", path)
@@ -168,6 +192,7 @@ function fixture(name)
 		mineunit:debug("Fixture already loaded", path)
 	end
 	_fixtures[name] = true
+	state:pop()
 end
 
 local function source_path(name)
@@ -178,10 +203,15 @@ local function source_path(name)
 end
 
 function sourcefile(name)
+	--state:push("sourcefile")
 	local path = source_path(name .. ".lua")
 	mineunit:info("Loading source", path)
 	assert(pl.path.isfile(path), "Source file not found: " .. path)
 	return dofile(path)
+	--local result = {dofile(path)}
+	--state:pop()
+	-- TODO: This might not work in all cases, add select wrapper if needed
+	--return unpack(result)
 end
 
 function DEPRECATED(msg)
@@ -192,7 +222,9 @@ end
 
 function mineunit.export_object(obj, def)
 	if _G[def.name] == nil or def.private then
-		obj.__index = obj
+		if not obj.__index then
+			obj.__index = obj
+		end
 		setmetatable(obj, {
 			__call = function(...)
 				local obj = def.constructor(...)
@@ -234,7 +266,7 @@ function mineunit.deep_merge(data, target, defaults)
 	else
 		-- Hash tables merge strategy: preserve keys, override values
 		for key,value in pairs(data) do
-			if defaults[key] then
+			if defaults[key] ~= nil then
 				assert(type(value) == type(defaults[key]), "Configuration: invalid data type for key", key)
 				if type(value) == "table" then
 					target[key] = {}
