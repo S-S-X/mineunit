@@ -75,14 +75,7 @@ local Player = {}
 
 -- Exported while playing default minetest game
 local default_player_properties = {
-	selectionbox = {
-		-0.30000001192093,
-		0,
-		-0.30000001192093,
-		0.30000001192093,
-		1.7000000476837,
-		0.30000001192093
-	},
+	selectionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 },
 	nametag = "",
 	nametag_bgcolor = false,
 	infotext = "",
@@ -90,45 +83,19 @@ local default_player_properties = {
 	backface_culling = false,
 	makes_footstep_sound = true,
 	is_visible = true,
-	textures = {
-		"character.png",
-		"3d_armor_trans.png^spacesuit_chestplate.png^moderator_armor_shield.png^spacesuit_boots.png^spacesuit_pants.png",
-		"3d_armor_trans.png"
-	},
+	textures = { "character.png" },
 	physical = false,
 	stepheight = 0.60000002384186,
-	collisionbox = {
-		-0.30000001192093,
-		0,
-		-0.30000001192093,
-		0.30000001192093,
-		1.7000000476837,
-		0.30000001192093
-	},
-	initial_sprite_basepos = {
-		y = 0,
-		x = 0
-	},
+	collisionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 },
+	initial_sprite_basepos = { y = 0, x = 0 },
 	use_texture_alpha = false,
 	show_on_minimap = true,
 	automatic_face_movement_dir = false,
-	spritediv = {
-		y = 1,
-		x = 1
-	},
+	spritediv = { y = 1, x = 1 },
 	breath_max = 10,
-	nametag_color = {
-		a = 255,
-		b = 255,
-		g = 255,
-		r = 255
-	},
-	visual_size = {
-		y = 1,
-		x = 1,
-		z = 1
-	},
-	mesh = "3d_armor_character.b3d",
+	nametag_color = { a = 255, b = 255, g = 255, r = 255 },
+	visual_size = { y = 1, x = 1, z = 1 },
+	mesh = "character.b3d",
 	visual = "mesh",
 	collide_with_objects = true,
 	damage_texture_modifier = "^[brighten",
@@ -136,14 +103,7 @@ local default_player_properties = {
 	pointable = true,
 	zoom_fov = 0,
 	eye_height = 1.4700000286102,
-	colors = {
-		{
-			a = 255,
-			b = 255,
-			g = 255,
-			r = 255
-		}
-	},
+	colors = {{ a = 255, b = 255, g = 255, r = 255 }},
 	automatic_rotate = 0,
 	hp_max = 20,
 	wield_item = "", -- TODO: This should probably be actual item in Player:_wield_index inventory slot
