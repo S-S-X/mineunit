@@ -140,7 +140,6 @@ _G.minetest.get_content_id = function(name)
 
 	-- create and increment
 	if not content_name2id[name] then
-		-- TODO: Verify that content id is 0 based instead of 1
 		content_name2id[name] = #content_id2name
 		table.insert(content_id2name, name)
 	end
@@ -148,14 +147,7 @@ _G.minetest.get_content_id = function(name)
 end
 
 _G.minetest.get_name_from_content_id = function(cid)
-	if not content_id2name[cid+1] then
-		-- TODO: Should this be error instead of "fixing" it? Content id depends on
-		-- load order and should not be known before calling minetest.get_content_id.
-		for name,_ in pairs(minetest.registered_nodes) do
-			minetest.get_content_id(name)
-		end
-		assert(content_id2name[cid+1], "Unknown content id")
-	end
+	assert(content_id2name[cid+1], "Unknown content id")
 	return content_id2name[cid+1]
 end
 
