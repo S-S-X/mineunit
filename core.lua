@@ -38,10 +38,13 @@ mineunit("common/vector")
 mineunit("common/serialize")
 mineunit("common/fs")
 
+assert(minetest.registered_nodes["air"])
+assert(minetest.registered_nodes["ignore"])
+assert(minetest.registered_items[""])
+assert(minetest.registered_items["unknown"])
+
 mineunit("metadata")
 mineunit("itemstack")
-
-_G.core.register_node(":air", {buildable_to = true})
 
 local mod_storage
 _G.minetest.get_mod_storage = function()
@@ -99,7 +102,7 @@ _G.minetest.after = noop
 _G.minetest.find_nodes_with_meta = _G.world.find_nodes_with_meta
 _G.minetest.find_nodes_in_area = _G.world.find_nodes_in_area
 _G.minetest.get_node_or_nil = _G.world.get_node
-_G.minetest.get_node = function(pos) return minetest.get_node_or_nil(pos) or {name="IGNORE",param2=0} end
+_G.minetest.get_node = function(pos) return minetest.get_node_or_nil(pos) or {name="ignore",param2=0} end
 _G.minetest.dig_node = function(pos) return world.on_dig(pos) and true or false end
 _G.minetest.remove_node = _G.world.remove_node
 
