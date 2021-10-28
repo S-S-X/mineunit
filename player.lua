@@ -1,4 +1,3 @@
-
 local players = {}
 
 function mineunit:get_players()
@@ -72,9 +71,43 @@ mineunit("metadata")
 
 local Player = {}
 
-local function get_pointed_thing(pt)
-	return pt.x and { type = "node", above = {x=pt.x,y=pt.y+1,z=pt.z}, under = {x=pt.x,y=pt.y,z=pt.z}, } or pt
-end
+-- Exported while playing default minetest game
+local default_player_properties = {
+	selectionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 },
+	nametag = "",
+	nametag_bgcolor = false,
+	infotext = "",
+	static_save = true,
+	backface_culling = false,
+	makes_footstep_sound = true,
+	is_visible = true,
+	textures = { "character.png" },
+	physical = false,
+	stepheight = 0.60000002384186,
+	collisionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 },
+	initial_sprite_basepos = { y = 0, x = 0 },
+	use_texture_alpha = false,
+	show_on_minimap = true,
+	automatic_face_movement_dir = false,
+	spritediv = { y = 1, x = 1 },
+	breath_max = 10,
+	nametag_color = { a = 255, b = 255, g = 255, r = 255 },
+	visual_size = { y = 1, x = 1, z = 1 },
+	mesh = "character.b3d",
+	visual = "mesh",
+	collide_with_objects = true,
+	damage_texture_modifier = "^[brighten",
+	shaded = true,
+	pointable = true,
+	zoom_fov = 0,
+	eye_height = 1.4700000286102,
+	colors = {{ a = 255, b = 255, g = 255, r = 255 }},
+	automatic_rotate = 0,
+	hp_max = 20,
+	wield_item = "", -- TODO: This should probably be actual item in Player:_wield_index inventory slot
+	automatic_face_movement_max_rotation_per_sec = -1,
+	glow = 0
+}
 
 --
 -- Mineunit player API methods
@@ -156,16 +189,81 @@ function Player:do_use(pointed_thing)
 end
 
 function Player:do_place(pointed_thing_or_pos)
-	local item, pointed_thing, returnstack = self:get_wielded_item(), get_pointed_thing(pointed_thing_or_pos)
-	local craftitem = minetest.registered_craftitems[item:get_name()]
-	if craftitem and craftitem.on_place then
-		returnstack = craftitem.on_place(item, self, pointed_thing)
+	local item = self:get_wielded_item()
+	local pointed_thing
+	if pointed_thing_or_pos.x then
+		-- Coordinates supplied, find out real pointed_thing assuming next thing from position is node
+		local pos = pointed_thing_or_pos
+		local playerpos = self:get_pos()
+		playerpos.y = playerpos.y + self:get_properties().eye_height
+		-- Do not actually care about facing, allow placing to impossible positions if asked to
+		local pos_dir = vector.direction(playerpos, pointed_thing_or_pos)
+		pointed_thing = {
+			type = "node",
+			above = vector.round(pos),
+			under = vector.round(vector.add(pos, pos_dir))
+		}
 	else
+		pointed_thing = table.copy(pointed_thing_or_pos)
+	end
+	local name = item:get_name()
+	local itemdef = core.registered_nodes[name] or core.registered_craftitems[name] or core.registered_tools[name]
+	local returnstack
+	if itemdef and itemdef.on_place then
+		returnstack = itemdef.on_place(item, self, pointed_thing)
+	else
+		-- FIXME: Check what exactly should be done here if anything
+		error("Attempt to call minetest.item_place from Player:do_place")
 		returnstack = minetest.item_place(item, self, pointed_thing, nil)
 	end
 	if returnstack then
-		self._inv:set_stack("main", self._wield_index, returnstack)
+		self._inv:set_stack("main", self._wield_index, ItemStack(returnstack))
 	end
+end
+
+function Player:do_set_pos_fp(pos)
+	-- Set camera/crosshair position for first person view, eyes will be at pos instead of entity
+	self:set_pos({x=pos.x, y=pos.y-self:get_properties().eye_height, z=pos.z})
+end
+
+function Player:do_set_look_xyz(xyz)
+	assert(type(xyz) == "string", "do_set_look_xyz requires string X+, X-, Y+, Y-, Z+ or Z-")
+	local r90 = math.pi / 2
+	local look = {
+		["X+"] = {0, math.pi + r90},
+		["X-"] = {0, r90},
+		["Y+"] = {-r90, nil},
+		["Y-"] = {r90, nil},
+		["Z+"] = {0, 0},
+		["Z-"] = {0, math.pi},
+	}
+	dir = look[xyz:sub(1,2):upper()]
+	assert(dir, "do_set_look_xyz requires string X+, X-, Y+, Y-, Z+ or Z-")
+	self:set_look_vertical(dir[1])
+	if dir[2] then
+		self:set_look_horizontal(dir[2])
+	end
+end
+
+function Player:do_set_look_vertical(radians_or_heading)
+	if type(radians_or_heading) == "string" then
+		local r90 = math.pi / 2
+		local tilt = { U = -r90, F = 0, D = r90 }
+		radians_or_heading = tilt[radians_or_heading:sub(1,1):upper()]
+		-- It is possible to set view all the way upside down but decided to not include that, seems buggy on client
+		assert(radians_or_heading, "Unknown heading, must be radians or one of Up, Forward, Down")
+	end
+	self:set_look_vertical(radians_or_heading)
+end
+
+function Player:do_set_look_horizontal(radians_or_heading)
+	if type(radians_or_heading) == "string" then
+		local r90 = math.pi / 2
+		local compass = { N = 0, E = math.pi + r90, S = math.pi, W = r90 }
+		radians_or_heading = compass[radians_or_heading:sub(1,1):upper()]
+		assert(radians_or_heading, "Unknown heading, must be radians or one of North, East, South, West")
+	end
+	self:set_look_horizontal(radians_or_heading)
 end
 
 --
@@ -180,13 +278,20 @@ function Player:get_wielded_item() return self._inv:get_stack("main", self._wiel
 function Player:get_meta() return self._meta end
 function Player:get_inventory() return self._inv end
 
+--[[
+-- FIXME: Remove or keep these? ObjectRef implements these methods.
 function Player:set_pos(pos) self._pos = table.copy(pos) end
 function Player:get_pos() return table.copy(self._pos) end
+--]]
 
 function Player:get_player_velocity() DEPRECATED() end
 function Player:add_player_velocity(vel) DEPRECATED() end
 
-function Player:get_look_dir() return self._look_dir or 0 end
+function Player:get_look_dir()
+	local pitch, yaw = self:get_look_vertical(), self:get_look_horizontal()
+	return { x = math.cos(pitch) * math.sin(yaw), y = math.sin(pitch), z = math.cos(pitch) * math.cos(yaw) }
+end
+
 function Player:get_look_vertical() return self._look_vertical or 0 end
 function Player:get_look_horizontal() return self._look_horizontal or 0 end
 function Player:set_look_vertical(radians) self._look_vertical = radians end
@@ -202,6 +307,8 @@ function Player:set_breath(value) error("NOT IMPLEMENTED") end
 function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMENTED") end
 function Player:get_fov() error("NOT IMPLEMENTED") end
 
+function Player:get_eye_offset() return self._eye_offset_first, self._eye_offset_third end
+
 function Player:set_attribute(attribute, value) DEPRECATED() end
 function Player:get_attribute(attribute) DEPRECATED() end
 
@@ -210,9 +317,31 @@ function Player:get_inventory_formspec() return "" end
 function Player:set_formspec_prepend(formspec) end
 function Player:get_formspec_prepend(formspec) return "" end
 
+function Player:__index(key)
+	local result = rawget(Player, key)
+	if not result then
+		if type(ObjectRef[key]) == "function" then
+			local object = self._object
+			return function(...)
+				local args = {...}
+				table.remove(args, 1)
+				return ObjectRef[key](object, unpack(args))
+			end
+		end
+		result = self._object[key]
+	end
+	return result
+end
+
+mineunit("entity")
 mineunit.export_object(Player, {
 	name = "Player",
 	constructor = function(self, name, privs)
+		-- TBD: Error or replace player if created again with existing name
+		--assert(players[name] == nil, "Player with name already exists: "..tostring(name))
+		local object = ObjectRef()
+		object:set_pos({x=0,y=0,z=0})
+		object:set_properties(table.copy(default_player_properties))
 		local obj = {
 			_name = name or "SX",
 			-- Players are always online if server module is not loaded
@@ -223,7 +352,10 @@ mineunit.export_object(Player, {
 			_wield_index = 1,
 			_meta = MetaDataRef(),
 			_inv = InvRef(),
-			_pos = {x=0,y=0,z=0},
+			_object = object,
+			_look_dir = {x=0,y=-1,z=0}, -- Reflects simplified pointed_thing used to place nodes
+			_eye_offset_first = {x=0,y=0,z=0},
+			_eye_offset_third = {x=0,y=0,z=0},
 		}
 		obj._inv:set_size("main", 32)
 		players[obj._name] = obj

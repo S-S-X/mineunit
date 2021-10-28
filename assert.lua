@@ -3,6 +3,17 @@ local function round(value)
 	return (value < 0) and math.ceil(value - 0.5) or math.floor(value + 0.5)
 end
 
+local function path(t, s, ignorefirst)
+	local components = s:split(".")
+	if ignorefirst then
+		table.remove(components, 1)
+	end
+	for _,key in ipairs(components) do
+		t = t[key]
+	end
+	return t
+end
+
 local function sequential(t)
 	local p = 1
 	for i,_ in pairs(t) do
@@ -99,6 +110,22 @@ assert:register("assertion", "lt", lessthan, "assertion.lt.negative")
 local function check_in_array(_,args) return in_array(args[1], args[2]) end
 say:set("assertion.in_array.negative", "Expected %s to be in array %s")
 assert:register("assertion", "in_array", check_in_array, "assertion.in_array.negative")
+
+local function check_nodename(_,args) return core.get_node(args[2]).name == args[1] end
+say:set("assertion.nodename.negative", "Expected to find %s at %s")
+assert:register("assertion", "nodename", check_nodename, "assertion.nodename.negative")
+
+local function check_param2(_,args) return core.get_node(args[2]).param2 == args[1] end
+say:set("assertion.param2.negative", "Expected param2 to be %s at %s")
+assert:register("assertion", "param2", check_param2, "assertion.param2.negative")
+
+local function close_enough(state, args)
+	local msg = "Expected %s = %s to be %s"
+	local a, b = args[1], type(args[2]) == "table" and path(args[2], args[3], true) or args[2]
+	state.failure_message = msg:format(tostring(args[3]) or "input", tostring(a), tostring(b))
+	return ((math.abs(a - b) * 1000000000) < 0.000001)
+end
+assert:register("assertion", "close_enough", close_enough, "assertion.close_enough.negative")
 
 -- TODO: Check this one, should it actually check for mineunit_type Player instead of tble or userdata
 local function player_or_name(_,args)
