@@ -213,7 +213,7 @@ function Player:do_place(pointed_thing_or_pos)
 		returnstack = itemdef.on_place(item, self, pointed_thing)
 	else
 		-- FIXME: Check what exactly should be done here if anything
-		error("Attempt to call minetest.item_place from Player:do_place")
+		error("Attempt to call minetest.item_place from Player:do_place, probably invalid wield item")
 		returnstack = minetest.item_place(item, self, pointed_thing, nil)
 	end
 	if returnstack then

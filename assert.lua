@@ -111,9 +111,13 @@ local function check_in_array(_,args) return in_array(args[1], args[2]) end
 say:set("assertion.in_array.negative", "Expected %s to be in array %s")
 assert:register("assertion", "in_array", check_in_array, "assertion.in_array.negative")
 
-local function check_nodename(_,args) return core.get_node(args[2]).name == args[1] end
-say:set("assertion.nodename.negative", "Expected to find %s at %s")
-assert:register("assertion", "nodename", check_nodename, "assertion.nodename.negative")
+local function check_nodename(state,args)
+	local msg = "Expected node %s at x=%d,y=%d,z=%d but found %s"
+	local node = world.get_node(args[2])
+	state.failure_message = msg:format(args[1], args[2].x, args[2].y, args[2].z, node and node.name or "nothing")
+	return node and node.name == args[1]
+end
+assert:register("assertion", "nodename", check_nodename)
 
 local function check_param2(_,args) return core.get_node(args[2]).param2 == args[1] end
 say:set("assertion.param2.negative", "Expected param2 to be %s at %s")
@@ -125,7 +129,7 @@ local function close_enough(state, args)
 	state.failure_message = msg:format(tostring(args[3]) or "input", tostring(a), tostring(b))
 	return ((math.abs(a - b) * 1000000000) < 0.000001)
 end
-assert:register("assertion", "close_enough", close_enough, "assertion.close_enough.negative")
+assert:register("assertion", "close_enough", close_enough)
 
 -- TODO: Check this one, should it actually check for mineunit_type Player instead of tble or userdata
 local function player_or_name(_,args)
