@@ -23,7 +23,12 @@ local default_config = {
 	},
 	source_path = ".",
 	time_step = -1,
+	engine_version = "mineunit",
 }
+
+for k,v in pairs(mineunit_conf_defaults) do
+	default_config[k] = v
+end
 
 mineunit = {
 	_config = {
@@ -33,10 +38,36 @@ mineunit = {
 	_on_mods_loaded_exec_count = 0,
 }
 
+local tagged_paths = {
+	["common"] = true,
+	["game"] = true
+}
+
 require("mineunit.globals")
 
 local function mineunit_path(name)
 	return pl.path.normpath(string.format("%s/%s", mineunit:config("mineunit_path"), name))
+end
+
+local function require_mineunit(name, root, tag)
+	local modulename = name:gsub("/", ".")
+	if root and tag and tag ~= "mineunit" then
+		local path = name:match("^([^/]+)/")
+		if path and tagged_paths[path] then
+			local oldpath = package.path
+			local module
+			package.path = root.."/"..tag.."/?.lua;"
+			mineunit:debug("Loading "..name.." from "..tag)
+			local success = pcall(function() module = require(modulename)end)
+			package.path = oldpath
+			if success then
+				return module
+			else
+				mineunit:error("Loading "..name.." from "..tag.." failed, trying to use builtin")
+			end
+		end
+	end
+	return require("mineunit." .. modulename)
 end
 
 mineunit.__index = mineunit
@@ -46,7 +77,7 @@ setmetatable(mineunit, {
 		local res
 		if not _mineunits[name] then
 			mineunit:debug("Loading mineunit module", name)
-			res = require("mineunit." .. name:gsub("/", "."))
+			res = require_mineunit(name, mineunit:config("core_root"), mineunit:config("engine_version"))
 		end
 		_mineunits[name] = true
 		return res
