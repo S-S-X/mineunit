@@ -27,12 +27,24 @@ local args = {
 	Xoutput = {},
 }
 
+mineunit_conf_defaults = {}
 mineunit_conf_override = {}
 
 local pl = { path = require 'pl.path' }
 local lua_dofile = dofile
 function _G.dofile(path, ...)
 	return lua_dofile(pl.path.normpath(path), ...)
+end
+
+local function execread(cmd)
+	local process = assert(io.popen(cmd .. ' ; printf "\n$?"', "r"))
+	local rawout = assert(process:read("*a"))
+	process:close()
+	assert(type(rawout) == "string" and rawout ~= "")
+	local output, status = rawout:match("^(.-)\n?\n([0-9]+)$")
+	--print("output", "'"..output.."'")
+	--print("status", "'"..status.."'")
+	return tonumber(status), output
 end
 
 local function run_report()
@@ -88,8 +100,7 @@ local function run_report()
 	os.remove(luacov_config.statsfile)
 end
 
-local function read_mineunit_conf()
-	local configpath = "spec/mineunit.conf"
+local function read_mineunit_conf(configpath)
 	local configfile, err = loadfile(configpath)
 	if configfile then
 		local configenv = {}
@@ -100,7 +111,102 @@ local function read_mineunit_conf()
 				table.insert(args.luacov.exclude, v)
 			end
 		end
+		configenv.exclude = nil
+		for k,v in pairs(configenv) do
+			-- FIXME: Configuration system is totally messed up currently, complete refactoring needed
+			if type(v) ~= "table" then
+				mineunit_conf_defaults[k] = v
+			end
+		end
+		return next(configenv) and configenv or nil
 	end
+end
+
+local function fetch_core_libraries(tag, target)
+	local status, output
+
+	-- Check git version and availability
+	status, output = execread("git --version")
+	if status ~= 0 or not output:find("^git version 2%.[2-9][0-9]") then
+		print("Suitable git version not found. At least Git 2.20 is required and reachable.", output)
+		return false
+	end
+
+	-- Check and create directory
+	if target:find('[%c%s"]') then
+		print("Refusing to use target with spaces double quotes or control characters (sorry for being lazy): " .. target)
+		return false
+	end
+	if pl.path.exists(target) then
+		if pl.path.isdir(target) then
+			print("Using existing `core` directory for libraries: " .. target)
+		else
+			print("Path `core` exists and is not directory, refusing to continue: " .. target)
+			return false
+		end
+	else
+		local pl_dir = require("pl.dir")
+		if pl_dir.makepath(target) ~= true then
+			print("Could not create `core` directory for libraries: " .. target)
+			return false
+		end
+		print("Created new `core` directory for libraries: " .. target)
+	end
+
+	-- Check if tag exists
+	local tagdir = pl.path.join(target, tag)
+	if pl.path.exists(tagdir) then
+		print("Path for selected version already exists, remove to download again: " .. tagdir)
+		return true
+	end
+	if tagdir:find('[%c%s"]') then
+		print("Refusing to use target with spaces double quotes or control characters (sorry for being lazy): " .. tagdir)
+		return false
+	end
+
+	-- Download tag from git repository
+	local gitarg = "--config advice.detachedHead=false --quiet --progress --depth 1"
+	local gitcmd = "git clone "..gitarg.." --branch '%s' --single-branch '%s' '%s'"
+	local url = "https://github.com/minetest/minetest.git"
+	local fetchdir = tagdir .. ".mineunit.temp"
+	local fetch_command = gitcmd:format(tag, url, fetchdir)
+	status, output = execread(fetch_command)
+	if status ~= 0 or output:lower():find("error") then
+		-- This check is kinda stupid but simple and hopefully works...
+		print(output)
+		print("Command failed: " .. fetch_command)
+		return false
+	else
+		print(output)
+	end
+
+	-- Get `builtin` from fetchdir, remove fetchdir
+	local libdir = pl.path.join(fetchdir, "builtin")
+	if not pl.path.exists(libdir) then
+		print("Seems like `builtin` directory does not exist: " .. libdir)
+		return false
+	end
+
+	status, output = execread(('mv "%s" "%s"'):format(libdir, tagdir))
+	if status ~= 0 then
+		print(output)
+		print("Command failed: " .. fetch_command)
+		return false
+	end
+
+	assert(#target + #tag > 4, "Refusing to run rm -rf on "..fetchdir)
+	assert(#fetchdir > #target + #tag, "Refusing to run rm -rf on "..fetchdir)
+	assert(fetchdir:find("..", 1, true) == nil, "Refusing to run rm -rf on "..fetchdir)
+	assert(fetchdir:find(target, 1, true) ~= nil, "Refusing to run rm -rf on "..fetchdir)
+	status, output = execread(('rm -rf "%s"'):format(fetchdir))
+	if status ~= 0 then
+		-- This check is kinda stupid but simple and hopefully works...
+		print(output)
+		print("Command failed: " .. fetch_command)
+		return false
+	end
+	print("Engine "..tag.." libraries downloaded to "..tagdir)
+	return true
 end
 
 -- Mineunit cli runner
@@ -110,10 +216,48 @@ do -- Parse cli args
 	while arg[i] do
 		local v = arg[i]
 		if v == "-V" or v == "--version" or v == "-h" or v == "--help" then
-			print("Mineunit v0.7-already-pretty-good")
-			print("mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>]")
-			print("mineunit -r|--report")
-			print("mineunit --demo")
+			print(({([[Mineunit v0.8-somehow-still-working
+				
+				Usage:
+					mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>] \
+					[--engine-version <version>] [--fetch-core <version>] [--core-root <path>]
+				
+				Options:
+					-c, --coverage  Execute luacov test coverage analysis.
+					-r, --report    Build report after successful coverage analysis.
+					                Currently cannot be combined with --coverage
+					-x|--exclude <pattern>
+					                Exclude source file patterns from test coverage analysis.
+					                Can be repeated for multiple patterns.
+				
+					--demo          Install demo tests to current directory.
+					                Good way to learn Mineunit or initialize tests for project.
+				
+					--core-root <path>
+					                Root directory for core libraries, defaults to install path.
+					--engine-version <tag>
+					                Use core engine libraries from git tag version.
+					--fetch-core <tag>
+					                Download core engine libraries for tag.
+					                This is simple wrapper around `git clone`.
+				
+					-v|--verbose    Be verbose, prints more useless crap to console.
+					-q|--quiet      Be quiet, most of time keeps your console fairly clean.
+				
+				Resources:
+					Luarocks package: https://luarocks.org/modules/S-S-X/mineunit
+					Issue tracker: https://github.com/S-S-X/mineunit/issues
+					GitHub integration: https://github.com/marketplace/actions/mineunit-runner
+				
+				Configuration files (in order):
+					/etc/mineunit/mineunit.conf
+					$HOME/.mineunit.conf
+					$HOME/.mineunit/mineunit.conf
+					./spec/mineunit.conf
+				
+				License:
+					MIT Expat with LGPL libraries, see LICENSE file for details.
+			]]):gsub("([\r\n])\t\t\t\t?", "%1"):gsub(" \\[\r\n]+\t*", " ")})[1])
 			return
 		elseif v == "-c" or v == "--coverage" then
 			args.coverage = true
@@ -172,12 +316,94 @@ do -- Parse cli args
 				print("Does not look like a Minetest mod directory, file init.lua not found.")
 			end
 			return
+		elseif v == "--core-root" then
+			i = i + 1
+			if not arg[i] then
+				print("Missing value for " .. v)
+				return
+			end
+			local target = pl.path.normpath(pl.path.abspath(arg[i]))
+			if not pl.path.exists(target) then
+				print("Path "..v.." does not exist: " .. target)
+				return
+			elseif not pl.path.isdir(target) then
+				print("Path "..v.." is not directory, refusing to continue: " .. target)
+				return
+			end
+			args,core_root = target
+		elseif v == "--engine-version" then
+			if arg[i+1] and arg[i+1]:sub(1,1) ~= "-" then
+				i = i + 1
+				if not arg[i]:find("^[%w][%w%.%-_]+$") then
+					print("Engine version is restricted to alpha numeric and .-_ characters.")
+					return
+				end
+				args.engine_version = arg[i]
+			else
+				args.engine_version = true
+			end
+		elseif v == "--fetch-core" then
+			i = i + 1
+			if not arg[i] then
+				print("Missing value for " .. v)
+				return
+			elseif not arg[i]:find("^[0-9]+%.[0-9]+%.[0-9]+$") then
+				print("Invalid value for " .. v .. ". Currently only release version tags are possible.")
+				return
+			end
+			args.fetch_core = arg[i]
+		elseif v == "--" then
+			break
+		else
+			print("Invalid argument "..v)
+			print("Use -- to stop argument parsing")
+			return
 		end
 		i = i + 1
 	end
 end
 
-read_mineunit_conf()
+do -- read configuration files
+	read_mineunit_conf("/etc/mineunit/mineunit.conf")
+	local home = os.getenv("HOME")
+	if type(home) == "string" then
+		read_mineunit_conf(home .. "/.mineunit.conf")
+		read_mineunit_conf(home .. "/.mineunit/mineunit.conf")
+	end
+	read_mineunit_conf("spec/mineunit.conf")
+	args.core_root = args.core_root or mineunit_conf_defaults.core_root
+	args.engine_version = args.engine_version or mineunit_conf_defaults.engine_version
+end
+
+args.core_root = args.core_root or pl.path.normpath(pl.path.abspath(pl.path.join(require("mineunit.scwd"), "core")))
+if args.fetch_core then
+	if not fetch_core_libraries(args.fetch_core, args.core_root) then
+		print("Operation --fetch-core "..args.fetch_core.." failed, giving up")
+		return
+	elseif not args.engine_version then
+		return
+	end
+end
+
+if args.engine_version and args.engine_version ~= "mineunit" then
+	if args.engine_version == true then
+		local status, output = execread(('ls -1 "%s"'):format(args.core_root))
+		if status == 0 and output then
+			print("Available engine versions: ("..args.core_root..")")
+			print("mineunit"..("\n"..output):gsub("\n+$",""))
+		else
+			print("Reading "..args.core_root.." failed")
+		end
+		return
+	end
+	local tagdir = pl.path.join(args.core_root, args.engine_version)
+	if not pl.path.isdir(tagdir) then
+		print("Libraries for version "..args.engine_version.." not found from "..tagdir)
+		return
+	end
+	mineunit_conf_override.engine_version = args.engine_version
+	mineunit_conf_override.core_root = args.core_root
+end
 
 if args.report then
 	run_report()
