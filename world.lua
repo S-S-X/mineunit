@@ -208,7 +208,8 @@ function world.remove_node(pos)
 end
 
 function world.clear()
-	world.nodes = {}
+	local metatable = getmetatable(world.nodes)
+	world.nodes = setmetatable({}, metatable)
 end
 
 function world.layout(layout, offset)
