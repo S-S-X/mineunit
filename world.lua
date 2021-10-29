@@ -1,6 +1,24 @@
-local world = {
-	nodes = {}
-}
+local world = {}
+local world_default_node = { name = "air", param1 = 0, param2 = 0 }
+
+-- TODO: Add some protection against direct node modifications, preferably with clear warning message
+function world.clear()
+	local nodes = {}
+	setmetatable(nodes, {
+		__index = function(self, key) return rawget(self, key) or world_default_node end,
+		__newindex = function(self, key, node)
+			local resolved = rawget(core.registered_aliases, node.name)
+			if resolved then
+				node = table.copy(node)
+				node.name = resolved
+			end
+			rawset(self, key, node)
+		end,
+	})
+	world.nodes = nodes
+end
+
+world.clear()
 
 -- Helper to execute callbacks
 local function call(fn, ...)
@@ -51,12 +69,7 @@ local function get_pointed_thing(pos, pointed_thing_type)
 end
 
 function world.set_default_node(node)
-	local nodes = world.nodes
-	if node then
-		setmetatable(nodes, { __index=function(key) return rawget(nodes, key) or node end })
-	else
-		setmetatable(nodes, nil)
-	end
+	world_default_node = node
 end
 
 function world.get_node(pos)
@@ -205,11 +218,6 @@ end
 
 function world.remove_node(pos)
 	world.set_node(pos, {name="air"})
-end
-
-function world.clear()
-	local metatable = getmetatable(world.nodes)
-	world.nodes = setmetatable({}, metatable)
 end
 
 function world.layout(layout, offset)
