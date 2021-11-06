@@ -112,6 +112,27 @@ local default_player_properties = {
 --
 -- Mineunit player API methods
 --
+
+local function get_pointed_thing(player, pointed_thing_or_pos)
+	local pointed_thing
+	if pointed_thing_or_pos.x then
+		-- Coordinates supplied, find out real pointed_thing assuming next thing from position is node
+		local pos = pointed_thing_or_pos
+		local playerpos = player:get_pos()
+		playerpos.y = playerpos.y + player:get_properties().eye_height
+		-- Do not actually care about facing, allow placing to impossible positions if asked to
+		local pos_dir = vector.direction(playerpos, pointed_thing_or_pos)
+		pointed_thing = {
+			type = "node",
+			above = vector.round(pos),
+			under = vector.round(vector.add(pos, pos_dir))
+		}
+	else
+		pointed_thing = table.copy(pointed_thing_or_pos)
+	end
+	return pointed_thing
+end
+
 function Player:_set_player_control_state(control, value)
 	self._controls[control] = value and value
 end
@@ -184,41 +205,43 @@ end
 
 function Player:do_set_wieldslot(inv_slot) self._wield_index = inv_slot end
 
-function Player:do_use(pointed_thing)
-	error("NOT IMPLEMENTED")
+function Player:do_use(pointed_thing_or_pos)
+	local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos)
+	local item = self:get_wielded_item()
+	local itemdef = core.registered_items[item:get_name()]
+	if itemdef and itemdef.on_use then
+		local returnstack = itemdef.on_use(item, self, pointed_thing)
+		if returnstack then
+			assert.is_ItemStack(returnstack)
+			self._inv:set_stack("main", self._wield_index, ItemStack(returnstack))
+		end
+	end
 end
 
 function Player:do_place(pointed_thing_or_pos)
+	local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos)
 	local item = self:get_wielded_item()
-	local pointed_thing
-	if pointed_thing_or_pos.x then
-		-- Coordinates supplied, find out real pointed_thing assuming next thing from position is node
-		local pos = pointed_thing_or_pos
-		local playerpos = self:get_pos()
-		playerpos.y = playerpos.y + self:get_properties().eye_height
-		-- Do not actually care about facing, allow placing to impossible positions if asked to
-		local pos_dir = vector.direction(playerpos, pointed_thing_or_pos)
-		pointed_thing = {
-			type = "node",
-			above = vector.round(pos),
-			under = vector.round(vector.add(pos, pos_dir))
-		}
-	else
-		pointed_thing = table.copy(pointed_thing_or_pos)
+	local itemdef = core.registered_items[item:get_name()]
+	if itemdef then
+		local returnstack
+		if itemdef.on_place and pointed_thing.type == "node" then
+			returnstack = itemdef.on_place(item, self, pointed_thing)
+		elseif itemdef.on_secondary_use and pointed_thing.type ~= "node" then
+			returnstack = itemdef.on_secondary_use(item, self, pointed_thing)
+		end
+		if returnstack then
+			assert.is_ItemStack(returnstack)
+			self._inv:set_stack("main", self._wield_index, ItemStack(returnstack))
+		end
 	end
-	local name = item:get_name()
-	local itemdef = core.registered_nodes[name] or core.registered_craftitems[name] or core.registered_tools[name]
-	local returnstack
-	if itemdef and itemdef.on_place then
-		returnstack = itemdef.on_place(item, self, pointed_thing)
-	else
-		-- FIXME: Check what exactly should be done here if anything
-		error("Attempt to call minetest.item_place from Player:do_place, probably invalid wield item")
-		returnstack = minetest.item_place(item, self, pointed_thing, nil)
-	end
-	if returnstack then
-		self._inv:set_stack("main", self._wield_index, ItemStack(returnstack))
-	end
+end
+
+function Player:do_place_from_above(pos)
+	-- Wrapper to move player above given position, look downwards and place to exact position
+	self:set_pos(vector.add(pos, {x=0,y=1,z=0}))
+	self:do_set_look_xyz("Y-")
+	self:do_place({ type = "node", above = {x=pos.x, y=pos.y, z=pos.z}, under = {x=pos.x, y=pos.y-1, z=pos.z} })
+	-- TODO / TBD: Restore original position and camera orientation?
 end
 
 function Player:do_set_pos_fp(pos)
