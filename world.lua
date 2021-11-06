@@ -1,5 +1,5 @@
 local world = {}
-local world_default_node = { name = "air", param1 = 0, param2 = 0 }
+local world_default_node
 
 -- TODO: Add some protection against direct node modifications, preferably with clear warning message
 function world.clear()
@@ -69,7 +69,7 @@ local function get_pointed_thing(pos, pointed_thing_type)
 end
 
 function world.set_default_node(node)
-	world_default_node = node
+	world_default_node = create_node(node)
 end
 
 function world.get_node(pos)
