@@ -69,7 +69,7 @@ local function get_pointed_thing(pos, pointed_thing_type)
 end
 
 function world.set_default_node(node)
-	world_default_node = create_node(node)
+	world_default_node = node and create_node(node) or nil
 end
 
 function world.get_node(pos)
