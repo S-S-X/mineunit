@@ -9,7 +9,18 @@ describe("Mineunit Player", function()
 	mineunit("entity")
 	mineunit("player")
 
-	core.register_node(":default:stone", {
+	core.register_node(":chest", {
+		description = "chest",
+		buildable_to = false,
+		walkable = true,
+		on_construct = function(pos)
+			local meta = core.get_meta(pos)
+			local inv = meta:get_inventory()
+			inv:set_size("chest", 3)
+		end,
+	})
+
+	core.register_node(":stone", {
 		description = "stone",
 		buildable_to = false,
 		walkable = true,
@@ -78,7 +89,7 @@ describe("Mineunit Player", function()
 		end,
 	})
 
-	world.set_node({x=2,y=0,z=0}, "default:stone")
+	world.set_node({x=2,y=0,z=0}, "stone")
 
 	local SX = Player("SX")
 	SX:get_inventory():set_stack("main", 1, "check")
@@ -283,6 +294,48 @@ describe("Mineunit Player", function()
 				assert.close_enough( 0.49, surface_pos, "surface_pos.z")
 			end
 			SX:do_use({x=1,y=0,z=0})
+		end)
+
+	end)
+
+	describe(":do_metadata_inventory_put(...)", function()
+
+		setup(function()
+			world.place_node({x=0,y=1,z=0}, "chest")
+			local inv = SX:get_inventory()
+			inv:set_stack("main", 1, "stone 33")
+			inv:set_stack("main", 2, "stone 42")
+			inv:set_stack("main", 3, "stone 88")
+		end)
+
+		it("works without source index", function()
+			SX:do_metadata_inventory_put({x=0,y=1,z=0}, "chest", 1)
+			local expected = InvRef()
+			expected:set_size("chest", 3)
+			expected:set_stack("chest", 1, ItemStack("stone 33"))
+			local nodeinv = core.get_meta({x=0,y=1,z=0}):get_inventory()
+			assert.same(tostring(expected:get_list("chest")), tostring(nodeinv:get_list("chest")))
+		end)
+
+		it("works with source index", function()
+			SX:do_metadata_inventory_put({x=0,y=1,z=0}, "chest", 2, 2)
+			local expected = InvRef()
+			expected:set_size("chest", 3)
+			expected:set_stack("chest", 1, ItemStack("stone 33"))
+			expected:set_stack("chest", 2, ItemStack("stone 42"))
+			local nodeinv = core.get_meta({x=0,y=1,z=0}):get_inventory()
+			assert.same(tostring(expected:get_list("chest")), tostring(nodeinv:get_list("chest")))
+		end)
+
+		it("works with ItemStack", function()
+			SX:do_metadata_inventory_put({x=0,y=1,z=0}, "chest", 3, ItemStack("stone 96"))
+			local expected = InvRef()
+			expected:set_size("chest", 3)
+			expected:set_stack("chest", 1, ItemStack("stone 33"))
+			expected:set_stack("chest", 2, ItemStack("stone 42"))
+			expected:set_stack("chest", 3, ItemStack("stone 96"))
+			local nodeinv = core.get_meta({x=0,y=1,z=0}):get_inventory()
+			assert.same(tostring(expected:get_list("chest")), tostring(nodeinv:get_list("chest")))
 		end)
 
 	end)

@@ -12,6 +12,8 @@ function world.clear()
 				node = table.copy(node)
 				node.name = resolved
 			end
+			-- TODO: Add option for stricter validation of nodes added to world
+			--assert(core.registered_nodes[node.name], "Attempt to place invalid node: "..tostring(node.name))
 			rawset(self, key, node)
 		end,
 	})
