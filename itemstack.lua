@@ -26,7 +26,9 @@ function ItemStack:get_wear() return self._wear end
 --* `set_wear(wear)`: returns boolean indicating whether item was cleared
 --    `wear`: number, unsigned 16 bit integer
 function ItemStack:set_wear(wear)
-	self._wear = math.min(65535, math.max(0, wear))
+	assert(wear <= 65535, "ItemStack:set_wear invalid wear value")
+	wear = wear < 0 and -((-wear) % 65536) or wear
+	self._wear = math.max(0, wear < 0 and 65536 + wear or wear)
 end
 --* `get_meta()`: returns ItemStackMetaRef. See section for more details
 function ItemStack:get_meta() return self._meta end
@@ -117,12 +119,13 @@ end
 --* `add_item(item)`: returns leftover `ItemStack`
 --    Put some item or stack onto this stack
 function ItemStack:add_item(item)
+	local stack_max = self:get_stack_max()
 	local stack = ItemStack(item)
 	local leftover = ItemStack(item)
 	local count = self:get_count()
-	local space = self._stack_max - count
+	local space = stack_max - count
 	if stack:get_count() > space then
-		self:set_count(self._stack_max)
+		self:set_count(stack_max)
 		leftover:set_count(stack:get_count() - space)
 	else
 		self:set_count(count + stack:get_count())
@@ -188,12 +191,10 @@ mineunit.export_object(ItemStack, {
 		else
 			error("NOT IMPLEMENTED: " .. type(value))
 		end
-		local itemdef = obj._name and core.registered_items[obj._name]
 		obj._count = obj._count or (obj._name and 1 or 0)
 		obj._name = obj._name or ""
 		obj._wear = obj._wear or 0
 		obj._meta = obj._meta or MetaDataRef()
-		obj._stack_max = itemdef and itemdef.stack_max or 99
 		setmetatable(obj, ItemStack)
 		return obj
 	end,
