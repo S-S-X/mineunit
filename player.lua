@@ -243,6 +243,8 @@ end
 function Player:do_set_wieldslot(inv_slot) self._wield_index = inv_slot end
 
 function Player:do_use(pointed_thing_or_pos)
+	-- TODO: Default should probably be position in front of player instead of player itself
+	pointed_thing_or_pos = pointed_thing_or_pos or self:get_pos()
 	local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos)
 	local item = self:get_wielded_item()
 	local itemdef = core.registered_items[item:get_name()]
@@ -256,6 +258,8 @@ function Player:do_use(pointed_thing_or_pos)
 end
 
 function Player:do_place(pointed_thing_or_pos)
+	-- TODO: Default should probably be position in front of player instead of player itself
+	pointed_thing_or_pos = pointed_thing_or_pos or self:get_pos()
 	local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos)
 	local item = self:get_wielded_item()
 	local itemdef = core.registered_items[item:get_name()]
