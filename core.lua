@@ -69,6 +69,7 @@ _G.minetest.register_on_mods_loaded = function(func) mineunit:register_on_mods_l
 
 _G.minetest.item_drop = noop
 _G.minetest.add_item = noop
+_G.minetest.check_for_falling = noop
 
 _G.minetest.register_biome = noop
 _G.minetest.clear_registered_biomes = function(...) error("MINEUNIT UNSUPPORTED CORE METHOD") end

@@ -26,7 +26,7 @@ function ItemStack:get_wear() return self._wear end
 --* `set_wear(wear)`: returns boolean indicating whether item was cleared
 --    `wear`: number, unsigned 16 bit integer
 function ItemStack:set_wear(wear)
-	assert(wear <= 65535, "ItemStack:set_wear invalid wear value")
+	assert(wear <= 65535, "ItemStack:set_wear invalid wear value: "..tostring(wear))
 	wear = wear < 0 and -((-wear) % 65536) or wear
 	self._wear = math.max(0, wear < 0 and 65536 + wear or wear)
 end
@@ -103,7 +103,7 @@ function ItemStack:is_known()
 end
 --* `get_definition()`: returns the item definition table.
 function ItemStack:get_definition()
-	return minetest.registered_items[self._name] or {}
+	return minetest.registered_items[self._name] or minetest.registered_items.unknown
 end
 --* `get_tool_capabilities()`: returns the digging properties of the item,
 --    or those of the hand if none are defined for this item type.

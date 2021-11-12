@@ -11,7 +11,7 @@ local args = {
 		include = {},
 		exclude = {
 			"spec/",
-			"/\.?luarocks/",
+			"/%.?luarocks/",
 			"/share/lua/",
 			"busted_bootstrap$",
 			"busted%.",
@@ -26,6 +26,8 @@ local args = {
 	Xhelper = {},
 	Xoutput = {},
 }
+
+mineunit_conf_override = {}
 
 local pl = { path = require 'pl.path' }
 local lua_dofile = dofile
@@ -120,7 +122,8 @@ do -- Parse cli args
 		elseif v == "-v" or v == "--verbose" then
 			args.verbose = true
 		elseif v == "-q" or v == "--quiet" then
-			mineunit_conf_override = { print = false, verbose = 1 }
+			mineunit_conf_override.print = false
+			mineunit_conf_override.verbose = 1
 		elseif v == "-x" or v == "--exclude" then
 			i = i + 1
 			if not arg[i] then
