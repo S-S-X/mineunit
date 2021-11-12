@@ -53,7 +53,17 @@ function core.global_exists(name)
 	return rawget(_G, name) ~= nil
 end
 
-function core.log(...) mineunit:info(...) end
+function core.log(level, ...)
+	if level == "error" then
+		mineunit:error(...)
+	elseif level == "warning" then
+		mineunit:warning(...)
+	elseif level == "debug" then
+		mineunit:debug(...)
+	else
+		mineunit:info(...)
+	end
+end
 function core.request_http_api(...) end
 
 function core.gettext(value)

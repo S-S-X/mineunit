@@ -24,6 +24,7 @@ _G.minetest = _G.core
 
 mineunit("settings")
 _G.core.settings = _G.Settings(fixture_path("minetest.conf"))
+mineunit:apply_default_settings(_G.core.settings)
 
 _G.core.register_on_joinplayer = noop
 _G.core.register_on_leaveplayer = noop
@@ -33,6 +34,7 @@ mineunit("game/item")
 mineunit("game/misc")
 mineunit("game/register")
 mineunit("game/privileges")
+mineunit("game/features")
 mineunit("common/misc_helpers")
 mineunit("common/vector")
 mineunit("common/serialize")
@@ -69,6 +71,8 @@ _G.minetest.register_on_mods_loaded = function(func) mineunit:register_on_mods_l
 
 _G.minetest.item_drop = noop
 _G.minetest.add_item = noop
+_G.minetest.check_for_falling = noop
+_G.minetest.get_objects_inside_radius = function(...) return {} end
 
 _G.minetest.register_biome = noop
 _G.minetest.clear_registered_biomes = function(...) error("MINEUNIT UNSUPPORTED CORE METHOD") end
