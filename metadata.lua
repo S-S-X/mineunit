@@ -301,7 +301,8 @@ function NodeMetaRef:mark_as_private(...) mineunit:info("NodeMetaRef:mark_as_pri
 
 function NodeMetaRef:to_table()
 	local result = MetaDataRef.to_table(self)
-	result.inventory = self:get_inventory():to_table()
+	-- TODO: result.inventory might not be in correct format, verify and fix if needed
+	result.inventory = self:get_inventory():get_lists()
 	return result
 end
 
