@@ -11,7 +11,8 @@ describe("NodeMetaRef", function()
 	mineunit("assert")
 
 	core.registered_items = {
-		test = { stack_max = 100 }
+		test = { stack_max = 100 },
+		foo = { stack_max = 50 }
 	}
 
 	describe("inventory", function()
@@ -22,36 +23,107 @@ describe("NodeMetaRef", function()
 			assert.is_true(inv:is_empty("main"))
 		end)
 
-		it("inventory:add_item not empty", function()
-			local meta = NodeMetaRef()
-			local inv = meta:get_inventory()
-			inv:set_size("main", 1)
-			inv:add_item("main", ItemStack("test 1"))
-			assert.is_false(inv:is_empty("main"))
+		describe("InvRef:add_item", function()
+
+			it("not empty", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 1)
+				inv:add_item("main", ItemStack("test 1"))
+				assert.is_false(inv:is_empty("main"))
+			end)
+
+			it("is empty", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 1)
+				inv:add_item("main", ItemStack("test 0"))
+				assert.is_true(inv:is_empty("main"))
+			end)
+
 		end)
 
-		it("inventory:set_stack not empty", function()
-			local meta = NodeMetaRef()
-			local inv = meta:get_inventory()
-			inv:set_size("main", 1)
-			inv:set_stack("main", 1, ItemStack("test 1"))
-			assert.is_false(inv:is_empty("main"))
+		describe("InvRef:set_stack", function()
+
+			it("not empty", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 1)
+				inv:set_stack("main", 1, ItemStack("test 1"))
+				assert.is_false(inv:is_empty("main"))
+			end)
+
+			it("is empty", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 1)
+				inv:set_stack("main", 1, ItemStack("test 0"))
+				assert.is_true(inv:is_empty("main"))
+			end)
+
 		end)
 
-		it("inventory:add_item is empty", function()
-			local meta = NodeMetaRef()
-			local inv = meta:get_inventory()
-			inv:set_size("main", 1)
-			inv:add_item("main", ItemStack("test 0"))
-			assert.is_true(inv:is_empty("main"))
-		end)
+		describe("InvRef:contains_item", function()
 
-		it("inventory:set_stack is empty", function()
-			local meta = NodeMetaRef()
-			local inv = meta:get_inventory()
-			inv:set_size("main", 1)
-			inv:set_stack("main", 1, ItemStack("test 0"))
-			assert.is_true(inv:is_empty("main"))
+			it("single stack", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 1)
+				inv:set_stack("main", 1, ItemStack("test 1"))
+				assert.is_true(inv:contains_item("main", "test 1"))
+			end)
+
+			it("single empty", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 1)
+				assert.is_false(inv:contains_item("main", "test 1"))
+			end)
+
+			it("single middle", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 5)
+				inv:set_stack("main", 3, ItemStack("test 1"))
+				assert.is_true(inv:contains_item("main", "test 1"))
+			end)
+
+			it("multi middle", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 5)
+				inv:set_stack("main", 2, ItemStack("foo 1"))
+				inv:set_stack("main", 4, ItemStack("test 4"))
+				assert.is_true(inv:contains_item("main", "test 4"))
+			end)
+
+			it("meta match", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 5)
+
+				local stack1 = ItemStack("test 4")
+				stack1:get_meta():set_string("test", "foo")
+				inv:set_stack("main", 4, stack1)
+
+				local stack2 = ItemStack("test 4")
+				stack2:get_meta():set_string("test", "foo")
+				assert.is_true(inv:contains_item("main", stack2, true))
+			end)
+
+			it("meta no match", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 5)
+
+				local stack1 = ItemStack("test 4")
+				stack1:get_meta():set_string("test", "foo")
+				inv:set_stack("main", 4, stack1)
+
+				local stack2 = ItemStack("test 4")
+				assert.is_false(inv:contains_item("main", stack2, true))
+			end)
+
 		end)
 
 	end)

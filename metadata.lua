@@ -173,13 +173,13 @@ function InvRef:contains_item(listname, stack, match_meta)
 	stack = type(stack) == "string" and ItemStack(stack) or stack
 	local name = stack:get_name()
 	local count = stack:get_count()
-	local meta1 = match_meta and stack:get_meta():to_table() or nil
+	local meta1 = match_meta and stack:get_meta():to_table().fields or nil
 	for _, liststack in ipairs(list) do
 		if liststack:get_name() == name and liststack:get_count() >= count then
 			if not match_meta then
 				return true
 			end
-			local meta2 = liststack:get_meta():to_table()
+			local meta2 = liststack:get_meta():to_table().fields
 			local fieldcount = 0
 			local matching = true
 			for k,v in pairs(meta1) do
@@ -189,8 +189,8 @@ function InvRef:contains_item(listname, stack, match_meta)
 				end
 				fieldcount = fieldcount + 1
 			end
-			if matching then
-				return mineunit.utils.count(meta2) == fieldcount
+			if matching and mineunit.utils.count(meta2) == fieldcount then
+				return true
 			end
 		end
 	end
@@ -310,7 +310,6 @@ function NodeMetaRef:from_table(t)
 			inv:set_list(listname, list)
 		end
 	end
-	self._data = table.copy(t.fields)
 end
 
 mineunit.export_object(NodeMetaRef, {
