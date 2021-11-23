@@ -7,7 +7,7 @@ describe("Mineunit Player", function()
 	mineunit("core")
 	mineunit("itemstack")
 	mineunit("entity")
-	mineunit("player")
+	sourcefile("player")
 
 	core.register_node(":chest", {
 		description = "chest",
