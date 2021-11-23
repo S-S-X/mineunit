@@ -5,7 +5,7 @@ local ItemStack = {}
 --* `is_empty()`: returns `true` if stack is empty.
 function ItemStack:is_empty() return self._count < 1 end
 --* `get_name()`: returns item name (e.g. `"default:stone"`).
-function ItemStack:get_name() return self._name end
+function ItemStack:get_name() return self._count > 0 and self._name or "" end
 --* `set_name(item_name)`: returns a boolean indicating whether the item was cleared.
 function ItemStack:set_name(item_name)
 	assert.is_string(item_name, "ItemStack:set_name expected item_name to be string")
@@ -67,7 +67,11 @@ function ItemStack:clear() self._count = 0 end
 --* `replace(item)`: replace the contents of this stack.
 --    `item` can also be an itemstring or table.
 function ItemStack:replace(item)
-	error("NOT IMPLEMENTED")
+	local stack = mineunit.utils.type(item) == "ItemStack" and item or ItemStack(item)
+	self._name = stack._name
+	self._count = stack._count
+	self._wear = stack._wear
+	self._meta = stack._meta
 end
 --* `to_string()`: returns the stack in itemstring form.
 -- https://github.com/minetest/minetest/blob/5.4.0/src/inventory.cpp#L59-L85
@@ -99,11 +103,11 @@ function ItemStack:get_free_space()
 end
 --* `is_known()`: returns `true` if the item name refers to a defined item type.
 function ItemStack:is_known()
-	return not not minetest.registered_items[self._name]
+	return not not core.registered_items[self._name]
 end
 --* `get_definition()`: returns the item definition table.
 function ItemStack:get_definition()
-	return minetest.registered_items[self._name] or minetest.registered_items.unknown
+	return core.registered_items[self._name] or core.registered_items.unknown
 end
 --* `get_tool_capabilities()`: returns the digging properties of the item,
 --    or those of the hand if none are defined for this item type.
@@ -119,17 +123,28 @@ end
 --* `add_item(item)`: returns leftover `ItemStack`
 --    Put some item or stack onto this stack
 function ItemStack:add_item(item)
-	local stack_max = self:get_stack_max()
-	local stack = ItemStack(item)
 	local leftover = ItemStack(item)
+	if item:is_empty() then
+		return leftover
+	end
+	if self:is_empty() then
+		self:replace(leftover)
+		leftover:set_count(0)
+		return leftover
+	end
+
+	local stack_max = item:get_stack_max()
 	local count = self:get_count()
 	local space = stack_max - count
-	if stack:get_count() > space then
-		self:set_count(stack_max)
-		leftover:set_count(stack:get_count() - space)
-	else
-		self:set_count(count + stack:get_count())
-		leftover:set_count(0)
+	if space > 0 and self:get_name() == leftover:get_name() then
+		local input_count = leftover:get_count()
+		if input_count > space then
+			self:set_count(stack_max)
+			leftover:set_count(input_count - space)
+		else
+			self:set_count(count + input_count)
+			leftover:set_count(0)
+		end
 	end
 	return leftover
 end
