@@ -63,6 +63,112 @@ describe("NodeMetaRef", function()
 
 		end)
 
+		describe("InvRef:set_list", function()
+
+			it("set empty list", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 3)
+				inv:set_list("main", {})
+				local expected = {
+					ItemStack(),
+					ItemStack(),
+					ItemStack()
+				}
+				assert.is_true(inv:is_empty("main"))
+				assert.same(expected, inv:get_list("main"))
+			end)
+
+			it("set ItemStack list beginning", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 3)
+				inv:set_list("main", {
+					ItemStack("test 1"),
+					ItemStack("foo 2"),
+				})
+				local expected = {
+					ItemStack("test 1"),
+					ItemStack("foo 2"),
+					ItemStack(),
+				}
+				assert.is_false(inv:is_empty("main"))
+				assert.same(expected, inv:get_list("main"))
+			end)
+
+			it("set ItemStack list end", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 3)
+				inv:set_list("main", {
+					ItemStack(),
+					ItemStack("test 1"),
+					ItemStack("foo 2")
+				})
+				local expected = {
+					ItemStack(),
+					ItemStack("test 1"),
+					ItemStack("foo 2"),
+				}
+				assert.is_false(inv:is_empty("main"))
+				assert.same(expected, inv:get_list("main"))
+			end)
+
+			it("set ItemStack list with stack at beginning", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 3)
+				inv:set_stack("main", 1, ItemStack("test 9"))
+				inv:set_list("main", {
+					ItemStack("test 1"),
+					ItemStack("foo 2"),
+				})
+				local expected = {
+					ItemStack("test 1"),
+					ItemStack("foo 2"),
+					ItemStack()
+				}
+				assert.is_false(inv:is_empty("main"))
+				assert.same(expected, inv:get_list("main"))
+			end)
+
+			it("set ItemStack list with stack at end", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 3)
+				inv:set_stack("main", 3, ItemStack("test 9"))
+				inv:set_list("main", {
+					ItemStack("test 1"),
+					ItemStack("foo 2"),
+				})
+				local expected = {
+					ItemStack("test 1"),
+					ItemStack("foo 2"),
+					ItemStack(),
+				}
+				assert.is_false(inv:is_empty("main"))
+				assert.same(expected, inv:get_list("main"))
+			end)
+
+			it("set empty ItemStack list", function()
+				local meta = NodeMetaRef()
+				local inv = meta:get_inventory()
+				inv:set_size("main", 3)
+				inv:set_list("main", {
+					ItemStack("test 0"),
+					ItemStack("foo 0"),
+				})
+				local expected = {
+					ItemStack(),
+					ItemStack(),
+					ItemStack()
+				}
+				assert.is_true(inv:is_empty("main"))
+				assert.same(expected, inv:get_list("main"))
+			end)
+
+		end)
+
 		describe("InvRef:contains_item", function()
 
 			it("single stack", function()

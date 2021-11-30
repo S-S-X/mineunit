@@ -127,6 +127,38 @@ describe("ItemStack", function()
 
 	end)
 
+	describe("to_table", function()
+
+		it("returns all data", function()
+			local stack = ItemStack("test 101")
+			stack:set_wear(1337)
+			local meta = stack:get_meta()
+			meta:set_string("foo", "bar")
+			meta:set_int("baz", 42)
+			local result = stack:to_table()
+			local expected = {
+				name = "test",
+				count = 101,
+				wear = 1337,
+				meta = {
+					foo = "bar",
+					baz = "42",
+				}
+			}
+			assert.same(expected, result)
+		end)
+
+		it("is nil for empty stack", function()
+			local stack = ItemStack("test 0")
+			stack:set_wear(1337)
+			local meta = stack:get_meta()
+			meta:set_string("foo", "bar")
+			meta:set_int("baz", 42)
+			assert.is_nil(stack:to_table())
+		end)
+
+	end)
+
 	describe("stack definition", function()
 
 		it("is_known known itemstring", function()
