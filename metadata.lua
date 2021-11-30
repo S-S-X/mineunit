@@ -7,6 +7,21 @@ local function assert_invlist_index(index, size)
 	assert(index <= size, "InvList:set_stack: Invalid InvList stack index larger than InvList size")
 end
 
+-- TODO: This should be moved to mineunit.utils with configurable failure behavior
+local function get_integer(value, msg)
+	local number = tonumber(value)
+	if number == nil then
+		error(msg.."Expected number, got: "..tostring(value))
+	elseif type(number) ~= "number" then
+		mineunit:warning(msg.."Expected number, got: "..type(value))
+	end
+	local integer = math.floor(number)
+	if number ~= integer then
+		mineunit:warning(msg.."Expected integer, got: "..tostring(value))
+	end
+	return integer
+end
+
 local function invlist_tostring(list)
 	local items = {}
 	for _, item in ipairs(list) do
@@ -43,13 +58,16 @@ end
 -- * `set_size(listname, size)`: set size of a list
 --    * returns `false` on error (e.g. invalid `listname` or `size`)
 function InvRef:set_size(listname, size)
-	local newsize = tonumber(size)
+	local newsize = get_integer(size, "InvRef:set_size: ")
 	if newsize < 0 then
+		mineunit:warning("InvRef:set_size: Invalid size: "..tostring(size))
 		return false
 	elseif newsize == 0 then
 		self._lists[listname] = nil
 		self._empty[listname] = nil
 		newsize = nil
+	elseif newsize == self._sizes[listname] then
+		return true
 	elseif not self._lists[listname] then
 		self._lists[listname] = {}
 		setmetatable(self._lists[listname], { __tostring = invlist_tostring })
@@ -89,11 +107,15 @@ end
 function InvRef:set_stack(listname, index, stack)
 	local list = self._lists[listname]
 	assert(list, "InvRef:set_stack: Invalid inventory list " .. tostring(list))
-	assert_invlist_index(index, self:get_size(listname))
+	assert_invlist_index(index, self._sizes[listname])
 	-- Either clone or create itemstack, both cases are needed here. References should not be added to lists.
 	stack = ItemStack(stack)
 	local input_empty = stack:is_empty()
-	if not self._empty[listname] or not list[index]:is_empty() then
+	local target_empty = self._empty[listname] or list[index]:is_empty()
+	if input_empty and target_empty then
+		-- Both input and target stacks are empty, skip inventory update
+		return
+	elseif not target_empty then
 		if input_empty then
 			self._empty[listname] = self._sizes[listname] == 1 and true or nil
 		end
@@ -104,19 +126,39 @@ function InvRef:set_stack(listname, index, stack)
 end
 -- * `get_list(listname)`: return full list
 function InvRef:get_list(listname)
-	assert(self._lists[listname], "InvRef:get_list list not found: "..tostring(listname))
-	mineunit:debug("InvRef:get_list returning list "..listname.." as reference, this can lead to unxpected results")
-	return self._lists[listname]
+	if not self._lists[listname] then
+		mineunit:warning("InvRef:get_list list not found: "..tostring(listname))
+		return nil
+	end
+	local result = {}
+	for index, stack in ipairs(self._lists[listname]) do
+		result[index] = ItemStack(stack)
+	end
+	return result
 end
 -- * `set_list(listname, list)`: set full list (size will not change)
 function InvRef:set_list(listname, list)
 	assert.is_string(listname, "InvRef:set_list expected `listname` to be string, got "..type(listname))
 	assert.is_table(list, "InvRef:set_list expected `list` to be table, got " .. type(list))
-	local target = self._lists[listname]
-	assert(target, "InvRef:set_list list does not exist "..tostring(listname))
-	self._empty[listname] = nil
-	for index = 1, math.min(self._sizes[listname], #list) do
-		target[index] = ItemStack(list[index])
+	assert.is_table(self._lists[listname], "InvRef:set_list list does not exist "..tostring(listname))
+	assert.is_table(list, "InvRef:set_stack: Invalid inventory list " .. tostring(list))
+	-- Update list if input or target contains anything
+	if not self._empty[listname] or next(list) then
+		local empty = true
+		local target = self._lists[listname]
+		for index = 1, self._sizes[listname] do
+			-- Either clone or create itemstack, both cases are needed here. References should not be added to lists.
+			local stack = ItemStack(list[index])
+			if stack:is_empty() then
+				if not target[index]:is_empty() then
+					target[index] = stack
+				end
+			else
+				empty = false
+				target[index] = stack
+			end
+		end
+		self._empty[listname] = empty
 	end
 end
 -- * `get_lists()`: returns list of inventory lists
@@ -135,18 +177,16 @@ function InvRef:set_lists(lists)
 end
 -- * `add_item(listname, stack)`: add item somewhere in list, returns leftover
 function InvRef:add_item(listname, stack)
-	local list = self._lists[listname]
-	assert(list, "InvRef:add_item: Invalid inventory list " .. tostring(list))
-	stack = mineunit.utils.type(stack) == "ItemStack" and stack or ItemStack(stack)
-	local count = stack:get_count()
+	stack = ItemStack(stack)
 	if not stack:is_empty() then
+		local list = self._lists[listname]
+		local count = stack:get_count()
+		assert(list, "InvRef:add_item: Invalid inventory list " .. tostring(list))
 		for index = 1, self:get_size(listname) do
 			-- Try to add items into stack, get and check leftover stack
 			stack = list[index]:add_item(stack)
 			if stack:is_empty() then
-				-- Input stack is empty, all items have been added somewhere
-				self._empty[listname] = false
-				return stack
+				break
 			end
 		end
 		if stack:get_count() < count then
@@ -264,6 +304,22 @@ function MetaDataRef:from_table(t)
 	end
 end
 function MetaDataRef:equals(other) error("NOT IMPLEMENTED") end
+
+-- TODO: Allows `same` assertions but in corner cases makes mod code to return true where engine would return false.
+-- Requires either overriding luassert `same` (nice for users) or only allowing special assertions (not so nice).
+function MetaDataRef:__eq(other)
+	if mineunit.utils.type(other) == "MetaDataRef" then
+		local fieldcount = 0
+		for key, value in pairs(self._data) do
+			if other._data[key] ~= value then
+				return false
+			end
+			fieldcount = fieldcount + 1
+		end
+		return mineunit.utils.count(other._data) == fieldcount
+	end
+	return false
+end
 
 mineunit.export_object(MetaDataRef, {
 	name = "MetaDataRef",
