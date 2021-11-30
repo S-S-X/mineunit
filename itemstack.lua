@@ -85,13 +85,15 @@ function ItemStack:to_string()
 end
 --* `to_table()`: returns the stack in Lua table form.
 function ItemStack:to_table()
-	-- FIXME: Format is probably wrong, missing something or has too much something. Check actual spec and fix.
-	return {
-		name = self:get_name(),
-		count = self:get_count(),
-		wear = self:get_wear(),
-		meta = self:get_meta():to_table(),
-	}
+	-- NOTE: `metadata` field is not and probably will not be here, engine does add it but it seems to be legacy thing.
+	if self:get_count() > 0 then
+		return {
+			name = self:get_name(),
+			count = self:get_count(),
+			wear = self:get_wear(),
+			meta = self:get_meta():to_table().fields,
+		}
+	end
 end
 --* `get_stack_max()`: returns the maximum size of the stack (depends on the item).
 function ItemStack:get_stack_max()
@@ -183,6 +185,18 @@ end
 function ItemStack:__tostring()
 	local count = self:get_count()
 	return 'ItemStack("' .. self:get_name() .. (count > 1 and " "..count or "") .. '")'
+end
+
+-- TODO: Allows `same` assertions but in corner cases makes mod code to return true where engine would return false.
+-- Requires either overriding luassert `same` (nice for users) or only allowing special assertions (not so nice).
+function ItemStack:__eq(other)
+	if mineunit.utils.type(other) == "ItemStack" then
+		return self:get_name() == other:get_name()
+			and self._count == other._count
+			and self._wear == other._wear
+			and self._meta == other._meta
+	end
+	return false
 end
 
 mineunit.export_object(ItemStack, {
