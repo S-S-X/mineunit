@@ -317,9 +317,10 @@ end
 
 function Player:do_use_from_above(pos, controls)
 	-- Wrapper to move player above given position, look downwards and use on exact position
+	-- Targeted node is under, player looks from above position
 	self:set_pos(vector.add(pos, {x=0,y=1,z=0}))
 	self:do_set_look_xyz("Y-")
-	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y, z=pos.z}, under = {x=pos.x, y=pos.y-1, z=pos.z} }
+	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y+1, z=pos.z}, under = {x=pos.x, y=pos.y, z=pos.z} }
 	self:do_use(pointed_thing, controls)
 	-- TODO / TBD: Restore original position and camera orientation?
 end
@@ -348,6 +349,7 @@ end
 
 function Player:do_place_from_above(pos, controls)
 	-- Wrapper to move player above given position, look downwards and place to exact position
+	-- Placed on above position, supporting node is under
 	self:set_pos(vector.add(pos, {x=0,y=1,z=0}))
 	self:do_set_look_xyz("Y-")
 	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y, z=pos.z}, under = {x=pos.x, y=pos.y-1, z=pos.z} }

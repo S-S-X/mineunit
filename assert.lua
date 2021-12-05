@@ -54,6 +54,21 @@ local function in_array(value, t)
 	return false
 end
 
+local coordinate_keys = {x=true, y=true, z=true}
+local function is_coordinate(thing)
+	if type(thing) == "table" then
+		for k,v in pairs(thing) do
+			if type(v) ~= "number" or not coordinate_keys[k] then
+				return false
+			end
+		end
+		return true
+	end
+	return false
+end
+
+-- Type overrides
+
 local lua_type = type
 
 local function mineunit_type(obj)
@@ -131,6 +146,9 @@ local function close_enough(state, args)
 end
 assert:register("assertion", "close_enough", close_enough)
 
+say:set("assertion.is_coordinate.negative", "Expected %s to be valid coordinates")
+assert:register("assertion", "is_coordinate", is_coordinate, "assertion.is_coordinate.negative")
+
 -- TODO: Check this one, should it actually check for mineunit_type Player instead of tble or userdata
 local function player_or_name(_,args)
 	return (type(args[1]) == "string" and args[1] ~= "") or in_array(type(args[1]), {"table", "userdata"})
@@ -152,6 +170,67 @@ for _, typename in ipairs(mineunit_types) do
 	assert:register("assertion", assertname, checktype, "assertion."..assertname..".negative")
 end
 
+-- Inventory assertions
+
+local function resolve_args_inv_list_slot_stack(a, b, c, d)
+	if mineunit_type(a) == "Player" then
+		inv = a:get_inventory()
+	elseif is_coordinate(a) then
+		inv = world.get_meta(a):get_inventory()
+	else
+		return
+	end
+	-- This makes some cases fail without error, those cases are not supported and it is invalid assertion use
+	local stack = d or c or b or nil
+	return inv, (c and b or nil), (d and c or nil), (type(stack) == "string" and ItemStack(stack) or stack)
+end
+
+local function formatname(thing)
+	local mtype = mineunit_type(thing)
+	if mtype == "Player" then
+		return thing:get_player_name()
+	elseif mtype == "ItemStack" then
+		return thing:get_name()
+	elseif is_coordinate(thing) then
+		return pos.x..","..pos.y..","..pos.z
+	elseif type(thing) == "string" then
+		return thing
+	end
+	error("formatname: unsupported thing")
+end
+
+-- has_item(Player, listname, slotnumber, itemstring|ItemStack)
+-- has_item(Player, listname, itemstring|ItemStack)
+-- has_item(Player, itemstring|ItemStack)
+-- has_item(coordinate, listname, slotnumber, itemstring|ItemStack)
+-- has_item(coordinate, listname, itemstring|ItemStack)
+-- has_item(coordinate, itemstring|ItemStack)
+local function has_item(state, args)
+	local inv, list, slot, expected = resolve_args_inv_list_slot_stack(args[1], args[2], args[3], args[4])
+	assert.is_InvRef(inv, "assert.has_item expected Player or coordinates, got "..type(args[1]))
+	assert(type(list) == "string" or list == nil, "Invalid 2nd argument for has_item assertion")
+	assert(type(slot) == "number" or slot == nil, "Invalid 3rd argument for has_item assertion")
+	assert.is_ItemStack(expected, "Invalid expected stack for has_item assertion")
+	local msg = "Expected %s to have item %s"
+	state.failure_message = msg:format(formatname(args[1]), tostring(expected))
+	if list then
+		if slot then
+			local actual = inv:get_stack(list, slot)
+			local msg = "Expected %s to have %s but found %s"
+			state.failure_message = msg:format(formatname(args[1]), tostring(expected), tostring(actual))
+			return actual:get_name() == expected:get_name() and actual:get_count() == expected:get_count()
+		end
+		return inv:contains_item(list, expected)
+	end
+	for listname in pairs(inv._lists) do
+		if inv:contains_item(listname, expected) then
+			return true
+		end
+	end
+	return false
+end
+assert:register("assertion", "has_item", has_item)
+
 -- Replace builtin assert with luassert
 
 _G.assert = assert
@@ -163,5 +242,7 @@ return {
 	count = count,
 	tabletype = tabletype,
 	round = round,
+	is_coordinate = is_coordinate,
+	has_item = has_item,
 	type = mineunit_type
 }
