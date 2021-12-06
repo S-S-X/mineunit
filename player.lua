@@ -113,15 +113,71 @@ local default_player_properties = {
 -- Mineunit player API methods
 --
 
-local function get_pointed_thing(player, pointed_thing_or_pos)
+local function tempcontrols(player, controls)
+	if controls then
+		player._oldcontrols = player._controls
+		player._controls = controls
+	end
+end
+
+local function restorecontrols(player)
+	if player._oldcontrols then
+		player._controls = player._oldcontrols
+		player._oldcontrols = nil
+	end
+end
+
+local function resolve_player_action_args(pt_or_pos_or_controls, controls)
+	-- All arguments are optional, detect type by looking at arguments
+	if pt_or_pos_or_controls == nil or pt_or_pos_or_controls.x or pt_or_pos_or_controls.under then
+		-- Arg1: pointed_thing or pos Arg2: controls
+		return pt_or_pos_or_controls, controls
+	elseif controls == nil then
+		-- Arg1: controls Arg2: N/A
+		return nil, pt_or_pos_or_controls
+	end
+	error("Invalid arguments for player action")
+end
+
+local function raycast_collision(pos, dir, range, resolution)
+	-- NOTE: Nodeboxes / meshes and anything that is not 1x1x1 cube is not supported
+	-- NOTE: Resolution simplifies detection but is not really accurate or efficient, adjust as needed
+	-- TODO: Add support for entities
+	range = range or 4
+	resolution = resolution or 1
+	local result
+	local distance = resolution
+	while result == nil and distance <= range do
+		local raypos = vector.add(pos, vector.multiply(dir, distance))
+		local node = world.get_node(raypos)
+		if node and core.registered_nodes[node.name] and core.registered_nodes[node.name].pointable then
+			-- TODO: Get actual face of current node (this is simply closest box face going backwards pos from raypos)
+			-- This is good enough for now and should work just fine with basic things.
+			result = {
+				type = "node",
+				above = vector.round(vector.subtract(raypos, dir)),
+				under = vector.round(raypos),
+			}
+			return result
+		end
+		distance = distance + resolution
+	end
+	return { type = "nothing" }
+end
+
+local function get_pointed_thing(player, pointed_thing_or_pos, range)
 	local pointed_thing
-	if pointed_thing_or_pos.x then
+	if not pointed_thing_or_pos then
+		-- Coordinates or pointed_thing not supplied, find out real pointed_thing based on player parameters
+		local campos = vector.add(player:get_pos(), {x=0, y=player:get_properties().eye_height, z=0})
+		local camdir = player:get_look_dir()
+		pointed_thing = raycast_collision(campos, camdir, tonumber(range) or 4)
+	elseif pointed_thing_or_pos.x then
 		-- Coordinates supplied, find out real pointed_thing assuming next thing from position is node
 		local pos = pointed_thing_or_pos
-		local playerpos = player:get_pos()
-		playerpos.y = playerpos.y + player:get_properties().eye_height
+		local campos = vector.add(player:get_pos(), {x=0, y=player:get_properties().eye_height, z=0})
 		-- Do not actually care about facing, allow placing to impossible positions if asked to
-		local pos_dir = vector.direction(playerpos, pointed_thing_or_pos)
+		local pos_dir = vector.direction(campos, pointed_thing_or_pos)
 		pointed_thing = {
 			type = "node",
 			above = vector.round(pos),
@@ -242,14 +298,17 @@ end
 
 function Player:do_set_wieldslot(inv_slot) self._wield_index = inv_slot end
 
-function Player:do_use(pointed_thing_or_pos)
+function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
 	-- TODO: Default should probably be position in front of player instead of player itself
-	pointed_thing_or_pos = pointed_thing_or_pos or self:get_pos()
-	local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos)
+	local pointed_thing_or_pos, controls = resolve_player_action_args(...)
 	local item = self:get_wielded_item()
-	local itemdef = core.registered_items[item:get_name()]
+	local itemdef = item:get_definition()
 	if itemdef and itemdef.on_use then
-		local returnstack = itemdef.on_use(item, self, pointed_thing)
+		local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos, itemdef.range)
+		local returnstack
+		tempcontrols(self, controls)
+		returnstack = itemdef.on_use(item, self, pointed_thing)
+		restorecontrols(self)
 		if returnstack then
 			assert.is_ItemStack(returnstack)
 			self._inv:set_stack("main", self._wield_index, ItemStack(returnstack))
@@ -257,19 +316,31 @@ function Player:do_use(pointed_thing_or_pos)
 	end
 end
 
-function Player:do_place(pointed_thing_or_pos)
+function Player:do_use_from_above(pos, controls)
+	-- Wrapper to move player above given position, look downwards and use on exact position
+	-- Targeted node is under, player looks from above position
+	self:set_pos(vector.add(pos, {x=0,y=1,z=0}))
+	self:do_set_look_xyz("Y-")
+	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y+1, z=pos.z}, under = {x=pos.x, y=pos.y, z=pos.z} }
+	self:do_use(pointed_thing, controls)
+	-- TODO / TBD: Restore original position and camera orientation?
+end
+
+function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
 	-- TODO: Default should probably be position in front of player instead of player itself
-	pointed_thing_or_pos = pointed_thing_or_pos or self:get_pos()
-	local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos)
+	local pointed_thing_or_pos, controls = resolve_player_action_args(...)
 	local item = self:get_wielded_item()
-	local itemdef = core.registered_items[item:get_name()]
+	local itemdef = item:get_definition()
 	if itemdef then
+		local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos)
 		local returnstack
+		tempcontrols(self, controls)
 		if itemdef.on_place and pointed_thing.type == "node" then
 			returnstack = itemdef.on_place(item, self, pointed_thing)
 		elseif itemdef.on_secondary_use and pointed_thing.type ~= "node" then
 			returnstack = itemdef.on_secondary_use(item, self, pointed_thing)
 		end
+		restorecontrols(self)
 		if returnstack then
 			assert.is_ItemStack(returnstack)
 			self._inv:set_stack("main", self._wield_index, ItemStack(returnstack))
@@ -277,11 +348,13 @@ function Player:do_place(pointed_thing_or_pos)
 	end
 end
 
-function Player:do_place_from_above(pos)
+function Player:do_place_from_above(pos, controls)
 	-- Wrapper to move player above given position, look downwards and place to exact position
+	-- Placed on above position, supporting node is under
 	self:set_pos(vector.add(pos, {x=0,y=1,z=0}))
 	self:do_set_look_xyz("Y-")
-	self:do_place({ type = "node", above = {x=pos.x, y=pos.y, z=pos.z}, under = {x=pos.x, y=pos.y-1, z=pos.z} })
+	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y, z=pos.z}, under = {x=pos.x, y=pos.y-1, z=pos.z} }
+	self:do_place(pointed_thing, controls)
 	-- TODO / TBD: Restore original position and camera orientation?
 end
 
@@ -330,6 +403,17 @@ function Player:do_set_look_horizontal(radians_or_heading)
 	self:set_look_horizontal(radians_or_heading)
 end
 
+-- Reset most properties of player, keep privileges, position, look direction and few other basic properties
+function Player:do_reset()
+	self._controls = {}
+	self._oldcontrols = nil
+	self._wield_index = 1
+	self._meta = MetaDataRef()
+	self._inv = InvRef()
+	self._inv:set_size("main", 32)
+	self._object:set_properties(table.copy(default_player_properties))
+end
+
 --
 -- Minetest player API methods
 --
@@ -342,18 +426,12 @@ function Player:get_wielded_item() return self._inv:get_stack("main", self._wiel
 function Player:get_meta() return self._meta end
 function Player:get_inventory() return self._inv end
 
---[[
--- FIXME: Remove or keep these? ObjectRef implements these methods.
-function Player:set_pos(pos) self._pos = table.copy(pos) end
-function Player:get_pos() return table.copy(self._pos) end
---]]
-
 function Player:get_player_velocity() DEPRECATED() end
 function Player:add_player_velocity(vel) DEPRECATED() end
 
 function Player:get_look_dir()
-	local pitch, yaw = self:get_look_vertical(), self:get_look_horizontal()
-	return { x = math.cos(pitch) * math.sin(yaw), y = math.sin(pitch), z = math.cos(pitch) * math.cos(yaw) }
+	local pitch, yaw = self:get_look_vertical(), self:get_look_horizontal() + math.pi
+	return { z = math.cos(pitch) * math.cos(yaw), y = math.sin(pitch), x = math.cos(pitch) * math.sin(yaw) }
 end
 
 function Player:get_look_vertical() return self._look_vertical or 0 end
@@ -403,25 +481,19 @@ mineunit.export_object(Player, {
 	constructor = function(self, name, privs)
 		-- TBD: Error or replace player if created again with existing name
 		--assert(players[name] == nil, "Player with name already exists: "..tostring(name))
-		local object = ObjectRef()
-		object:set_pos({x=0,y=0,z=0})
-		object:set_properties(table.copy(default_player_properties))
 		local obj = {
 			_name = name or "SX",
 			-- Players are always online if server module is not loaded
 			_online = not (mineunit.execute_on_joinplayer and true or false),
 			_is_player = true,
 			_privs = privs or { server = 1, test_priv=1 },
-			_controls = {},
-			_wield_index = 1,
-			_meta = MetaDataRef(),
-			_inv = InvRef(),
-			_object = object,
+			_object = ObjectRef(),
 			_look_dir = {x=0,y=-1,z=0}, -- Reflects simplified pointed_thing used to place nodes
 			_eye_offset_first = {x=0,y=0,z=0},
 			_eye_offset_third = {x=0,y=0,z=0},
 		}
-		obj._inv:set_size("main", 32)
+		Player.do_reset(obj)
+		obj._object:set_pos({x=0,y=0,z=0})
 		players[obj._name] = obj
 		setmetatable(obj, Player)
 		return obj

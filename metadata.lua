@@ -181,7 +181,7 @@ function InvRef:add_item(listname, stack)
 	if not stack:is_empty() then
 		local list = self._lists[listname]
 		local count = stack:get_count()
-		assert(list, "InvRef:add_item: Invalid inventory list " .. tostring(list))
+		assert(list, "InvRef:add_item: Invalid inventory list " .. tostring(listname))
 		for index = 1, self:get_size(listname) do
 			-- Try to add items into stack, get and check leftover stack
 			stack = list[index]:add_item(stack)
@@ -210,6 +210,7 @@ end
 --  (default: `false`).
 function InvRef:contains_item(listname, stack, match_meta)
 	local list = self:get_list(listname)
+	assert(list, "InvRef:contains_item: Invalid inventory list " .. tostring(listname))
 	stack = type(stack) == "string" and ItemStack(stack) or stack
 	local name = stack:get_name()
 	local count = stack:get_count()

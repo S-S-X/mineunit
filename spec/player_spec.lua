@@ -298,6 +298,74 @@ describe("Mineunit Player", function()
 
 	end)
 
+	describe(":do_use(...) with raycast", function()
+
+		it("Crosshair location is correct at center", function()
+			SX:do_set_pos_fp({x=0,y=0,z=0})
+			SX:do_set_look_xyz("X+")
+			validate_pointed_thing = function(pointed_thing, surface_pos, callback)
+				assert.equals("on_use", callback)
+				assert.is_hashed(pointed_thing)
+				assert.same({type="node",above={x=1,y=0,z=0},under={x=2,y=0,z=0}}, pointed_thing)
+
+				assert.is_hashed(surface_pos)
+				assert.close_enough(0.50, surface_pos, "surface_pos.x")
+				assert.close_enough(0.00, surface_pos, "surface_pos.y")
+				assert.close_enough(0.00, surface_pos, "surface_pos.z")
+			end
+			SX:do_use()
+		end)
+
+		it("Crosshair location is correct at Y+ edge", function()
+			SX:do_set_pos_fp({x=0,y=0.25,z=0})
+			SX:do_set_look_xyz("X+")
+			validate_pointed_thing = function(pointed_thing, surface_pos, callback)
+				assert.equals("on_use", callback)
+				assert.is_hashed(pointed_thing)
+				assert.same({type="node",above={x=1,y=0,z=0},under={x=2,y=0,z=0}}, pointed_thing)
+
+				assert.is_hashed(surface_pos)
+				assert.close_enough(0.50, surface_pos, "surface_pos.x")
+				assert.close_enough(0.25, surface_pos, "surface_pos.y")
+				assert.close_enough(0.00, surface_pos, "surface_pos.z")
+			end
+			SX:do_use()
+		end)
+
+		it("Crosshair location is correct at Z- edge", function()
+			SX:do_set_pos_fp({x=0,y=0,z=-0.5})
+			SX:do_set_look_xyz("X+")
+			validate_pointed_thing = function(pointed_thing, surface_pos, callback)
+				assert.equals("on_use", callback)
+				assert.is_hashed(pointed_thing)
+				assert.same({type="node",above={x=1,y=0,z=0},under={x=2,y=0,z=0}}, pointed_thing)
+
+				assert.is_hashed(surface_pos)
+				assert.close_enough( 0.5, surface_pos, "surface_pos.x")
+				assert.close_enough( 0.00, surface_pos, "surface_pos.y")
+				assert.close_enough(-0.5, surface_pos, "surface_pos.z")
+			end
+			SX:do_use()
+		end)
+
+		it("Crosshair location is correct at Y- Z+ corner", function()
+			SX:do_set_pos_fp({x=0,y=-0.49,z=0.49})
+			SX:do_set_look_xyz("X+")
+			validate_pointed_thing = function(pointed_thing, surface_pos, callback)
+				assert.equals("on_use", callback)
+				assert.is_hashed(pointed_thing)
+				assert.same({type="node",above={x=1,y=0,z=0},under={x=2,y=0,z=0}}, pointed_thing)
+
+				assert.is_hashed(surface_pos)
+				assert.close_enough( 0.50, surface_pos, "surface_pos.x")
+				assert.close_enough(-0.49, surface_pos, "surface_pos.y")
+				assert.close_enough( 0.49, surface_pos, "surface_pos.z")
+			end
+			SX:do_use()
+		end)
+
+	end)
+
 	describe(":do_metadata_inventory_put(...)", function()
 
 		setup(function()
