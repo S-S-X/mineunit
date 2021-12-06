@@ -162,6 +162,7 @@ local function raycast_collision(pos, dir, range, resolution)
 		end
 		distance = distance + resolution
 	end
+	return { type = "nothing" }
 end
 
 local function get_pointed_thing(player, pointed_thing_or_pos, range)
@@ -402,6 +403,17 @@ function Player:do_set_look_horizontal(radians_or_heading)
 	self:set_look_horizontal(radians_or_heading)
 end
 
+-- Reset most properties of player, keep privileges, position, look direction and few other basic properties
+function Player:do_reset()
+	self._controls = {}
+	self._oldcontrols = nil
+	self._wield_index = 1
+	self._meta = MetaDataRef()
+	self._inv = InvRef()
+	self._inv:set_size("main", 32)
+	self._object:set_properties(table.copy(default_player_properties))
+end
+
 --
 -- Minetest player API methods
 --
@@ -469,25 +481,19 @@ mineunit.export_object(Player, {
 	constructor = function(self, name, privs)
 		-- TBD: Error or replace player if created again with existing name
 		--assert(players[name] == nil, "Player with name already exists: "..tostring(name))
-		local object = ObjectRef()
-		object:set_pos({x=0,y=0,z=0})
-		object:set_properties(table.copy(default_player_properties))
 		local obj = {
 			_name = name or "SX",
 			-- Players are always online if server module is not loaded
 			_online = not (mineunit.execute_on_joinplayer and true or false),
 			_is_player = true,
 			_privs = privs or { server = 1, test_priv=1 },
-			_controls = {},
-			_wield_index = 1,
-			_meta = MetaDataRef(),
-			_inv = InvRef(),
-			_object = object,
+			_object = ObjectRef(),
 			_look_dir = {x=0,y=-1,z=0}, -- Reflects simplified pointed_thing used to place nodes
 			_eye_offset_first = {x=0,y=0,z=0},
 			_eye_offset_third = {x=0,y=0,z=0},
 		}
-		obj._inv:set_size("main", 32)
+		Player.do_reset(obj)
+		obj._object:set_pos({x=0,y=0,z=0})
 		players[obj._name] = obj
 		setmetatable(obj, Player)
 		return obj
