@@ -81,8 +81,18 @@ function core.get_node_light(pos, timeofday)
 end
 
 local json = require('mineunit.lib.json')
-core.write_json = json.encode
-core.parse_json = json.decode
+
+function core.write_json(...)
+	local args = {...}
+	local success, result = pcall(function() return json.encode(unpack(args)) end)
+	return success and result or nil
+end
+
+function core.parse_json(...)
+	local args = {...}
+	local success, result = pcall(function() return json.decode(unpack(args)) end)
+	return success and result or nil
+end
 
 function core.register_craft(t)
 	assert.is_table(t, "core.register_craft: table expected, got " .. type(t))
