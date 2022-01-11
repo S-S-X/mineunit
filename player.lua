@@ -26,23 +26,33 @@ function _G.core.set_player_privs(name, privs)
 	players[name]._privs = new_privs
 end
 
-function _G.core.check_player_privs(player_or_name, ...)
-	assert.player_or_name(player_or_name, "core.check_player_privs: player_or_name: expected string or Player")
-	local player
-	if type(player_or_name) == "string" then
-		player = core.get_player_by_name(player_or_name)
-	else
-		player = player_or_name
-	end
-	assert.is_Player(player, "core.check_player_privs: player does not exist or is not online")
-	local missing_privs = {}
-	local arg={...}
-	for _,priv in ipairs(type(arg[1]) == "table" and arg[1] or arg) do
-		if not player._privs[priv] then
-			table.insert(missing_privs, priv)
+if not _G.core.check_player_privs then
+	function _G.core.check_player_privs(player_or_name, ...)
+		assert.player_or_name(player_or_name, "core.check_player_privs: player_or_name: expected string or Player")
+		local player
+		if type(player_or_name) == "string" then
+			player = core.get_player_by_name(player_or_name)
+		else
+			player = player_or_name
 		end
+		assert.is_Player(player, "core.check_player_privs: player does not exist or is not online")
+		local missing_privs = {}
+		local arg={...}
+		if type(arg[1]) == "table" then
+			for priv,_ in pairs(arg[1]) do
+				if not player._privs[priv] then
+					table.insert(missing_privs, priv)
+				end
+			end
+		else
+			for _,priv in ipairs(arg) do
+				if not player._privs[priv] then
+					table.insert(missing_privs, priv)
+				end
+			end
+		end
+		return #missing_privs == 0, #missing_privs > 0 and missing_privs or ""
 	end
-	return #missing_privs == 0, missing_privs
 end
 
 function _G.core.get_player_by_name(name)
