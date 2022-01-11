@@ -1,7 +1,7 @@
 package = "mineunit"
-version = "scm-3"
+version = "scm-4"
 source = {
-	url = "git://github.com/S-S-X/mineunit.git",
+	url = "git+https://github.com/S-S-X/mineunit.git",
 }
 description = {
 	summary = "Regression test framework for Minetest mods",
