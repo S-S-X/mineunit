@@ -4,6 +4,10 @@ function mineunit:get_players()
 	return players
 end
 
+-- this one belongs to player_api mod
+-- format player_attached[player_name] = boolean/nil
+_G.player_api = { player_attached = {} }
+
 function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
 
 function _G.core.get_player_privs(name)
