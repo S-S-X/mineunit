@@ -424,7 +424,6 @@ function Player:do_reset()
 	self._object:set_properties(table.copy(default_player_properties))
 	self._hud_flags = { hotbar = true, healthbar = true, crosshair = true,
 		wielditem = true, breathbar = true, minimap = false, minimap_radar = false }
-	}
 end
 
 --
