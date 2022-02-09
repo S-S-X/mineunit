@@ -123,12 +123,13 @@ function ObjectRef:set_properties(value) self._properties = value end
 function ObjectRef:get_properties() return table.copy(self._properties) end
 function ObjectRef:is_player() return true end -- FIXME! This is not actually player, add and test in Player class
 function ObjectRef:get_nametag_attributes()
-	-- * returns a table with the attributes of the nametag of an object
-	-- * {
-	--     text = "",
-	--     color = {a=0..255, r=0..255, g=0..255, b=0..255},
-	--     bgcolor = {a=0..255, r=0..255, g=0..255, b=0..255},
-	--   }
+	if not self._nametag_attributes then self._nametag_attributes = {
+		text = self._nametag_text or '',
+		color = self._nametag_color or { a = 255, r = 255, g = 255, b = 255 },
+		bgcolor = self._nametag_bgcolor or { a = 0, r = 0, g = 0, b = 0 },
+	}
+	end
+	return self._nametag_attributes
 end
 function ObjectRef:set_nametag_attributes(attributes)
 	-- * sets the attributes of the nametag of an object
@@ -142,6 +143,21 @@ function ObjectRef:set_nametag_attributes(attributes)
 	--     -- `false` will cause the background to be set automatically based on user settings
 	--     -- Default: false
 	--   }
+	-- TODO: support ColorSpec and bgcolor of false and sync with self._nametag_*
+	if not self._nametag_attributes then self:get_nametag_attributes() end
+	for key, value in pairs(new_attributes) do
+		if nil ~= self._nametag_attributes[key] then
+			if 'text' == key then
+				self._nametag_attributes.text = tostring(value)
+			else
+				for subkey, subvalue in pairs(new_attributes[key]) do
+					if nil ~= self._nametag_attributes[key][subkey] then
+						self._nametag_attributes[key][subkey] = tonumber(subvalue)
+					end
+				end -- loop a, r, g, b
+			end
+		end -- if key exists
+	end -- loop new_attributes
 end
 
 mineunit.export_object(ObjectRef, {
