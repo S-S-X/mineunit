@@ -422,6 +422,8 @@ function Player:do_reset()
 	self._inv = InvRef()
 	self._inv:set_size("main", 32)
 	self._object:set_properties(table.copy(default_player_properties))
+	self._hud_flags = { hotbar = true, healthbar = true, crosshair = true,
+		wielditem = true, breathbar = true, minimap = false, minimap_radar = false }
 end
 
 --
@@ -468,6 +470,15 @@ function Player:set_inventory_formspec(formspec) end
 function Player:get_inventory_formspec() return "" end
 function Player:set_formspec_prepend(formspec) end
 function Player:get_formspec_prepend(formspec) return "" end
+
+function Player:hud_get_flags() return self._hud_flags end
+function Player:set_hud_flags(new_flags)
+	for flag, value in pairs(new_flags) do
+		if nil ~= self._hud_flags[flag] then
+			self._hud_flags[flag] = not not value
+		end
+	end
+end
 
 function Player:__index(key)
 	local result = rawget(Player, key)
