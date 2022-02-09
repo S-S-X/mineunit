@@ -4,6 +4,10 @@ function mineunit:get_players()
 	return players
 end
 
+-- this one belongs to player_api mod
+-- format player_attached[player_name] = boolean/nil
+_G.player_api = { player_attached = {} }
+
 function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
 
 function _G.core.get_player_privs(name)
@@ -462,6 +466,16 @@ function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMEN
 function Player:get_fov() error("NOT IMPLEMENTED") end
 
 function Player:get_eye_offset() return self._eye_offset_first, self._eye_offset_third end
+function Player:set_eye_offset(firstperson, thirdperson)
+	self._eye_offset_first =
+		firstperson and vector.copy(firstperson) or vector.zero()
+
+	thirdperson = thirdperson and vector.copy(thirdperson) or vector.zero()
+	thirdperson.x = math.max(-10, math.min(10, thirdperson.x))
+	thirdperson.y = math.max(-10, math.min(15, thirdperson.y))
+	thirdperson.z = math.max(-5, math.min(5, thirdperson.z))
+	self._eye_offset_third = thirdperson
+end
 
 function Player:set_attribute(attribute, value) DEPRECATED() end
 function Player:get_attribute(attribute) DEPRECATED() end
@@ -520,3 +534,4 @@ mineunit.export_object(Player, {
 		return obj
 	end,
 })
+
