@@ -12,6 +12,14 @@ function vector.new(a, b, c)
 	return {x=0, y=0, z=0}
 end
 
+function vector.zero() return { x = 0, y = 0, z = 0 } end
+
+function vector.copy(v)
+	assert('table' == type(v) and v.x and v.y and v.z,
+		"Invalid vector passed to vector.copy()")
+	return { x = v.x or 0, y = v.y or 0, z = v.z or 0 }
+end
+
 function vector.equals(a, b)
 	return a.x == b.x and
 	       a.y == b.y and
