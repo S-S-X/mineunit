@@ -16,7 +16,7 @@ function ObjectRef:set_roll(value) self._roll = value end
 
 function ObjectRef:get_pos() return table.copy(self._pos) end
 function ObjectRef:set_pos(value)
-	self._pos = vector.copy(value)
+	self._pos = vector.new(value)
 	for _, child in ipairs(self:get_children()) do
 		child:set_pos(vector.add(self._pos, child._attach.position))
 	end
@@ -119,8 +119,8 @@ function ObjectRef:set_attach(parent, bone, position, rotation, forced_visible)
 	self._attach = {
 		parent = parent,
 		bone = bone or '',
-		position = position or vector.zero(),
-		rotation = rotation or vector.zero(),
+		position = position or vector.new(),
+		rotation = rotation or vector.new(),
 		forced_visible = not not forced_visible,
 	}
 	self._pitch = self._attach.position.x

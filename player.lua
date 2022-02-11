@@ -468,9 +468,9 @@ function Player:get_fov() error("NOT IMPLEMENTED") end
 function Player:get_eye_offset() return self._eye_offset_first, self._eye_offset_third end
 function Player:set_eye_offset(firstperson, thirdperson)
 	self._eye_offset_first =
-		firstperson and vector.copy(firstperson) or vector.zero()
+		firstperson and vector.new(firstperson) or vector.new()
 
-	thirdperson = thirdperson and vector.copy(thirdperson) or vector.zero()
+	thirdperson = thirdperson and vector.new(thirdperson) or vector.new()
 	thirdperson.x = math.max(-10, math.min(10, thirdperson.x))
 	thirdperson.y = math.max(-10, math.min(15, thirdperson.y))
 	thirdperson.z = math.max(-5, math.min(5, thirdperson.z))
