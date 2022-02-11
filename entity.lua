@@ -114,9 +114,7 @@ function ObjectRef:set_attach(parent, bone, position, rotation, forced_visible)
 		end
 		obj = obj._attach.parent
 	end
-	mineunit:info(parent._children)
 	if 'table' ~= type(parent._children) then parent._children = {} end
-	mineunit:info(parent._children)
 	table.insert(parent._children, self)
 	self._attach = {
 		parent = parent,
