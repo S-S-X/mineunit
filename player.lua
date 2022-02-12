@@ -424,6 +424,7 @@ function Player:do_reset()
 	self._object:set_properties(table.copy(default_player_properties))
 	self._hud_flags = { hotbar = true, healthbar = true, crosshair = true,
 		wielditem = true, breathbar = true, minimap = false, minimap_radar = false }
+	self._breath = 10
 end
 
 --
@@ -456,8 +457,8 @@ function Player:get_look_yaw() DEPRECATED() end
 function Player:set_look_pitch(radians) DEPRECATED() end
 function Player:set_look_yaw(radians) DEPRECATED() end
 
-function Player:get_breath() error("NOT IMPLEMENTED") end
-function Player:set_breath(value) error("NOT IMPLEMENTED") end
+function Player:get_breath() return self._breath or 10 end
+function Player:set_breath(value) self._breath = tonumber(value) or self._breath end
 function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMENTED") end
 function Player:get_fov() error("NOT IMPLEMENTED") end
 
