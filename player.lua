@@ -458,7 +458,7 @@ function Player:set_look_pitch(radians) DEPRECATED() end
 function Player:set_look_yaw(radians) DEPRECATED() end
 
 function Player:get_breath() return self._breath or 10 end
-function Player:set_breath(value) self._breath = tonumber(value) or self._breath end
+function Player:set_breath(value) self._breath = assert(tonumber(value), "bad argument #1 to 'set_breath' (number expected, got "..type(value)..")") end
 function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMENTED") end
 function Player:get_fov() error("NOT IMPLEMENTED") end
 
