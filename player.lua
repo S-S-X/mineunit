@@ -422,6 +422,9 @@ function Player:do_reset()
 	self._inv = InvRef()
 	self._inv:set_size("main", 32)
 	self._object:set_properties(table.copy(default_player_properties))
+	self._hud_flags = { hotbar = true, healthbar = true, crosshair = true,
+		wielditem = true, breathbar = true, minimap = false, minimap_radar = false }
+	self._breath = 10
 end
 
 --
@@ -454,12 +457,22 @@ function Player:get_look_yaw() DEPRECATED() end
 function Player:set_look_pitch(radians) DEPRECATED() end
 function Player:set_look_yaw(radians) DEPRECATED() end
 
-function Player:get_breath() error("NOT IMPLEMENTED") end
-function Player:set_breath(value) error("NOT IMPLEMENTED") end
+function Player:get_breath() return self._breath or 10 end
+function Player:set_breath(value) self._breath = assert(tonumber(value), "bad argument #1 to 'set_breath' (number expected, got "..type(value)..")") end
 function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMENTED") end
 function Player:get_fov() error("NOT IMPLEMENTED") end
 
 function Player:get_eye_offset() return self._eye_offset_first, self._eye_offset_third end
+function Player:set_eye_offset(firstperson, thirdperson)
+	self._eye_offset_first =
+		firstperson and vector.new(firstperson) or vector.new()
+
+	thirdperson = thirdperson and vector.new(thirdperson) or vector.new()
+	thirdperson.x = math.max(-10, math.min(10, thirdperson.x))
+	thirdperson.y = math.max(-10, math.min(15, thirdperson.y))
+	thirdperson.z = math.max(-5, math.min(5, thirdperson.z))
+	self._eye_offset_third = thirdperson
+end
 
 function Player:set_attribute(attribute, value) DEPRECATED() end
 function Player:get_attribute(attribute) DEPRECATED() end
@@ -468,6 +481,15 @@ function Player:set_inventory_formspec(formspec) end
 function Player:get_inventory_formspec() return "" end
 function Player:set_formspec_prepend(formspec) end
 function Player:get_formspec_prepend(formspec) return "" end
+
+function Player:hud_get_flags() return self._hud_flags end
+function Player:set_hud_flags(new_flags)
+	for flag, value in pairs(new_flags) do
+		if nil ~= self._hud_flags[flag] then
+			self._hud_flags[flag] = not not value
+		end
+	end
+end
 
 function Player:__index(key)
 	local result = rawget(Player, key)
@@ -509,3 +531,4 @@ mineunit.export_object(Player, {
 		return obj
 	end,
 })
+

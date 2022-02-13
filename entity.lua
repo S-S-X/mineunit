@@ -15,7 +15,12 @@ function ObjectRef:set_roll(value) self._roll = value end
 
 
 function ObjectRef:get_pos() return table.copy(self._pos) end
-function ObjectRef:set_pos(value) self._pos = vector.new(value) end
+function ObjectRef:set_pos(value)
+	self._pos = vector.new(value)
+	for _, child in ipairs(self:get_children()) do
+		child:set_pos(vector.add(self._pos, child._attach.position))
+	end
+end
 function ObjectRef:get_velocity() return table.copy(self._velocity) end
 function ObjectRef:add_velocity(vel)
 	-- * `vel` is a vector, e.g. `{x=0.0, y=2.3, z=1.0}`
@@ -91,25 +96,54 @@ function ObjectRef:set_animation_frame_speed(frame_speed)
 	-- * `frame_speed`: number, default: `15.0`
 end
 function ObjectRef:set_attach(parent, bone, position, rotation, forced_visible)
-	--
-	-- * `bone`: string. Default is `""`, the root bone
-	-- * `position`: `{x=num, y=num, z=num}`, relative, default `{x=0, y=0, z=0}`
-	-- * `rotation`: `{x=num, y=num, z=num}` = Rotation on each axis, in degrees.
-	--   Default `{x=0, y=0, z=0}`
-	-- * `forced_visible`: Boolean to control whether the attached entity
-	--    should appear in first person. Default `false`.
-	-- * This command may fail silently (do nothing) when it would result
-	--   in circular attachments.
+	if not parent then return end
+	if self._attach and self._attach.parent == parent then
+		mineunit:info('Attempt to attach to parent that object is already attached to.')
+		return
+	end
+	-- detach if attached
+	self:set_detach()
+	local obj = parent
+	while true do
+		if not obj._attach then break end
+		if obj._attach.parent == self then
+			mineunit:warning('Mod bug: Attempted to attach object to an object that '
+				.. 'is directly or indirectly attached to the first object. -> '
+				.. 'circular attachment chain.')
+			return
+		end
+		obj = obj._attach.parent
+	end
+	if 'table' ~= type(parent._children) then parent._children = {} end
+	table.insert(parent._children, self)
+	self._attach = {
+		parent = parent,
+		bone = bone or '',
+		position = position or vector.new(),
+		rotation = rotation or vector.new(),
+		forced_visible = not not forced_visible,
+	}
+	self._pitch = self._attach.position.x
+	self._roll = self._attach.position.z
+	self._yaw = self._attach.position.y
+	self:set_pos(vector.add(parent:get_pos(), self._attach.position))
+	-- TODO: bones depending on object type
 end
 function ObjectRef:get_attach()
-	--: returns parent, bone, position, rotation, forced_visible,
-	-- or nil if it isn't attached.
+	return self._attach
 end
 function ObjectRef:get_children()
-	--: returns a list of ObjectRefs that are attached to the
-	-- object.
+	return self._children or {}
 end
 function ObjectRef:set_detach()
+	if not self._attach then return end
+
+	local new_children = {}
+	for _, child in ipairs(self._attach.parent._children) do
+		if child ~= self then table.insert(new_children, child) end
+	end
+	self._attach.parent._children = new_children
+	self._attach = nil
 end
 function ObjectRef:set_bone_position(bone, position, rotation)
 	-- * `bone`: string. Default is `""`, the root bone
@@ -123,12 +157,13 @@ function ObjectRef:set_properties(value) self._properties = value end
 function ObjectRef:get_properties() return table.copy(self._properties) end
 function ObjectRef:is_player() return true end -- FIXME! This is not actually player, add and test in Player class
 function ObjectRef:get_nametag_attributes()
-	-- * returns a table with the attributes of the nametag of an object
-	-- * {
-	--     text = "",
-	--     color = {a=0..255, r=0..255, g=0..255, b=0..255},
-	--     bgcolor = {a=0..255, r=0..255, g=0..255, b=0..255},
-	--   }
+	if not self._nametag_attributes then self._nametag_attributes = {
+		text = self._nametag_text or '',
+		color = self._nametag_color or { a = 255, r = 255, g = 255, b = 255 },
+		bgcolor = self._nametag_bgcolor or { a = 0, r = 0, g = 0, b = 0 },
+	}
+	end
+	return self._nametag_attributes
 end
 function ObjectRef:set_nametag_attributes(attributes)
 	-- * sets the attributes of the nametag of an object
@@ -142,6 +177,21 @@ function ObjectRef:set_nametag_attributes(attributes)
 	--     -- `false` will cause the background to be set automatically based on user settings
 	--     -- Default: false
 	--   }
+	-- TODO: support ColorSpec and bgcolor of false and sync with self._nametag_*
+	if not self._nametag_attributes then self:get_nametag_attributes() end
+	for key, value in pairs(new_attributes) do
+		if nil ~= self._nametag_attributes[key] then
+			if 'text' == key then
+				self._nametag_attributes.text = tostring(value)
+			else
+				for subkey, subvalue in pairs(new_attributes[key]) do
+					if nil ~= self._nametag_attributes[key][subkey] then
+						self._nametag_attributes[key][subkey] = tonumber(subvalue)
+					end
+				end -- loop a, r, g, b
+			end
+		end -- if key exists
+	end -- loop new_attributes
 end
 
 mineunit.export_object(ObjectRef, {
