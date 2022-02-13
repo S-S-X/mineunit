@@ -1,7 +1,7 @@
 # mineunit
 Minetest core / engine libraries for regression tests
 
-![mineunit](https://mineunit-badges.000webhostapp.com/mt-mods/mineunit/coverage)
+![mineunit](https://mineunit-badges.000webhostapp.com/S-S-X/mineunit/coverage)
 
 Probably will not currently work with Windows so unless you want to help fixing things use Linux or similar OS.
 
@@ -193,6 +193,50 @@ It is recommended to always load `core` module instead of selecting individual a
 | common/chatcommands | Minetest engine library.
 | game/chat           | Minetest engine library.
 | assert              | Provides custom assertions like `assert.isPlayer(thing)` and `assert.is_ItemStack(thing)`.
+
+### Command line arguments
+
+```
+Usage:
+	mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>]
+	  [--engine-version <version>] [--fetch-core <version>] [--core-root <path>]
+
+Options:
+	-h, --help      Display this help message.
+
+	-c, --coverage  Execute luacov test coverage analysis.
+	-r, --report    Build report after successful coverage analysis.
+	                Currently cannot be combined with --coverage
+	-x|--exclude <pattern>
+	                Exclude source file patterns from test coverage analysis.
+	                Can be repeated for multiple patterns.
+
+	--demo          Install demo tests to current directory.
+	                Good way to learn Mineunit or initialize tests for project.
+
+	--core-root <path>
+	                Root directory for core libraries, defaults to install path.
+	--engine-version <tag>
+	                Use core engine libraries from git tag version.
+	--fetch-core <tag>
+	                Download core engine libraries for tag.
+	                This is simple wrapper around `git clone`.
+
+	-v|--verbose    Be verbose, prints more useless crap to console.
+	-q|--quiet      Be quiet, most of time keeps your console fairly clean.
+
+Configuration files (in order):
+	/etc/mineunit/mineunit.conf
+	$HOME/.mineunit.conf
+	$HOME/.mineunit/mineunit.conf
+	./spec/mineunit.conf
+```
+
+Configuration files are checked and merged in order and last configuration entry will take effect.
+For example core_root in project configuration will override core_root in user configuration.
+
+Command line arguments will override all configuration file entries except for luacov excludes which will be merged.
+Table values (other than luacov excludes) are only supported in project configuration file.
 
 ### Known projects using mineunit
 
