@@ -11,6 +11,8 @@ RUN luarocks-5.1 install --server https://luarocks.org/dev mineunit
 FROM alpine:latest
 COPY --from=build /usr/local /usr/local
 RUN adduser -D mineunit
+RUN mkdir /usr/local/share/lua/5.1/mineunit/core
+RUN chown mineunit /usr/local/share/lua/5.1/mineunit/core
 RUN apk add --no-cache lua5.1
 
 # Alpine is fine but image size could still be optimized if needed
