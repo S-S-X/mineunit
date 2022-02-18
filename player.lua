@@ -461,10 +461,8 @@ function Player:get_fov() error("NOT IMPLEMENTED") end
 
 function Player:get_eye_offset() return self._eye_offset_first, self._eye_offset_third end
 function Player:set_eye_offset(firstperson, thirdperson)
-	self._eye_offset_first =
-		firstperson and vector.copy(firstperson) or vector.zero()
-
-	thirdperson = thirdperson and vector.copy(thirdperson) or vector.zero()
+	self._eye_offset_first = firstperson and table.copy(firstperson) or {x=0,y=0,z=0}
+	thirdperson = thirdperson and table.copy(thirdperson) or {x=0,y=0,z=0}
 	thirdperson.x = math.max(-10, math.min(10, thirdperson.x))
 	thirdperson.y = math.max(-10, math.min(15, thirdperson.y))
 	thirdperson.z = math.max(-5, math.min(5, thirdperson.z))
@@ -519,4 +517,3 @@ mineunit.export_object(Player, {
 		return obj
 	end,
 })
-
