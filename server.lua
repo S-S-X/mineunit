@@ -166,6 +166,15 @@ end
 
 function mineunit:execute_on_joinplayer(player, lastlogin)
 	assert.is_Player(player, "Invalid call to mineunit:execute_on_joinplayer")
+	rawset(player, "_address", "127.1.2.7")
+	rawset(player, "_connection_info", {
+		min_rtt = 0,
+		max_rtt = 0,
+		avg_rtt = 0,
+		min_jitter = 0,
+		max_jitter = 0,
+		avg_jitter = 0,
+	})
 	if core.get_auth_handler then
 		local name = player:get_player_name()
 		local data = core.get_auth_handler().get_auth(name)
