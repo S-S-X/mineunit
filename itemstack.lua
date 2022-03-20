@@ -113,8 +113,21 @@ function ItemStack:get_definition()
 end
 --* `get_tool_capabilities()`: returns the digging properties of the item,
 --    or those of the hand if none are defined for this item type.
+local default_tool_capabilities = {
+	full_punch_interval = 1.4,
+	max_drop_level = 1,
+	punch_attack_uses = 0,
+	groupcaps = {}
+}
 function ItemStack:get_tool_capabilities()
-	error("NOT IMPLEMENTED")
+	local capabilities = table.copy(self:get_definition().tool_capabilities)
+	for key, value in pairs(default_tool_capabilities) do
+		if capabilities[key] == nil then
+			local value = default_tool_capabilities[key]
+			capabilities[key] = type(value) == "table" and table.copy(value) or value
+		end
+	end
+	return capabilities
 end
 --* `add_wear(amount)`
 --    Increases wear by `amount` if the item is a tool

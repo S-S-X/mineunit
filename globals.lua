@@ -197,6 +197,54 @@ function core.get_craft_result(t)
 	}
 end
 
+function core.get_dig_params(groups, capabilities, initial_wear)
+	assert.is_table(groups, "core.get_dig_params groups table expected, got: "..type(groups))
+	assert.is_table(capabilities, "core.get_dig_params capabilities table expected, got: "..type(capabilities))
+	if initial_wear ~= nil then
+		assert.is_number(initial_wear, "core.get_dig_params initial_wear number expected, got: "..type(initial_wear))
+	end
+
+	local groupcaps = capabilities.groupcaps
+	if groupcaps.dig_immediate then
+		if groups.dig_immediate == 2 then
+			return { diggable = true, time = 0.5, wear = 0 }
+		elseif groups.dig_immediate == 3 then
+			return { diggable = true, time = 0, wear = 0 }
+		end
+	end
+
+	local diggable = false
+	local result_time = 0
+	local wear = 0
+	for groupname, cap in pairs(groupcaps) do
+		local level = groups.level
+		local leveldiff = cap.maxlevel - level
+		if leveldiff >= 0 then
+			if cap.times and cap.times[groups[groupname]] then
+				local time = 0
+				if leveldiff > 1 then
+					time = time / leveldiff
+				end
+				if not diggable or time < 0 then
+					-- Basic parameter
+					result_time = time
+					diggable = true
+					-- Calculate tool wear
+					local real_uses = math.min(cap.uses * math.pow(3, leveldiff), 65535)
+					local wear = 65536 / real_uses
+					local additional = 65536 % real_uses
+					if additional > 0 then
+						if initial_wear >= (real_uses - additional) * wear then
+							wear = wear + 1
+						end
+					end
+				end
+			end
+		end
+	end
+	return { diggable = diggable, time = result_time, wear = wear }
+end
+
 local origin
 function core.get_last_run_mod() return origin end
 function core.set_last_run_mod(v) origin = v end
