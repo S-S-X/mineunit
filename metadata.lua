@@ -1,5 +1,6 @@
 
 mineunit("common/misc_helpers")
+local json = require('mineunit.lib.json')
 
 local function assert_invlist_index(index, size)
 	assert(type(index) == "number" and math.floor(index) == index, "InvList:set_stack: Invalid InvList stack index")
@@ -341,9 +342,9 @@ end
 	serialize metadata, for use in itemstrings
 	https://github.com/minetest/minetest/blob/0f25fa7af655b98fa401176a523f269c843d1943/src/itemstackmetadata.cpp#L61-L71
 ]]
-local DESERIALIZE_START = "\x01"
-local DESERIALIZE_KV_DELIM = "\x02"
-local DESERIALIZE_PAIR_DELIM = "\x03"
+local DESERIALIZE_START = "\01"
+local DESERIALIZE_KV_DELIM = "\02"
+local DESERIALIZE_PAIR_DELIM = "\03"
 function MetaDataRef:_serialize()
 	local parts = {}
 	table.insert(parts, DESERIALIZE_START)
@@ -364,29 +365,29 @@ end
 	https://github.com/minetest/minetest/blob/0f25fa7af655b98fa401176a523f269c843d1943/src/itemstackmetadata.cpp#L73-L94
 ]]
 function MetaDataRef:_deserialize(s)
-	s = json.decode(s)
+	local ds = json.decode(s)
 	self:_clear()
 
 	local function find_next(i)
-		if i > #s then
+		if i > #ds then
 			return
 		end
 		local key_start = i
-		while s:sub(i, i) ~= DESERIALIZE_KV_DELIM and i <= #s do
+		while ds:sub(i, i) ~= DESERIALIZE_KV_DELIM and i <= #ds do
 			i = i + 1
 		end
 		local key_end = i - 1
 		i = i + 1
 		local value_start = i
-		while s:sub(i, i) ~= DESERIALIZE_PAIR_DELIM and i <= #s do
+		while ds:sub(i, i) ~= DESERIALIZE_PAIR_DELIM and i <= #ds do
 			i = i + 1
 		end
 		local value_end = i - 1
 		i = i + 1
-		return i, s:sub(key_start, key_end), s:sub(value_start, value_end)
+		return i, ds:sub(key_start, key_end), ds:sub(value_start, value_end)
 	end
 
-	if s:sub(1, 1) == DESERIALIZE_START then
+	if ds:sub(1, 1) == DESERIALIZE_START then
 		local key, value
 		local i = 2
 		while true do
@@ -398,6 +399,7 @@ function MetaDataRef:_deserialize(s)
 			end
 		end
 	else
+		error(("error deserializing %q (%q)"):format(s, ds))
 		-- "BACKWARDS COMPATIBILITY"
 		self._data[""] = s
 	end

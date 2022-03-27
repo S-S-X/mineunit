@@ -228,7 +228,12 @@ local function swap_stack(toinv, tolist, toindex, frominv, fromlist, fromindex, 
 	end
 
 	-- Place source stack into target inventory
-	local placedstack = count ~= -1 and stack:take_item(count) or ItemStack(stack)
+	local placedstack
+	if count == -1 then
+		placedstack = ItemStack(stack)
+	else
+		placedstack = stack:take_item(count)
+	end
 	toinv:set_stack(tolist, toindex, placedstack)
 
 	-- Return leftovers to source inventory

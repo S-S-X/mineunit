@@ -34,9 +34,8 @@ function ItemStack:get_wear() return self._wear end
 --* `set_wear(wear)`: returns boolean indicating whether item was cleared
 --    `wear`: number, unsigned 16 bit integer
 function ItemStack:set_wear(wear)
-	assert(wear >= 0, "ItemStack:set_wear invalid wear value: "..tostring(wear))
 	if wear <= 65535 then
-		self._wear = wear
+		self._wear = wear % 65536
 		return true
 	else
 		self.clear()
@@ -108,7 +107,7 @@ function ItemStack:to_string()
 			table.insert(parts, tostring(count))
 		end
 		if wear ~= 0 or not self._meta:_empty() then
-			table.insert(parts, tostring(count))
+			table.insert(parts, tostring(wear))
 		end
 		if not self._meta:_empty() then
 			table.insert(parts, self._meta:_serialize())
@@ -207,11 +206,11 @@ end
 --    Take (and remove) up to `n` items from this stack
 --    `n`: number, default: `1`
 function ItemStack:take_item(n)
+	local taken = ItemStack(self)
 	n = math.min(self:get_count(), n or 1)
 	self:set_count(self:get_count() - n)
-	local stack = ItemStack(self)
-	stack:set_count(n)
-	return stack
+	taken:set_count(n)
+	return taken
 end
 --* `peek_item(n)`: returns taken `ItemStack`
 --    Copy (don't remove) up to `n` items from this stack
@@ -225,8 +224,7 @@ function ItemStack:peek_item(n)
 end
 
 function ItemStack:__tostring()
-	local count = self:get_count()
-	return 'ItemStack("' .. self:get_name() .. (count > 1 and " "..count or "") .. '")'
+	return 'ItemStack("' .. self:to_string() .. '")'
 end
 
 -- TODO: Allows `same` assertions but in corner cases makes mod code to return true where engine would return false.
