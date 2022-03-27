@@ -11,7 +11,7 @@ function ItemStack:set_name(item_name)
 	assert.is_string(item_name, "ItemStack:set_name expected item_name to be string")
 	self._name = item_name
 	if item_name == "" then
-		self:set_count(0)
+		self:clear()
 		return true
 	end
 	return false
@@ -20,15 +20,28 @@ end
 function ItemStack:get_count() return self._count end
 --* `set_count(count)`: returns a boolean indicating whether the item was cleared
 --    `count`: number, unsigned 16 bit integer
-function ItemStack:set_count(count) self._count = count end
+function ItemStack:set_count(count)
+	if count > 0 and count <= 65535 then
+		self._count = count
+		return true
+	else
+		self:clear()
+		return false
+	end
+end
 --* `get_wear()`: returns tool wear (`0`-`65535`), `0` for non-tools.
 function ItemStack:get_wear() return self._wear end
 --* `set_wear(wear)`: returns boolean indicating whether item was cleared
 --    `wear`: number, unsigned 16 bit integer
 function ItemStack:set_wear(wear)
-	assert(wear <= 65535, "ItemStack:set_wear invalid wear value: "..tostring(wear))
-	wear = wear < 0 and -((-wear) % 65536) or wear
-	self._wear = math.max(0, wear < 0 and 65536 + wear or wear)
+	assert(wear >= 0, "ItemStack:set_wear invalid wear value: "..tostring(wear))
+	if wear <= 65535 then
+		self._wear = wear
+		return true
+	else
+		self.clear()
+		return false
+	end
 end
 --* `get_meta()`: returns ItemStackMetaRef. See section for more details
 function ItemStack:get_meta() return self._meta end
@@ -63,7 +76,15 @@ function ItemStack:get_short_description()
 	if value then return value:gmatch("[^\r\n]+")() end
 end
 --* `clear()`: removes all items from the stack, making it empty.
-function ItemStack:clear() self._count = 0 end
+-- https://github.com/minetest/minetest/blob/0f25fa7af655b98fa401176a523f269c843d1943/src/inventory.h#L63-L69
+-- https://github.com/minetest/minetest/blob/0f25fa7af655b98fa401176a523f269c843d1943/src/script/lua_api/l_item.cpp#L206-L214
+function ItemStack:clear()
+	self._name = ""
+	self._count = 0
+	self._wear = 0
+	self._meta:_clear()
+	return true
+end
 --* `replace(item)`: replace the contents of this stack.
 --    `item` can also be an itemstring or table.
 function ItemStack:replace(item)
@@ -76,12 +97,25 @@ end
 --* `to_string()`: returns the stack in itemstring form.
 -- https://github.com/minetest/minetest/blob/5.4.0/src/inventory.cpp#L59-L85
 function ItemStack:to_string()
-	-- FIXME: Does not currently serialize metadata
-	return ("%s %d %d"):format(
-		self:get_name(),
-		self:get_count(),
-		self:get_wear()
-	)
+	local name = self:get_name()
+	local count = self:get_count()
+	local wear = self:get_wear()
+	if name == "" or count == 0 then
+		return ""
+	else
+		local parts = {name}
+		if count > 1 or wear ~= 0 or not self._meta:_empty() then
+			table.insert(parts, tostring(count))
+		end
+		if wear ~= 0 or not self._meta:_empty() then
+			table.insert(parts, tostring(count))
+		end
+		if not self._meta:_empty() then
+			table.insert(parts, self._meta:_serialize())
+		end
+
+		return table.concat(parts, " ")
+	end
 end
 --* `to_table()`: returns the stack in Lua table form.
 function ItemStack:to_table()
@@ -135,6 +169,14 @@ function ItemStack:add_item(item)
 		return leftover
 	end
 
+	if self:get_name() ~= leftover:get_name() then
+		return leftover
+	end
+
+	if self._meta ~= leftover._meta then
+		return leftover
+	end
+
 	local stack_max = item:get_stack_max()
 	local count = self:get_count()
 	local space = stack_max - count
@@ -156,7 +198,7 @@ function ItemStack:item_fits(item)
 		return true
 	end
 	local stack = ItemStack(item)
-	if self:get_name() == stack:get_name() then
+	if self:get_name() == stack:get_name() and self._meta == item._meta then
 		return self:get_free_space() >= stack:get_count()
 	end
 	return false

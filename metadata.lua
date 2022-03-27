@@ -304,7 +304,9 @@ function MetaDataRef:from_table(t)
 		self._data = table.copy(t.fields)
 	end
 end
-function MetaDataRef:equals(other) error("NOT IMPLEMENTED") end
+function MetaDataRef:equals(other)
+	return self:__eq(other)
+end
 
 -- TODO: Allows `same` assertions but in corner cases makes mod code to return true where engine would return false.
 -- Requires either overriding luassert `same` (nice for users) or only allowing special assertions (not so nice).
@@ -322,6 +324,85 @@ function MetaDataRef:__eq(other)
 	return false
 end
 
+function MetaDataRef:_empty()
+	for _ in pairs(self._data) do
+		return false
+	end
+	return true
+end
+
+function MetaDataRef:_clear()
+	for key in pairs(self._data) do
+		self._data[key] = nil
+	end
+end
+
+--[[
+	serialize metadata, for use in itemstrings
+	https://github.com/minetest/minetest/blob/0f25fa7af655b98fa401176a523f269c843d1943/src/itemstackmetadata.cpp#L61-L71
+]]
+local DESERIALIZE_START = "\x01"
+local DESERIALIZE_KV_DELIM = "\x02"
+local DESERIALIZE_PAIR_DELIM = "\x03"
+function MetaDataRef:_serialize()
+	local parts = {}
+	table.insert(parts, DESERIALIZE_START)
+	for k, v in pairs(self._data) do
+		if k ~= "" or v ~= "" then
+			table.insert(parts, k)
+			table.insert(parts, DESERIALIZE_KV_DELIM)
+			table.insert(parts, v)
+			table.insert(parts, DESERIALIZE_PAIR_DELIM)
+		end
+	end
+
+	return json.encode(table.concat(parts, ""))
+end
+
+--[[
+	deserialize metadata, for use in itemstrings
+	https://github.com/minetest/minetest/blob/0f25fa7af655b98fa401176a523f269c843d1943/src/itemstackmetadata.cpp#L73-L94
+]]
+function MetaDataRef:_deserialize(s)
+	s = json.decode(s)
+	self:_clear()
+
+	local function find_next(i)
+		if i > #s then
+			return
+		end
+		local key_start = i
+		while s:sub(i, i) ~= DESERIALIZE_KV_DELIM and i <= #s do
+			i = i + 1
+		end
+		local key_end = i - 1
+		i = i + 1
+		local value_start = i
+		while s:sub(i, i) ~= DESERIALIZE_PAIR_DELIM and i <= #s do
+			i = i + 1
+		end
+		local value_end = i - 1
+		i = i + 1
+		return i, s:sub(key_start, key_end), s:sub(value_start, value_end)
+	end
+
+	if s:sub(1, 1) == DESERIALIZE_START then
+		local key, value
+		local i = 2
+		while true do
+			i, key, value = find_next(i)
+			if i and key and value then
+				self._data[key] = value
+			else
+				break
+			end
+		end
+	else
+		-- "BACKWARDS COMPATIBILITY"
+		self._data[""] = s
+	end
+end
+
 mineunit.export_object(MetaDataRef, {
 	name = "MetaDataRef",
 	constructor = function(self, value)
@@ -330,6 +411,10 @@ mineunit.export_object(MetaDataRef, {
 			obj = {}
 		elseif mineunit.utils.type(value) == "MetaDataRef" then
 			obj = table.copy(value)
+		elseif type(value) == "string" then
+			local it = MetaDataRef()
+			it:_deserialize(value)
+			return it
 		else
 			print(value)
 			error("TYPE NOT IMPLEMENTED: " .. type(value))
