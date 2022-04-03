@@ -59,8 +59,8 @@ function _G.core.get_player_by_name(name)
 	return players[name] and players[name]._online and players[name] or nil
 end
 
-function _G.core.get_player_ip(...)
-	return "127.1.2.7"
+function _G.core.get_player_ip(name)
+	return core.get_player_by_name(name)._address
 end
 
 function _G.core.get_connected_players()
@@ -69,6 +69,61 @@ function _G.core.get_connected_players()
 		if player._online then
 			table.insert(result, player)
 		end
+	end
+	return result
+end
+
+local client_state = {
+	"Invalid",
+	"Disconnecting",
+	"Denied",
+	"Created",
+	"AwaitingInit2",
+	"HelloSent",
+	"InitDone",
+	"DefinitionsSent",
+	"Active",
+	"SudoMode",
+}
+
+function _G.core.get_player_information(name)
+	local player = core.get_player_by_name(name)
+	if not player then
+		mineunit:warning("core.get_player_information client not found", name)
+		return
+	end
+
+	--if not player._client_info then
+	--	mineunit:warning("core.get_player_information no client information available", name)
+	--	return
+	--end
+
+	--local result = table.copy(player._client_info)
+	local result = {}
+	result.address = player._address
+	result.ip_version = 4 -- IPv4
+	--result.ip_version = 6 -- IPv6
+	--result.ip_version = 0 -- Something else
+
+	if player._connection_info then
+		for key, value in pairs(player._connection_info) do
+			result[key] = value
+		end
+	end
+
+	-- Based on official 5.4.1 client information
+	result.connection_uptime = 1 -- FIXME: Add server step based counter, possibly using get_us_time
+	result.protocol_version = 39
+	result.formspec_version = 4
+	result.lang_code = "EN"
+
+	if mineunit:config("server_debug") then
+		result.serialization_version = 28 -- number
+		result.major = 5
+		result.minor = 4
+		result.patch = 1
+		result.version_string = "5.4.1"
+		result.state = "Active"
 	end
 	return result
 end
@@ -503,8 +558,18 @@ mineunit.export_object(Player, {
 			_name = name or "SX",
 			-- Players are always online if server module is not loaded
 			_online = not (mineunit.execute_on_joinplayer and true or false),
+			_address = nil,
+			_connection_info = nil, --[[{
+				min_rtt = 0,
+				max_rtt = 0,
+				avg_rtt = 0,
+				min_jitter = 0,
+				max_jitter = 0,
+				avg_jitter = 0,
+			},--]]
+			_client_info = nil,
 			_is_player = true,
-			_privs = privs or { server = 1, test_priv=1 },
+			_privs = privs or { server = 1, interact = 1, test_priv = 1 },
 			_object = ObjectRef(),
 			_look_dir = {x=0,y=-1,z=0}, -- Reflects simplified pointed_thing used to place nodes
 			_eye_offset_first = {x=0,y=0,z=0},
