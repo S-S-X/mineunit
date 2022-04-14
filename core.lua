@@ -17,7 +17,85 @@ _G.core.swap_node = world.swap_node
 _G.core.get_worldpath = function(...) return _G.mineunit:get_worldpath(...) end
 _G.core.get_modpath = function(...) return _G.mineunit:get_modpath(...) end
 _G.core.get_current_modname = function(...) return _G.mineunit:get_current_modname(...) end
-_G.core.register_item_raw = noop
+
+if mineunit:config("validate_textures") then
+	local function add_validate(dst, src, name)
+		if rawget(src, name) then
+			table.insert(dst, rawget(src, name))
+		end
+	end
+	local function str_iter(t, callback)
+		for k,v in pairs(t) do
+			if key ~= "type" and type(v) == "string" then
+				callback(v)
+			elseif type(v) == "table" then
+				str_iter(v, callback)
+			end
+		end
+	end
+	local src_path = mineunit:config("source_path")
+	local tex_paths = mineunit:config("texture_paths")
+	local excludes = mineunit:config("exclude_textures")
+	local includes = mineunit:config("include_textures")
+	local pl_path = require("pl.path")
+	local function file_exists(fpath)
+		local f = io.open(fpath)
+		if not f then
+			return false
+		end
+		io.close(f)
+		return true
+	end
+	local function validate_texture(s, item)
+		local tex = s:split("^")
+		for _,fname in pairs(tex) do
+			local skip = false
+			for _, pattern in ipairs(excludes) do
+				if fname:find(pattern) then
+					skip = true
+					break
+				end
+			end
+			if not skip and #includes > 0 then
+				skip = true
+				for _, pattern in ipairs(includes) do
+					if fname:find(pattern) then
+						skip = false
+						break
+					end
+				end
+			end
+			if not skip then
+				local found = false
+				for _, tex_path in ipairs(tex_paths) do
+					local fpath = pl_path.normpath(("%s/%s/%s"):format(src_path, tex_path, fname))
+					if file_exists(fpath) then
+						found = true
+						break
+					end
+				end
+				if not found then
+					print("")
+					mineunit:error("Texture file not found:", fname, "Item:", item)
+				end
+			end
+		end
+	end
+	_G.core.register_item_raw = function(def)
+		if not mineunit:state() then
+			local validate = {}
+			add_validate(validate, def, "tiles")
+			add_validate(validate, def, "wield_image")
+			add_validate(validate, def, "inventory_image")
+			if #validate > 0 then
+				str_iter(validate, function(s) validate_texture(s, def.name) end)
+			end
+		end
+	end
+else
+	_G.core.register_item_raw = noop
+end
+
 _G.core.unregister_item_raw = noop
 _G.core.register_alias_raw = noop
 _G.minetest = _G.core
