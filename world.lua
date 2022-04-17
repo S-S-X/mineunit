@@ -17,6 +17,7 @@ function world.clear()
 			rawset(self, key, node)
 		end,
 	})
+	-- These nodes must not mutate.
 	world.nodes = nodes
 end
 
@@ -33,6 +34,7 @@ local function create_node(node, defaults)
 	node = type(node) == "table" and node or { name = node }
 	return {
 		name = node.name and node.name or (defaults and defaults.name),
+		param1 = node.param1 and node.param1 or (defaults and defaults.param1 or 0),
 		param2 = node.param2 and node.param2 or (defaults and defaults.param2 or 0),
 	}
 end
@@ -75,7 +77,8 @@ function world.set_default_node(node)
 end
 
 function world.get_node(pos)
-	return world.nodes[core.hash_node_position(vector.round(pos))]
+	local node = world.nodes[core.hash_node_position(vector.round(pos))]
+	return node and {name = node.name, param1 = node.param1, param2 = node.param2}
 end
 
 -- set_node sets world node without place/dig callbacks
@@ -251,7 +254,7 @@ function world.add_layout(layout, offset)
 		for x = p1.x, p2.x do
 			for y = p1.y, p2.y do
 				for z = p1.z, p2.z do
-					world.set_node({x=x, y=y, z=z}, {name=node[2], param2=0})
+					world.set_node({x=x, y=y, z=z}, {name=node[2], param1=0, param2=0})
 				end
 			end
 		end
