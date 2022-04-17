@@ -22,7 +22,9 @@ local function sort_box(minp, maxp)
 end
 
 local ignore_node = {name = "ignore", param1 = 0, param2 = 0}
-local nodes_mt = {__index = function() return ignore_node end}
+
+local unloaded_node = {name = "ignore", param1 = 0, param2 = 0, unloaded = true}
+local nodes_mt = {__index = function() return unloaded_node end}
 
 --
 -- VoxelManip public API
@@ -52,7 +54,7 @@ function VoxelManip:read_from_map(p1, p2)
 		while p.y <= maxp.y do
 			while p.x <= maxp.x do
 				local hash = core.hash_node_position(p)
-				self._nodes[hash] = world.nodes[hash]
+				self._nodes[hash] = world.nodes[hash] or ignore_node
 				p.x = p.x + 1
 			end
 			p.x = minp.x
@@ -62,42 +64,27 @@ function VoxelManip:read_from_map(p1, p2)
 		p.z = p.z + 1
 	end
 
-	local bp = vector.new(bpmin)
-	while bp.z <= bpmax.z do
-		while bp.y <= bpmax.y do
-			while bp.x <= bpmax.x do
-				self._block_set[core.hash_node_position(bp)] = true
-				bp.x = bp.x + 1
-			end
-			bp.x = bpmin.x
-			bp.y = bp.y + 1
-		end
-		bp.y = bpmin.y
-		bp.z = bp.z + 1
-	end
-
 	return self:get_emerged_area()
 end
 
 function VoxelManip:write_to_map()
-	for bphash in pairs(self._block_set) do
-		local bp = core.get_position_from_hash(bphash)
-		local minp = block_min_pos(bp)
-		local maxp = block_max_pos(bp)
-		local p = vector.new(minp)
-		while p.z <= maxp.z do
-			while p.y <= maxp.y do
-				while p.x <= maxp.x do
-					local hash = core.hash_node_position(p)
-					world.nodes[hash] = self._nodes[hash]
-					p.x = p.x + 1
+	local emin, emax = self._emin, self._emax
+	local p = vector.new(emin)
+	while p.z <= emax.z do
+		while p.y <= emax.y do
+			while p.x <= emax.x do
+				local hash = core.hash_node_position(p)
+				local node = self._nodes[hash]
+				if not node.unloaded then
+					world.nodes[hash] = node
 				end
-				p.x = minp.x
-				p.y = p.y + 1
+				p.x = p.x + 1
 			end
-			p.y = minp.y
-			p.z = p.z + 1
+			p.x = emin.x
+			p.y = p.y + 1
 		end
+		p.y = emin.y
+		p.z = p.z + 1
 	end
 end
 
@@ -113,14 +100,17 @@ function VoxelManip:get_node_at(pos)
 end
 
 function VoxelManip:set_node_at(pos, node)
-	if self._block_set[core.hash_node_position(pos2blockpos(pos))] then
-		node = {name = node.name, param1 = node.param1 or 0, param2 = node.param2 or 0}
-		local nodedef = core.registered_nodes[node.name]
-		if nodedef == nil then
-			error("Invalid node name '" .. tostring(node.name) .. "'")
-		end
-		node.name = nodedef.name
-		self._nodes[core.hash_node_position(pos)] = node
+	local nodedef = core.registered_nodes[node.name]
+	if nodedef == nil then
+		error("Invalid node name '" .. tostring(node.name) .. "'")
+	end
+	local hash = core.hash_node_position(pos)
+	if not self._nodes[hash].unloaded then
+		self._nodes[hash] = {
+			name = nodedef.name,
+			param1 = node.param1 or 0,
+			param2 = node.param2 or 0,
+		}
 	end
 end
 
@@ -209,6 +199,7 @@ function VoxelManip:set_data(buf)
 					name = core.get_name_from_content_id(buf[i]),
 					param1 = oldnode.param1,
 					param2 = oldnode.param2,
+					unloaded = oldnode.unloaded,
 				}
 				i = i + 1
 				p.x = p.x + 1
@@ -260,6 +251,7 @@ function VoxelManip:set_light_data(buf)
 					name = oldnode.name,
 					param1 = buf[i],
 					param2 = oldnode.param2,
+					unloaded = oldnode.unloaded,
 				}
 				i = i + 1
 				p.x = p.x + 1
@@ -311,6 +303,7 @@ function VoxelManip:set_param2_data(buf)
 					name = oldnode.name,
 					param1 = oldnode.param1,
 					param2 = buf[i],
+					unloaded = oldnode.unloaded
 				}
 				i = i + 1
 				p.x = p.x + 1
@@ -329,7 +322,6 @@ mineunit.export_object(VoxelManip, {
 	name = "VoxelManip",
 	constructor = function(self, p1, p2)
 		local vm = {
-			_block_set = {},
 			-- These nodes must not mutate.
 			_nodes = setmetatable({}, nodes_mt),
 			_emin = vector.new(1, 1, 1),
