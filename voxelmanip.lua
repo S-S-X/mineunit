@@ -97,6 +97,9 @@ end
 
 function VoxelManip:get_node_at(pos)
 	local node = self._nodes[core.hash_node_position(pos)]
+	if node.unloaded then
+		node = ignore_node
+	end
 	return {name = node.name, param1 = node.param1, param2 = node.param2}
 end
 
