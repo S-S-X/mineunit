@@ -123,8 +123,7 @@ function VoxelManip:get_data(buf)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				local node = self._nodes[core.hash_node_position(p)]
-				buf[i] = core.get_content_id(node.name)
+				buf[i] = core.get_content_id(self._nodes[core.hash_node_position(p)].name)
 				i = i + 1
 				p.x = p.x + 1
 			end
@@ -147,8 +146,7 @@ function VoxelManip:get_light_data()
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				local node = self._nodes[core.hash_node_position(p)]
-				buf[i] = node.param1
+				buf[i] = self._nodes[core.hash_node_position(p)].param1
 				i = i + 1
 				p.x = p.x + 1
 			end
@@ -171,8 +169,7 @@ function VoxelManip:get_param2_data(buf)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				local node = self._nodes[core.hash_node_position(p)]
-				buf[i] = node.param2
+				buf[i] = self._nodes[core.hash_node_position(p)].param2
 				i = i + 1
 				p.x = p.x + 1
 			end
@@ -214,30 +211,6 @@ function VoxelManip:set_data(buf)
 	return buf
 end
 
-function VoxelManip:get_light_data()
-	local buf = {}
-
-	local emin, emax = self._emin, self._emax
-	local i = 1
-	local p = vector.new(emin)
-	while p.z <= emax.z do
-		while p.y <= emax.y do
-			while p.x <= emax.x do
-				local node = self._nodes[core.hash_node_position(p)]
-				buf[i] = node.param1
-				i = i + 1
-				p.x = p.x + 1
-			end
-			p.x = emin.x
-			p.y = p.y + 1
-		end
-		p.y = emin.y
-		p.z = p.z + 1
-	end
-
-	return buf
-end
-
 function VoxelManip:set_light_data(buf)
 	local emin, emax = self._emin, self._emax
 	local i = 1
@@ -253,30 +226,6 @@ function VoxelManip:set_light_data(buf)
 					param2 = oldnode.param2,
 					unloaded = oldnode.unloaded,
 				}
-				i = i + 1
-				p.x = p.x + 1
-			end
-			p.x = emin.x
-			p.y = p.y + 1
-		end
-		p.y = emin.y
-		p.z = p.z + 1
-	end
-
-	return buf
-end
-
-function VoxelManip:get_param2_data(buf)
-	buf = buf or {}
-
-	local emin, emax = self._emin, self._emax
-	local i = 1
-	local p = vector.new(emin)
-	while p.z <= emax.z do
-		while p.y <= emax.y do
-			while p.x <= emax.x do
-				local node = self._nodes[core.hash_node_position(p)]
-				buf[i] = node.param2
 				i = i + 1
 				p.x = p.x + 1
 			end
