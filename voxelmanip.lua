@@ -1,3 +1,14 @@
+-- The VoxelManip stores nodes in a map from position hashes to node tables,
+-- just like the world at large. It may share node tables with the world, so
+-- these tables must be immutable.
+--
+-- Incompatibilities with real VoxelManip:
+-- 1. Mapgen methods not implemented.
+-- 2. Light and liquid updates no-ops.
+-- 3. If there are holes in the VoxelManip data due to multiple calls to
+--    read_from_map(), the placeholder data in these holes cannot be changed by
+--    set_data() etc. This is very unlikely to be a problem.
+
 mineunit("common/vector")
 mineunit("game/misc")
 mineunit("world")
