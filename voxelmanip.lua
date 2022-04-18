@@ -1,4 +1,5 @@
 mineunit("common/vector")
+mineunit("game/misc")
 mineunit("world")
 
 local VoxelManip = {}
