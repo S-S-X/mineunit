@@ -24,8 +24,14 @@ end
 
 local ignore_node = {name = "ignore", param1 = 0, param2 = 0}
 
-local unloaded_node = {name = "ignore", param1 = 0, param2 = 0, unloaded = true}
-local nodes_mt = {__index = function() return unloaded_node end}
+-- This must be a separate object from ignore_node.
+local unloaded_node = {name = "ignore", param1 = 0, param2 = 0}
+
+local nodes_mt = {
+	__index = function() return unloaded_node end,
+	-- This prevents addition of nodes outside loaded areas:
+	__newindex = function() end,
+}
 
 --
 -- VoxelManip public API
@@ -55,7 +61,7 @@ function VoxelManip:read_from_map(p1, p2)
 		while p.y <= maxp.y do
 			while p.x <= maxp.x do
 				local hash = core.hash_node_position(p)
-				self._nodes[hash] = world.nodes[hash] or ignore_node
+				rawset(self._nodes, hash, world.nodes[hash] or ignore_node)
 				p.x = p.x + 1
 			end
 			p.x = minp.x
@@ -76,7 +82,7 @@ function VoxelManip:write_to_map()
 			while p.x <= emax.x do
 				local hash = core.hash_node_position(p)
 				local node = self._nodes[hash]
-				if not node.unloaded then
+				if node ~= unloaded_node then
 					world.nodes[hash] = node
 				end
 				p.x = p.x + 1
@@ -97,9 +103,6 @@ end
 
 function VoxelManip:get_node_at(pos)
 	local node = self._nodes[core.hash_node_position(pos)]
-	if node.unloaded then
-		node = unloaded_node
-	end
 	return {name = node.name, param1 = node.param1, param2 = node.param2}
 end
 
@@ -108,14 +111,11 @@ function VoxelManip:set_node_at(pos, node)
 	if nodedef == nil then
 		error("Invalid node name '" .. tostring(node.name) .. "'")
 	end
-	local hash = core.hash_node_position(pos)
-	if not self._nodes[hash].unloaded then
-		self._nodes[hash] = {
-			name = nodedef.name,
-			param1 = node.param1 or 0,
-			param2 = node.param2 or 0,
-		}
-	end
+	self._nodes[core.hash_node_position(pos)] = {
+		name = nodedef.name,
+		param1 = node.param1 or 0,
+		param2 = node.param2 or 0,
+	}
 end
 
 function VoxelManip:get_data(buf)
@@ -200,7 +200,6 @@ function VoxelManip:set_data(buf)
 					name = core.get_name_from_content_id(buf[i]),
 					param1 = oldnode.param1,
 					param2 = oldnode.param2,
-					unloaded = oldnode.unloaded,
 				}
 				i = i + 1
 				p.x = p.x + 1
@@ -228,7 +227,6 @@ function VoxelManip:set_light_data(buf)
 					name = oldnode.name,
 					param1 = buf[i],
 					param2 = oldnode.param2,
-					unloaded = oldnode.unloaded,
 				}
 				i = i + 1
 				p.x = p.x + 1
@@ -256,7 +254,6 @@ function VoxelManip:set_param2_data(buf)
 					name = oldnode.name,
 					param1 = oldnode.param1,
 					param2 = buf[i],
-					unloaded = oldnode.unloaded
 				}
 				i = i + 1
 				p.x = p.x + 1
