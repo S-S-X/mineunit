@@ -10,6 +10,7 @@
 --    set_data() etc. This is very unlikely to be a problem.
 
 mineunit("common/vector")
+mineunit("core")
 mineunit("game/misc")
 mineunit("world")
 
