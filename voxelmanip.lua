@@ -36,11 +36,8 @@ end
 
 local ignore_node = {name = "ignore", param1 = 0, param2 = 0}
 
--- This must be a separate object from ignore_node.
-local unloaded_node = {name = "ignore", param1 = 0, param2 = 0}
-
 local nodes_mt = {
-	__index = function() return unloaded_node end,
+	__index = function() return ignore_node end,
 	-- This prevents addition of nodes outside loaded areas:
 	__newindex = function() end,
 }
@@ -93,8 +90,8 @@ function VoxelManip:write_to_map()
 		while p.y <= emax.y do
 			while p.x <= emax.x do
 				local hash = core.hash_node_position(p)
-				local node = self._nodes[hash]
-				if node ~= unloaded_node then
+				local node = rawget(self._nodes, hash)
+				if node then
 					world.nodes[hash] = node
 				end
 				p.x = p.x + 1
