@@ -14,6 +14,10 @@ mineunit("core")
 mineunit("game/misc")
 mineunit("world")
 
+local rawget, rawset = rawget, rawset
+local hash_node_position = core.hash_node_position
+local get_content_id, get_name_from_content_id = core.get_content_id, core.get_name_from_content_id
+
 local VoxelManip = {}
 
 local function pos2blockpos(p)
@@ -65,12 +69,13 @@ function VoxelManip:read_from_map(p1, p2)
 	self._emax.y = math.max(self._emax.y, maxp.y)
 	self._emax.z = math.max(self._emax.z, maxp.z)
 
+	local vm_nodes, world_nodes = self._nodes, world.nodes
 	local p = vector.new(minp)
 	while p.z <= maxp.z do
 		while p.y <= maxp.y do
 			while p.x <= maxp.x do
-				local hash = core.hash_node_position(p)
-				rawset(self._nodes, hash, world.nodes[hash] or ignore_node)
+				local hash = hash_node_position(p)
+				rawset(vm_nodes, hash, world_nodes[hash] or ignore_node)
 				p.x = p.x + 1
 			end
 			p.x = minp.x
@@ -84,15 +89,16 @@ function VoxelManip:read_from_map(p1, p2)
 end
 
 function VoxelManip:write_to_map()
+	local vm_nodes, world_nodes = self._nodes, world.nodes
 	local emin, emax = self._emin, self._emax
 	local p = vector.new(emin)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				local hash = core.hash_node_position(p)
-				local node = rawget(self._nodes, hash)
+				local hash = hash_node_position(p)
+				local node = rawget(vm_nodes, hash)
 				if node then
-					world.nodes[hash] = node
+					world_nodes[hash] = node
 				end
 				p.x = p.x + 1
 			end
@@ -111,7 +117,7 @@ function VoxelManip:update_map()
 end
 
 function VoxelManip:get_node_at(pos)
-	local node = self._nodes[core.hash_node_position(pos)]
+	local node = self._nodes[hash_node_position(pos)]
 	return {name = node.name, param1 = node.param1, param2 = node.param2}
 end
 
@@ -120,7 +126,7 @@ function VoxelManip:set_node_at(pos, node)
 	if nodedef == nil then
 		error("Invalid node name '" .. tostring(node.name) .. "'")
 	end
-	self._nodes[core.hash_node_position(pos)] = {
+	self._nodes[hash_node_position(pos)] = {
 		name = nodedef.name,
 		param1 = node.param1 or 0,
 		param2 = node.param2 or 0,
@@ -130,13 +136,14 @@ end
 function VoxelManip:get_data(buf)
 	buf = buf or {}
 
+	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
 	local p = vector.new(emin)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				buf[i] = core.get_content_id(self._nodes[core.hash_node_position(p)].name)
+				buf[i] = get_content_id(vm_nodes[hash_node_position(p)].name)
 				i = i + 1
 				p.x = p.x + 1
 			end
@@ -153,13 +160,14 @@ end
 function VoxelManip:get_light_data()
 	local buf = {}
 
+	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
 	local p = vector.new(emin)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				buf[i] = self._nodes[core.hash_node_position(p)].param1
+				buf[i] = vm_nodes[hash_node_position(p)].param1
 				i = i + 1
 				p.x = p.x + 1
 			end
@@ -176,13 +184,14 @@ end
 function VoxelManip:get_param2_data(buf)
 	buf = buf or {}
 
+	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
 	local p = vector.new(emin)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				buf[i] = self._nodes[core.hash_node_position(p)].param2
+				buf[i] = vm_nodes[hash_node_position(p)].param2
 				i = i + 1
 				p.x = p.x + 1
 			end
@@ -197,16 +206,17 @@ function VoxelManip:get_param2_data(buf)
 end
 
 function VoxelManip:set_data(buf)
+	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
 	local p = vector.new(emin)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				local hash = core.hash_node_position(p)
-				local oldnode = self._nodes[hash]
-				self._nodes[hash] = {
-					name = core.get_name_from_content_id(buf[i]),
+				local hash = hash_node_position(p)
+				local oldnode = vm_nodes[hash]
+				vm_nodes[hash] = {
+					name = get_name_from_content_id(buf[i]),
 					param1 = oldnode.param1,
 					param2 = oldnode.param2,
 				}
@@ -224,15 +234,16 @@ function VoxelManip:set_data(buf)
 end
 
 function VoxelManip:set_light_data(buf)
+	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
 	local p = vector.new(emin)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				local hash = core.hash_node_position(p)
-				local oldnode = self._nodes[hash]
-				self._nodes[hash] = {
+				local hash = hash_node_position(p)
+				local oldnode = vm_nodes[hash]
+				vm_nodes[hash] = {
 					name = oldnode.name,
 					param1 = buf[i],
 					param2 = oldnode.param2,
@@ -251,15 +262,16 @@ function VoxelManip:set_light_data(buf)
 end
 
 function VoxelManip:set_param2_data(buf)
+	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
 	local p = vector.new(emin)
 	while p.z <= emax.z do
 		while p.y <= emax.y do
 			while p.x <= emax.x do
-				local hash = core.hash_node_position(p)
-				local oldnode = self._nodes[hash]
-				self._nodes[hash] = {
+				local hash = hash_node_position(p)
+				local oldnode = vm_nodes[hash]
+				vm_nodes[hash] = {
 					name = oldnode.name,
 					param1 = oldnode.param1,
 					param2 = buf[i],
