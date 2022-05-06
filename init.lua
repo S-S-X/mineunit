@@ -194,11 +194,13 @@ function fixture(name)
 	if not _fixtures[name] then
 		mineunit:info("Loading fixture", path)
 		assert(pl.path.isfile(path), "Fixture not found: " .. path)
-		dofile(path)
+		result = {dofile(path)}
+		_fixtures[name] = result
+		return unpack(result)
 	else
 		mineunit:debug("Fixture already loaded", path)
+		return unpack(_fixtures[name])
 	end
-	_fixtures[name] = true
 end
 
 local function source_path(name)
