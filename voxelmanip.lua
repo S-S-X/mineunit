@@ -17,6 +17,7 @@ mineunit("world")
 local rawget, rawset = rawget, rawset
 local hash_node_position = core.hash_node_position
 local get_content_id, get_name_from_content_id = core.get_content_id, core.get_name_from_content_id
+local vector_round = vector.round
 
 local VoxelManip = {}
 
@@ -117,7 +118,7 @@ function VoxelManip:update_map()
 end
 
 function VoxelManip:get_node_at(pos)
-	local node = self._nodes[hash_node_position(pos)]
+	local node = self._nodes[hash_node_position(vector_round(pos))]
 	return {name = node.name, param1 = node.param1, param2 = node.param2}
 end
 
@@ -126,7 +127,7 @@ function VoxelManip:set_node_at(pos, node)
 	if nodedef == nil then
 		error("Invalid node name '" .. tostring(node.name) .. "'")
 	end
-	self._nodes[hash_node_position(pos)] = {
+	self._nodes[hash_node_position(vector_round(pos))] = {
 		name = nodedef.name,
 		param1 = node.param1 or 0,
 		param2 = node.param2 or 0,
