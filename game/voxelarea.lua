@@ -3,13 +3,15 @@ mineunit("common/vector")
 local math_huge = math.huge
 local vector_new, vector_offset, vector_round = vector.new, vector.offset, vector.round
 
-VoxelArea = {
-	MinEdge = vector_new(1, 1, 1),
-	MaxEdge = vector_new(0, 0, 0),
-	ystride = 0,
-	zstride = 0,
-	_nx = 0, _ny = 0, _nz = 0,
-}
+VoxelArea = {}
+
+VoxelArea.MinEdge = vector_new(1, 1, 1)
+VoxelArea.MaxEdge = vector_new(0, 0, 0)
+VoxelArea.ystride = 0
+VoxelArea.zstride = 0
+VoxelArea._nx = 0
+VoxelArea._ny = 0
+VoxelArea._nz = 0
 
 function VoxelArea:new(o)
 	setmetatable(o, self)
