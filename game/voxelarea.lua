@@ -85,15 +85,16 @@ function VoxelArea:iter(minx, miny, minz, maxx, maxy, maxz)
 					i = nil
 				else
 					i = prev_sheet + zstride
-					line_end = i + (maxx - minx)
+					prev_line = i
 					prev_sheet = i
+					line_end = i + (maxx - minx)
 					sheet_end = sheet_end + zstride
 				end
 			else
 				i = prev_line + ystride
+				prev_line = i
 				line_end = line_end + ystride
 			end
-			prev_line = i
 		end
 		return i
 	end
