@@ -38,8 +38,7 @@ describe("VoxelArea", function()
 		while p.z <= p2.z do
 			while p.y <= p2.y do
 				while p.x <= p2.x do
-					local i = iter()
-					assert.equal(va:indexp(p), i)
+					assert.equal(va:indexp(p), iter())
 					p.x = p.x + 1
 				end
 				p.x = p1.x
