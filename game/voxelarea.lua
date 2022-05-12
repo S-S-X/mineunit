@@ -1,6 +1,5 @@
 mineunit("common/vector")
 
-local math_huge = math.huge
 local vector_new, vector_offset, vector_round = vector.new, vector.offset, vector.round
 
 VoxelArea = {}
