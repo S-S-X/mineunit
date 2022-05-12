@@ -34,18 +34,12 @@ describe("VoxelArea", function()
 		local p1 = vector.new(-3, -2, -1)
 		local p2 = vector.new(6, 5, 4)
 		local iter = va:iterp(p1, p2)
-		local p = vector.new(p1)
-		while p.z <= p2.z do
-			while p.y <= p2.y do
-				while p.x <= p2.x do
-					assert.equal(va:indexp(p), iter())
-					p.x = p.x + 1
+		for z = p1.z, p2.z do
+			for y = p1.y, p2.y do
+				for x = p1.x, p2.x do
+					assert.equal(va:index(x, y, z), iter())
 				end
-				p.x = p1.x
-				p.y = p.y + 1
 			end
-			p.y = p1.y
-			p.z = p.z + 1
 		end
 		assert.is_nil(iter())
 	end)
