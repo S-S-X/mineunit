@@ -47,25 +47,19 @@ describe("VoxelManip", function()
 		local param1_data = vm:get_light_data()
 		local param2_data = vm:get_param2_data()
 		local emin, emax = vm:get_emerged_area()
-		local p = vector.new(emin)
 		local i = 1
-		while p.z <= emax.z do
-			while p.y <= emax.y do
-				while p.x <= emax.x do
-					local node1 = vm:get_node_at(p)
+		for z = emin.z, emax.z do
+			for y = emin.y, emax.y do
+				for x = emin.x, emax.x do
+					local node1 = vm:get_node_at(vector.new(x, y, z))
 					local node2 = {
 						name = minetest.get_name_from_content_id(data[i]),
 						param1 = param1_data[i], param2 = param2_data[i],
 					}
 					assert.same(node1, node2)
 					i = i + 1
-					p.x = p.x + 1
 				end
-				p.x = emin.x
-				p.y = p.y + 1
 			end
-			p.y = emin.y
-			p.z = p.z + 1
 		end
 	end)
 
