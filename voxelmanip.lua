@@ -33,12 +33,6 @@ local function block_max_pos(bp)
 	return vector.add(block_min_pos(bp), core.MAP_BLOCKSIZE - 1)
 end
 
-local function sort_box(minp, maxp)
-	minp.x, maxp.x = math.min(minp.x, maxp.x), math.max(minp.x, maxp.x)
-	minp.y, maxp.y = math.min(minp.y, maxp.y), math.max(minp.y, maxp.y)
-	minp.z, maxp.z = math.min(minp.z, maxp.z), math.max(minp.z, maxp.z)
-end
-
 local ignore_node = {name = "ignore", param1 = 0, param2 = 0}
 
 local nodes_mt = {
@@ -56,9 +50,7 @@ function VoxelManip:get_emerged_area()
 end
 
 function VoxelManip:read_from_map(p1, p2)
-	local bpmin = pos2blockpos(p1)
-	local bpmax = pos2blockpos(p2)
-	sort_box(bpmin, bpmax)
+	local bpmin, bpmax = vector.sort(pos2blockpos(p1), pos2blockpos(p2))
 
 	local minp = block_min_pos(bpmin)
 	local maxp = block_max_pos(bpmax)
