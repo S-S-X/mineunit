@@ -5,7 +5,7 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("VoxelArea", function()
 
 	require("mineunit")
-	sourcefile("game/voxelarea")
+	sourcefile("voxelarea")
 	mineunit("common/vector")
 
 	local MinEdge = vector.new(-10, -20, -30)
