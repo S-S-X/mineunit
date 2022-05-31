@@ -9,10 +9,7 @@
 --    read_from_map(), the placeholder data in these holes cannot be changed by
 --    set_data() etc. This is very unlikely to be a problem.
 
-mineunit("common/vector")
 mineunit("core")
-mineunit("game/misc")
-mineunit("world")
 
 local rawget, rawset = rawget, rawset
 local hash_node_position = core.hash_node_position
