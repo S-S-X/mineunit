@@ -7,8 +7,6 @@ describe("VoxelManip", function()
 	require("mineunit")
 	sourcefile("voxelmanip")
 	mineunit("core")
-	mineunit("common/vector")
-	mineunit("world")
 
 	mineunit:set_current_modname("test")
 	minetest.register_node("test:node", {})
