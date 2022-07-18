@@ -38,11 +38,6 @@ function ItemStack:get_metadata()
 end
 --* `set_metadata(metadata)`: (DEPRECATED) Returns true.
 function ItemStack:set_metadata(metadata)
-	if type(metadata) == "number" then
-		metadata = tostring(metadata)
-	else
-		assert.is_string(metadata, "ItemStack:set_metadata expects metadata to be string")
-	end
 	self._meta:set_string("", metadata)
 	return true
 end
