@@ -231,7 +231,7 @@ function core.get_dig_params(groups, capabilities, initial_wear)
 					diggable = true
 					-- Calculate tool wear
 					local real_uses = math.min(cap.uses * math.pow(3, leveldiff), 65535)
-					local wear = 65536 / real_uses
+					local wear = math.floor(65536 / real_uses)
 					local additional = 65536 % real_uses
 					if additional > 0 then
 						if initial_wear >= (real_uses - additional) * wear then
