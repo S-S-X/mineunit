@@ -24,7 +24,7 @@ function mineunit:destroy_nodetimer(pos)
 end
 
 local function match_nodes(nodename, nodegroups, nodes, groups)
-	if nodes[needle] then
+	if nodes[nodename] then
 		return true
 	elseif nodegroups then
 		for group,_ in pairs(nodegroups) do
@@ -164,29 +164,45 @@ function mineunit:execute_shutdown()
 	)
 end
 
-function mineunit:execute_on_joinplayer(player, lastlogin)
-	assert.is_Player(player, "Invalid call to mineunit:execute_on_joinplayer")
-	rawset(player, "_address", "127.1.2.7")
+function mineunit:execute_on_joinplayer(player, options)
+	assert.is_Player(player, "mineunit:execute_on_joinplayer 1st arg should be Player")
+	if options == nil then
+		options = {}
+	else
+		assert.is_table(options, "mineunit:execute_on_joinplayer 2nd arg should be table or nil")
+	end
+	local address = options.address or "127.1.2.7"
+	rawset(player, "_address", address)
 	rawset(player, "_connection_info", {
-		min_rtt = 0,
-		max_rtt = 0,
-		avg_rtt = 0,
-		min_jitter = 0,
-		max_jitter = 0,
-		avg_jitter = 0,
+		min_rtt = options.min_rtt or 0,
+		max_rtt = options.max_rtt or 0,
+		avg_rtt = options.avg_rtt or 0,
+		min_jitter = options.min_jitter or 0,
+		max_jitter = options.max_jitter or 0,
+		avg_jitter = options.avg_jitter or 0,
 	})
+	local name = player:get_player_name()
 	if core.get_auth_handler then
-		local name = player:get_player_name()
 		local data = core.get_auth_handler().get_auth(name)
 		core.set_player_privs(name, data.privileges)
 		mineunit:debug("Auth privileges:", player:get_player_name(), dump(player._privs))
+		local message = core.run_callbacks(
+			core.registered_on_prejoinplayers,
+			RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
+			name,
+			address
+		)
+		if message then
+			return message
+		end
+		mineunit:execute_globalstep()
 	end
 	player._online = true
 	return core.run_callbacks(
 		core.registered_on_joinplayers,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
 		player,
-		lastlogin
+		options.lastlogin
 	)
 end
 
