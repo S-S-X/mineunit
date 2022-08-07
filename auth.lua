@@ -14,7 +14,7 @@ mineunit.export_object(AuthEntry, {
 	name = "AuthEntry",
 	typename = "table",
 	constructor = function(self, name)
-		assert(type(name) == "string")
+		assert(type(name) == "string" and name ~= "", "Invalid AuthEntry name '"..tostring(name).."'")
 		local obj = {}
 		local player = mineunit:get_players()[name]
 		assert.is_player(player)
