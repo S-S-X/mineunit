@@ -60,7 +60,8 @@ function _G.core.get_player_by_name(name)
 end
 
 function _G.core.get_player_ip(name)
-	return core.get_player_by_name(name)._address
+	local player = core.get_player_by_name(name)
+	return player and player._address or nil
 end
 
 function _G.core.get_connected_players()
