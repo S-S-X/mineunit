@@ -1,7 +1,7 @@
 # mineunit
 Minetest core / engine libraries for regression tests
 
-![mineunit](https://mineunit-badges.000webhostapp.com/S-S-X/mineunit/coverage)
+![](https://byob.yarr.is/S-S-X/mineunit/coverage)
 
 Probably will not currently work with Windows so unless you want to help fixing things use Linux or similar OS.
 
@@ -129,7 +129,7 @@ Mineunit itself comes with some additional functionality to allow controlled tes
 | `mineunit:execute_globalstep(dtime)`                            | Execute Minetest globalstep: will trigger registered globalsteps, nodetimers, minetest.after and similar callbacks.
 | `mineunit:mods_loaded()`                                        | Execute functions registered with `minetest.register_on_mods_loaded(func)`.
 | `mineunit:execute_shutdown()`                                   | Simulate server shutdown event.
-| `mineunit:execute_on_joinplayer(player, lastlogin)`             | Simulate `Player` joining the game.
+| `mineunit:execute_on_joinplayer(player, options)`               | Simulate `Player` joining the game. Use `options` table for details like `address` and `lastlogin`.
 | `mineunit:execute_on_leaveplayer(player, timeout)`              | Simulate `Player` leaving the game.
 | `mineunit:execute_on_chat_message(sender, message)`             | Simulate `Player` sending chat message.
 | `mineunit:execute_modchannel_message(channel, sender, message)` | Modchannel message handlers.
