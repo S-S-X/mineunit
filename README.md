@@ -238,6 +238,24 @@ For example core_root in project configuration will override core_root in user c
 Command line arguments will override all configuration file entries except for luacov excludes which will be merged.
 Table values (other than luacov excludes) are only supported in project configuration file.
 
+### Using `--coverage` and `--report` cli args
+
+Using `--coverage` and `--report` together wont work, with `--report` cli argument mineunit
+wont run any tests but just instructs luacv to format coverage data producing human readable
+test coverage report called `luacov.report.out`. File is placed in current working directory.
+
+So basically to get code coverage report you have to run `mineunit` twice, example follows:
+
+```
+$ mineunit --coverage
+$ mineunit --report
+```
+
+First command executes tests, collects test coverage information and produces coverage data file.
+Second command does not execute tests but reads coverage data file and formats it with source
+code to produce human readable test coverage report file called `luacov.report.out`. Use any
+text editor to read this file.
+
 ### Known projects using mineunit
 
 See following projects for more examples on how to use mineunit and what you can do with it
@@ -255,7 +273,9 @@ See following projects for more examples on how to use mineunit and what you can
 * GitHub workflow https://github.com/S-S-X/metatool/blob/master/.github/workflows/mineunit.yml
 
 #### Other mods
-* QoS https://github.com/S-S-X/qos/tree/master/spec
+* QoS (basic unit testing and chat commands) https://github.com/S-S-X/qos/tree/master/spec
 * Machine_parts https://github.com/mt-mods/machine_parts/tree/master/spec
 * Beerchat (chat commands and message delivery) https://github.com/minetest-beerchat/beerchat/tree/master/spec
-* Mapblock_lib https://github.com/BuckarooBanzay/mapblock_lib/tree/master/spec
+* Geoip (HTTP API) https://github.com/mt-mods/geoip/tree/master/spec
+* Digistuff (very simple, only load mod) https://github.com/mt-mods/digistuff/tree/master/spec
+* spectator_mode (player API and chat) https://github.com/minetest-mods/spectator_mode/tree/master/spec
