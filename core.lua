@@ -109,6 +109,7 @@ _G.minetest.get_node_or_nil = _G.world.get_node
 _G.minetest.get_node = function(pos) return minetest.get_node_or_nil(pos) or {name="ignore",param1=0,param2=0} end
 _G.minetest.dig_node = function(pos) return world.on_dig(pos) and true or false end
 _G.minetest.remove_node = _G.world.remove_node
+_G.minetest.load_area = noop
 
 _G.minetest.get_node_timer = {}
 setmetatable(_G.minetest.get_node_timer, noop_object)
