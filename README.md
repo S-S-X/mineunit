@@ -187,6 +187,7 @@ It is recommended to always load `core` module instead of selecting individual a
 | player              | Provides `Player` class, privilege functions and formspec functions. Loads `metadata` as dependency.
 | protection          | Provides simple node protection API to simulate `minetest.is_protected(pos)` behavior.
 | server              | Provides functionality for globalstep, player, modchannel and chat. Loads `nodetimer`, `common/chatcommands` and `game/chat` as dependencies.
+| voxelarea           | Provides `VoxelArea` class.
 | voxelmanip          | Provides `VoxelManip` class.
 | auth                | Provides authentication API.
 | entity              | Provides SAO entity API.
