@@ -26,7 +26,7 @@ local default_config = {
 	engine_version = "mineunit",
 }
 
-for k,v in pairs(mineunit_conf_defaults) do
+for k,v in pairs(mineunit_conf_defaults or {}) do
 	default_config[k] = v
 end
 
