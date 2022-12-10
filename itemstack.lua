@@ -33,9 +33,14 @@ end
 --* `get_meta()`: returns ItemStackMetaRef. See section for more details
 function ItemStack:get_meta() return self._meta end
 --* `get_metadata()`: (DEPRECATED) Returns metadata (a string attached to an item stack).
-function ItemStack:get_metadata() DEPRECATED("Using deprecated ItemStack:get_metadata()") end
+function ItemStack:get_metadata()
+	return self._meta:get_string("")
+end
 --* `set_metadata(metadata)`: (DEPRECATED) Returns true.
-function ItemStack:set_metadata(metadata) DEPRECATED("Using deprecated ItemStack:set_metadata(metadata)") end
+function ItemStack:set_metadata(metadata)
+	self._meta:set_string("", metadata)
+	return true
+end
 --* `get_description()`: returns the description shown in inventory list tooltips.
 --    The engine uses the same as this function for item descriptions.
 --    Fields for finding the description, in order:
