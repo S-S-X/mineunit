@@ -13,14 +13,15 @@ end
 
 local function set_formspec(player, formname, formspec)
 	player._formname, player._formspec = formname, formspec
+	player._formspec_fields = {}
 end
 
 function _G.core.show_formspec(playername, formname, formspec)
-	assert.is_string(playername, "core.show_formspec: playername: expected string, got "..type(name))
-	assert.is_Player(players[name], "core.show_formspec: player not found: "..name)
+	assert.is_string(playername, "core.show_formspec: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "core.show_formspec: player not found: "..playername)
 	assert.is_string(formname, "core.show_formspec: formname: expected string, got "..type(formname))
 	assert.is_string(formspec, "core.show_formspec: formspec: expected string, got "..type(formspec))
-	local player = players[name]
+	local player = players[playername]
 	if formname == "" then
 		set_formspec(player)
 	elseif formspec == "" then
@@ -30,6 +31,38 @@ function _G.core.show_formspec(playername, formname, formspec)
 	else
 		set_formspec(player, formname, formspec)
 	end
+end
+
+function mineunit.send_formspec_fields(playername, fields)
+	assert.is_string(playername, "mineunit.send_formspec_fields: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "mineunit.send_formspec_fields: player not found: "..playername)
+	local player = players[playername]
+	assert(player._formname, "mineunit.send_formspec_fields: no formspec open")
+	assert(fields ~= nil and type(fields) ~= "table", "mineunit.send_formspec_fields: fields: expected table or nil, got "..type(fields))
+	if fields == nil then
+		fields = player._formspec_fields
+	end
+	player._formspec_fields = {}
+	for _, f in ipairs(core.registered_on_player_receive_fields) do
+		if f(player, player._formname, fields) then
+			break
+		end
+	end
+end
+
+function mineunit.set_formspec_fields(playername, fields)
+	assert.is_string(playername, "mineunit.set_formspec_fields: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "mineunit.set_formspec_fields: player not found: "..playername)
+	local player = players[playername]
+	assert(player._formname, "mineunit.set_formspec_fields: no formspec open")
+	local fsfields = player._formspec_fields
+	for k, v in pairs(fields) do
+		fsfields[k] = v
+	end
+end
+
+function mineunit.set_formspec_field(playername, key, value)
+	return mineunit.set_formspec_fields(playername, {key = value})
 end
 
 function _G.core.get_player_privs(name)
