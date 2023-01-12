@@ -5,8 +5,8 @@ function mineunit:get_players()
 end
 
 function mineunit.get_player_formspec(playername)
-	assert.is_string(playername, "mineunit.show_formspec: playername: expected string, got "..type(playername))
-	assert.is_Player(players[playername], "core.show_formspec: player not found: "..playername)
+	assert.is_string(playername, "mineunit.get_player_formspec: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "core.get_player_formspec: player not found: "..playername)
 	local player = players[playername]
 	return player._formname, player._formspec
 end
