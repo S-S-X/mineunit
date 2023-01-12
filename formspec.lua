@@ -303,6 +303,54 @@ function Form:__tostring()
 	return self._textcontent
 end
 
+-- Mixed instance/static utility functions, last argument is fields, second to last is player
+function Form:send(...)
+	local args = {...}
+	local form, player, fields
+	if mineunit.utils.type(self) == "Form" then
+		-- Instance method, send this form to player
+		form, player, fields = self, args[1], args[2]
+	else
+		-- Static method, get instance and send it
+		player, fields = self, args[1]
+	end
+	assert.player_or_name(player, "mineunit:get_player_formspec: player_or_name: expected string or Player")
+	player = type(player) == "string" and mineunit:get_players()[player] or player
+	if not form then
+		-- Should only end up here if called with Form.send(player, fields) instead of form:send(player[, fields])
+		form = player._formspec
+	end
+	if fields then
+		return mineunit:execute_on_player_receive_fields(player, form:name(), fields)
+	else
+		return mineunit:execute_on_player_receive_fields(player, form:name(), form:fields())
+	end
+end
+
+function mineunit:send_formspec_fields(player_or_name, fields)
+	assert.player_or_name(player_or_name, "mineunit:get_player_formspec: player_or_name: expected string or Player")
+	local player = type(player_or_name) == "string" and self:get_players()[player_or_name] or player_or_name
+	assert(player._formspec, "mineunit.send_formspec_fields: no formspec open")
+	assert(fields ~= nil and type(fields) ~= "table", "mineunit.send_formspec_fields: fields: expected table or nil, got "..type(fields))
+	return self:Form().send(player, fields)
+end
+
+function mineunit:set_formspec_fields(player_or_name, fields)
+	assert.player_or_name(player_or_name, "mineunit:get_player_formspec: player_or_name: expected string or Player")
+	local player = type(player_or_name) == "string" and self:get_players()[player_or_name] or player_or_name
+	assert(player._formspec, "mineunit.send_formspec_fields: no formspec open")
+	assert(player._formname, "mineunit.set_formspec_fields: no formspec open")
+	local form = player._formspec
+	for k, v in pairs(fields) do
+		form:value(k, v)
+	end
+end
+
+function mineunit:set_formspec_field(player_or_name, key, value)
+	return self:set_formspec_fields(player_or_name, {key = value})
+end
+
+-- Register private class, exposed through mineunit
 mineunit.export_object(Form, {
 	name = "Form",
 	private = true,
@@ -321,5 +369,5 @@ mineunit.export_object(Form, {
 })
 
 function mineunit:Form(formname, formspec)
-	return Form(formname, formspec)
+	return formname and Form(formname, formspec) or Form
 end
