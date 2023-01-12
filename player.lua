@@ -4,7 +4,33 @@ function mineunit:get_players()
 	return players
 end
 
-function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
+function mineunit.get_player_formspec(playername)
+	assert.is_string(playername, "mineunit.show_formspec: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "core.show_formspec: player not found: "..playername)
+	local player = players[playername]
+	return player._formname, player._formspec
+end
+
+local function set_formspec(player, formname, formspec)
+	player._formname, player._formspec = formname, formspec
+end
+
+function _G.core.show_formspec(playername, formname, formspec)
+	assert.is_string(playername, "core.show_formspec: playername: expected string, got "..type(name))
+	assert.is_Player(players[name], "core.show_formspec: player not found: "..name)
+	assert.is_string(formname, "core.show_formspec: formname: expected string, got "..type(formname))
+	assert.is_string(formspec, "core.show_formspec: formspec: expected string, got "..type(formspec))
+	local player = players[name]
+	if formname == "" then
+		set_formspec(player)
+	elseif formspec == "" then
+		if player._formname == formname then
+			set_formspec(player)
+		end
+	else
+		set_formspec(player, formname, formspec)
+	end
+end
 
 function _G.core.get_player_privs(name)
 	assert.is_string(name, "core.get_player_privs: name: expected string, got "..type(name))
@@ -530,10 +556,10 @@ end
 function Player:set_attribute(attribute, value) DEPRECATED() end
 function Player:get_attribute(attribute) DEPRECATED() end
 
-function Player:set_inventory_formspec(formspec) end
-function Player:get_inventory_formspec() return "" end
-function Player:set_formspec_prepend(formspec) end
-function Player:get_formspec_prepend(formspec) return "" end
+function Player:set_inventory_formspec(formspec) self._inventory_formspec = formspec end
+function Player:get_inventory_formspec() return self._inventory_formspec end
+function Player:set_formspec_prepend(formspec) self._formspec_prepend = formspec end
+function Player:get_formspec_prepend(formspec) return self._formspec_prepend end
 
 function Player:hud_get_flags() return self._hud_flags end
 function Player:set_hud_flags(new_flags)
