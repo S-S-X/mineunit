@@ -38,7 +38,7 @@ function mineunit.send_formspec_fields(playername, fields)
 	assert.is_Player(players[playername], "mineunit.send_formspec_fields: player not found: "..playername)
 	local player = players[playername]
 	assert(player._formname, "mineunit.send_formspec_fields: no formspec open")
-	assert(fields ~= nil and type(fields) ~= "table", "mineunit.send_formspec_fields: fields: expected table or nil, got "..type(fields))
+	assert(fields == nil or type(fields) == "table", "mineunit.send_formspec_fields: fields: expected table or nil, got "..type(fields))
 	if fields == nil then
 		fields = player._formspec_fields
 	end
