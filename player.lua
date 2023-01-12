@@ -54,6 +54,7 @@ if not _G.core.check_player_privs then
 end
 
 function _G.core.get_player_by_name(name)
+	assert.is_string(name, "core.get_player_by_name: name: expected string, got "..type(name))
 	return players[name] and players[name]._online and players[name] or nil
 end
 
@@ -73,12 +74,20 @@ function _G.core.get_connected_players()
 end
 
 function _G.core.show_formspec(playername, formname, formspec)
+	assert.is_string(formname, "core.show_formspec: formname: expected string, got "..type(formname))
+	assert.is_string(formspec, "core.show_formspec: formspec: expected string, got "..type(formspec))
 	local player = core.get_player_by_name(playername)
-	if player and mineunit:has_module("formspec") then
+	if player then
 		mineunit:debugf("core.show_formspec(%s, %s, %s)", playername, formname, formspec)
-		player._formspec = mineunit:Form(formname, formspec)
+		if formname == "" or formspec == "" then
+			player._formspec = nil
+		elseif mineunit:has_module("formspec")  then
+			player._formspec = mineunit:Form(formname, formspec)
+		else
+			player._formspec = { formname, formspec }
+		end
 	else
-		mineunit:debugf("core.show_formspec(%s, %s, <redacted>)", playername, formname)
+		mineunit:debugf("core.show_formspec(%s, %s, <redacted>) failed, player not online", playername, formname)
 	end
 end
 
@@ -90,6 +99,12 @@ function _G.core.close_formspec(playername, formname)
 	else
 		mineunit:debugf("core.show_formspec(%s, %s, <redacted>)", playername, formname)
 	end
+end
+
+function mineunit:get_player_formspec(player_or_name)
+	assert.player_or_name(player_or_name, "mineunit:get_player_formspec: player_or_name: expected string or Player")
+	local player = type(player_or_name) == "string" and players[player_or_name] or player_or_name
+	return type(player._formspec) == "table" and unpack(player._formspec) or player._formspec
 end
 
 local client_state = {
@@ -584,10 +599,10 @@ function Player:get_attribute(attribute)
 	error("NOT IMPLEMENTED")
 end
 
-function Player:set_inventory_formspec(formspec) end
-function Player:get_inventory_formspec() return "" end
-function Player:set_formspec_prepend(formspec) end
-function Player:get_formspec_prepend(formspec) return "" end
+function Player:set_inventory_formspec(formspec) self._inventory_formspec = formspec end
+function Player:get_inventory_formspec() return self._inventory_formspec end
+function Player:set_formspec_prepend(formspec) self._formspec_prepend = formspec end
+function Player:get_formspec_prepend(formspec) return self._formspec_prepend end
 
 function Player:hud_get_flags() return self._hud_flags end
 function Player:set_hud_flags(new_flags)
@@ -642,6 +657,8 @@ mineunit.export_object(Player, {
 			_privs = privs or { server = 1, interact = 1, test_priv = 1 },
 			_object = ObjectRef(),
 			_formspec = nil,
+			_inventory_formspec = nil,
+			_formspec_prepend = nil,
 			_look_dir = {x=0,y=-1,z=0}, -- Reflects simplified pointed_thing used to place nodes
 			_eye_offset_first = {x=0,y=0,z=0},
 			_eye_offset_third = {x=0,y=0,z=0},
