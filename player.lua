@@ -42,7 +42,6 @@ function mineunit.send_formspec_fields(playername, fields)
 	if fields == nil then
 		fields = player._formspec_fields
 	end
-	player._formspec_fields = {}
 	for _, f in ipairs(core.registered_on_player_receive_fields) do
 		if f(player, player._formname, fields) then
 			break
@@ -63,6 +62,21 @@ end
 
 function mineunit.set_formspec_field(playername, key, value)
 	return mineunit.set_formspec_fields(playername, {key = value})
+end
+
+function mineunit.clear_formspec_fields(playername)
+	assert.is_string(playername, "mineunit.clear_formspec_fields: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "mineunit.clear_formspec_fields: player not found: "..playername)
+	local player = players[playername]
+	player._formspec_fields = {}
+end
+
+mineunit.formspec_action = {}
+
+function mineunit.formspec_action.quit(playername)
+	mineunit.set_formspec_field(playername, "quit", "true")
+	mineunit.send_formspec_fields(playername)
+	mineunit.clear_formspec_fields(playername)
 end
 
 function _G.core.get_player_privs(name)
