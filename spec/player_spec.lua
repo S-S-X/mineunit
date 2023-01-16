@@ -493,4 +493,41 @@ describe("Mineunit Player", function()
 
 	end)
 
+	describe("Formspec system", function()
+		local player = Player("p9", {})
+		it("should show formspecs to the player", function()
+			core.show_formspec("p9", "fs1", "foo")
+			assert.same({"fs1", "foo"}, {mineunit.get_player_formspec("p9")})
+		end)
+		it("should not hide formspecs when the form name does not match", function()
+			core.close_formspec("p9", "fs2")
+			assert.same({"fs1", "foo"}, {mineunit.get_player_formspec("p9")})
+		end)
+		it("should close formspecs when the form name matches", function()
+			core.close_formspec("p9", "fs1")
+			assert.same({}, {mineunit.get_player_formspec("p9")})
+		end)
+		it("should close formspecs when the empty form name is passed", function()
+			core.show_formspec("p9", "fs1", "foo")
+			core.close_formspec("p9", "")
+			assert.same({}, {mineunit.get_player_formspec("p9")})
+		end)
+		it("should call callbacks correctly", function()
+			local count = 0
+			local realfields = { quit = "true" }
+			core.register_on_player_receive_fields(function(playername, formname, fields)
+				if formname == "fs1" then
+					count = 10
+				end
+			end)
+			core.register_on_player_receive_fields(function(playername, formname, fields)
+				assert.same(realfields, fields)
+				count = 1
+				return true
+			end)
+			core.show_formspec("p9", "fs1", "foo")
+			mineunit.send_formspec_fields("p9", realfields)
+			assert.equal(1, count)
+		end)
+	end)
 end)
