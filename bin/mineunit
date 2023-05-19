@@ -2,6 +2,7 @@
 
 local args = {
 	verbose = false,
+	quiet = false,
 	output = "utfTerminal",
 	coverage = false,
 	report = false,
@@ -268,6 +269,7 @@ do -- Parse cli args
 		elseif v == "-q" or v == "--quiet" then
 			mineunit_conf_override.print = false
 			mineunit_conf_override.verbose = 1
+			args.quiet = true
 		elseif v == "-x" or v == "--exclude" then
 			i = i + 1
 			if not arg[i] then
@@ -431,6 +433,24 @@ local exit = require("busted.compatibility").exit
 
 if args.coverage then
 	load_luacov()
+end
+
+-- subscribe for additional output
+
+if args.output == "utfTerminal" and not args.quiet then
+	local handler = require("busted.outputHandlers.base")()
+	local colors = require("term.colors")
+	local function getFileLine(element)
+		if element.trace or element.trace.short_src then
+			return element.trace.short_src:sub(6) .. ':' .. element.trace.currentline
+		end
+		return '?:?'
+	end
+	busted.subscribe({'test', 'start'}, function(element, parent)
+		local header = colors.bright(colors.white .. '◥◤ Running tests from ' .. getFileLine(element))
+		local testname = colors.bright(colors.yellow .. handler.getFullName(element))
+		io.stdout:write('\n' .. header .. ' ▷ ' .. testname .. '\n')
+	end)
 end
 
 -- watch for test errors and failures
