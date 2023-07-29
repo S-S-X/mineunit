@@ -249,6 +249,7 @@ do -- Parse cli args
 					Luarocks package: https://luarocks.org/modules/S-S-X/mineunit
 					Issue tracker: https://github.com/S-S-X/mineunit/issues
 					GitHub integration: https://github.com/marketplace/actions/mineunit-runner
+					Docker images: https://hub.docker.com/r/mineunit/mineunit
 				
 				Configuration files (in order):
 					/etc/mineunit/mineunit.conf
@@ -431,6 +432,10 @@ local outputHandlerLoader = require("busted.modules.output_handler_loader")()
 require("busted")(busted)
 local exit = require("busted.compatibility").exit
 
+mineunit = {}
+require("mineunit.print")
+busted.export('mineunit', mineunit)
+
 if args.coverage then
 	load_luacov()
 end
@@ -439,17 +444,60 @@ end
 
 if args.output == "utfTerminal" and not args.quiet then
 	local handler = require("busted.outputHandlers.base")()
-	local colors = require("term.colors")
+	local first_end
+	local skip_quiet = not args.verbose
+	local c = require("term.colors")
 	local function getFileLine(element)
 		if element.trace or element.trace.short_src then
 			return element.trace.short_src:sub(6) .. ':' .. element.trace.currentline
 		end
 		return '?:?'
 	end
+	busted.subscribe({'file', 'start'}, function(element, parent)
+		mineunit:prepend_flush()
+		io.stdout:write(c.cyan('++ Executing ' .. handler.getFullName(element)))
+		mineunit:prepend_print('\n')
+	end)
+	busted.subscribe({'file', 'end'}, function() mineunit:prepend_print('\n') end)
+	busted.subscribe({'describe', 'start'}, function(element, parent)
+		local header = c.yellow('⭆ Starting test set ' .. c.bright .. getFileLine(element))
+		local testname = c.cyan(handler.getFullName(element))
+		if skip_quiet then
+			mineunit:prepend_print(header .. ' ⯈ ' .. testname .. '\n')
+		else
+			mineunit:prepend_flush()
+			io.stdout:write(header .. ' ⯈ ' .. testname)
+			mineunit:prepend_print('\n')
+		end
+	end)
+	busted.subscribe({'describe', 'end'}, function() mineunit:prepend_print('\n') end)
 	busted.subscribe({'test', 'start'}, function(element, parent)
-		local header = colors.bright(colors.white .. '◥◤ Running tests from ' .. getFileLine(element))
-		local testname = colors.bright(colors.yellow .. handler.getFullName(element))
-		io.stdout:write('\n' .. header .. ' ▷ ' .. testname .. '\n')
+		local header = c.bright(c.white .. '🢆') .. c.yellow(' Running tests from ' .. c.bright .. getFileLine(element))
+		local testname = c.bright(c.cyan .. handler.getFullName(element))
+		if skip_quiet then
+			mineunit:prepend_print(header .. ' ▷ ' .. testname .. '\n')
+		else
+			mineunit:prepend_flush()
+			io.stdout:write(header .. ' ▷ ' .. testname)
+			mineunit:prepend_print('\n')
+		end
+		first_end = true
+	end)
+	busted.subscribe({'test', 'end'}, function(element, parent, status)
+		if not skip_quiet and first_end then
+			first_end = false
+			io.stdout:write(' ')
+		end
+		if status == 'pending' then
+			io.stdout:write(c.yellow('◌'))
+		elseif status == 'failure' then
+			io.stdout:write(c.red('◼'))
+		elseif status == 'error' then
+			io.stdout:write(c.magenta('✱'))
+		else
+			io.stdout:write(c.green('●'))
+		end
+		mineunit:prepend_print('\n')
 	end)
 end
 
@@ -459,11 +507,13 @@ local errors = 0
 
 busted.subscribe({ 'error', 'output' }, function(element, parent, message)
 	io.stderr:write(appName .. ': error: Cannot load output library: ' .. element.name .. '\n' .. message .. '\n')
+	mineunit:prepend_print(nil)
 	return nil, true
 end)
 
 busted.subscribe({ 'error', 'helper' }, function(element, parent, message)
 	io.stderr:write(appName .. ': error: Cannot load helper script: ' .. element.name .. '\n' .. message .. '\n')
+	mineunit:prepend_print(nil)
 	return nil, true
 end)
 
