@@ -26,23 +26,23 @@ local default_config = {
 	engine_version = "mineunit",
 }
 
-for k,v in pairs(mineunit_conf_defaults) do
+for k,v in pairs(mineunit_conf_defaults or {}) do
 	default_config[k] = v
 end
 
-mineunit = {
-	_config = {
-		modpaths = {},
-	},
-	_on_mods_loaded = {},
-	_on_mods_loaded_exec_count = 0,
+mineunit = mineunit or {}
+mineunit._config = {
+	modpaths = {},
 }
+mineunit._on_mods_loaded = {}
+mineunit._on_mods_loaded_exec_count = 0
 
 local tagged_paths = {
 	["common"] = true,
 	["game"] = true
 }
 
+require("mineunit.print")
 require("mineunit.globals")
 
 local function mineunit_path(name)
@@ -103,14 +103,6 @@ function mineunit:config(key)
 	return default_config[key]
 end
 mineunit._config.source_path = pl.path.normpath(("%s/%s"):format(mineunit:config("root"), mineunit:config("source_path")))
-
-local luaprint = _G.print
-function mineunit:debug(...)   if self:config("verbose") > 3 then luaprint("D:",...) end end
-function mineunit:info(...)    if self:config("verbose") > 2 then luaprint("I:",...) end end
-function mineunit:warning(...) if self:config("verbose") > 1 then luaprint("W:",...) end end
-function mineunit:error(...)   if self:config("verbose") > 0 then luaprint("E:",...) end end
-function mineunit:print(...)   if self:config("print")       then luaprint(...) end end
-_G.print = function(...) mineunit:print(...) end
 
 function mineunit:set_modpath(name, path)
 	mineunit:info("Setting modpath", name, path)
