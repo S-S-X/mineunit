@@ -5,13 +5,13 @@
 local luaprint = _G.print
 
 function mineunit:prepend_print(s)
-	self._append_output = s
+	self._prepend_output = s
 end
 
 function mineunit:prepend_flush()
-	if self._append_output then
-		io.stdout:write(self._append_output)
-		self._append_output = nil
+	if self._prepend_output then
+		io.stdout:write(self._prepend_output)
+		self._prepend_output = nil
 	end
 end
 

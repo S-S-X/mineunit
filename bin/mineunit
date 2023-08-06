@@ -484,20 +484,24 @@ if args.output == "utfTerminal" and not args.quiet then
 		first_end = true
 	end)
 	busted.subscribe({'test', 'end'}, function(element, parent, status)
+		local space = ''
 		if not skip_quiet and first_end then
 			first_end = false
-			io.stdout:write(' ')
+			space = ' '
 		end
 		if status == 'pending' then
-			io.stdout:write(c.yellow('◌'))
+			io.stdout:write(space..c.yellow('◌'))
+			mineunit:prepend_print('\n')
 		elseif status == 'failure' then
-			io.stdout:write(c.red('◼'))
+			io.stdout:write(space..c.red('◼'))
+			mineunit:prepend_print('\n')
 		elseif status == 'error' then
-			io.stdout:write(c.magenta('✱'))
-		else
-			io.stdout:write(c.green('●'))
+			io.stdout:write(space..c.magenta('✱'))
+			mineunit:prepend_print('\n')
+		elseif not skip_quiet then
+			io.stdout:write(space..c.green('●'))
+			mineunit:prepend_print('\n')
 		end
-		mineunit:prepend_print('\n')
 	end)
 end
 
