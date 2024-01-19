@@ -20,6 +20,16 @@ _G.core.get_current_modname = function(...) return _G.mineunit:get_current_modna
 _G.core.register_item_raw = noop
 _G.core.unregister_item_raw = noop
 _G.core.register_alias_raw = noop
+_G.core.get_translator = function(...) return function(...) mineunit:debug(...) end end
+_G.core.set_http_api_lua = noop
+_G.core.inventorycube = function(img1, img2, img3)
+	img2 = img2 or img1
+	img3 = img3 or img1
+	return "[inventorycube"
+			.. "{" .. img1:gsub("%^", "&")
+			.. "{" .. img2:gsub("%^", "&")
+			.. "{" .. img3:gsub("%^", "&")
+end
 _G.minetest = _G.core
 
 mineunit("settings")
@@ -30,13 +40,13 @@ _G.core.register_on_joinplayer = noop
 _G.core.register_on_leaveplayer = noop
 
 mineunit("game/constants")
+mineunit("common/vector")
 mineunit("game/item")
 mineunit("game/misc")
 mineunit("game/register")
+mineunit("common/misc_helpers")
 mineunit("game/privileges")
 mineunit("game/features")
-mineunit("common/misc_helpers")
-mineunit("common/vector")
 mineunit("common/serialize")
 mineunit("common/fs")
 
