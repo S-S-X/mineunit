@@ -5,6 +5,8 @@ local noop_object = {
 	__index = function(...) return function(...)end end,
 }
 
+mineunit("craft")
+
 _G.world = mineunit("world")
 
 _G.core.is_singleplayer = function() return true end
