@@ -8,37 +8,7 @@ describe("Mineunit Player", function()
 	mineunit("itemstack")
 	mineunit("entity")
 	sourcefile("player")
-
-	core.register_node(":chest", {
-		description = "chest",
-		buildable_to = false,
-		walkable = true,
-		on_construct = function(pos)
-			local meta = core.get_meta(pos)
-			local inv = meta:get_inventory()
-			inv:set_size("chest", 3)
-		end,
-	})
-
-	core.register_node(":stone", {
-		description = "stone",
-		buildable_to = false,
-		walkable = true,
-		drawtype = "nodebox",
-		node_box = {
-			type = "fixed",
-			fixed = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
-		},
-		collision_box = {
-			type = "fixed",
-			fixed = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
-		},
-		selection_box = {
-			type = "fixed",
-			fixed = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
-		},
-		nodebox = {}
-	})
+	fixture("items")
 
 	local validate_pointed_thing = function() error() end
 	core.register_craftitem(":check", {

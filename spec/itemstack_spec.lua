@@ -12,6 +12,59 @@ describe("ItemStack", function()
 		test = { stack_max = 100 }
 	}
 
+	describe("constructor", function()
+
+		it("fails ItemStack()", function()
+			pending("Waiting for strict mode implementation")
+			local stack
+			assert.has_error(function()
+				stack = ItemStack()
+			end)
+			assert.is_nil(stack)
+		end)
+
+		it("fails ItemStack('')", function()
+			local stack
+			assert.has_error(function()
+				stack = ItemStack('')
+			end)
+			assert.is_nil(stack)
+		end)
+
+		it("fails ItemStack('  ')", function()
+			local stack
+			assert.has_error(function()
+				stack = ItemStack('  ')
+			end)
+			assert.is_nil(stack)
+		end)
+
+		it("allows ItemStack(nil)", function()
+			local stack
+			assert.no_error(function()
+				stack = ItemStack(nil)
+			end)
+			assert.is_ItemStack(stack)
+		end)
+
+		it("allows ItemStack('testunknown')", function()
+			local stack
+			assert.no_error(function()
+				stack = ItemStack('testunknown')
+			end)
+			assert.is_ItemStack(stack)
+		end)
+
+		it("allows ItemStack('test')", function()
+			local stack
+			assert.no_error(function()
+				stack = ItemStack('test')
+			end)
+			assert.is_ItemStack(stack)
+		end)
+
+	end)
+
 	describe("wear", function()
 
 		it("set_wear 0", function()
@@ -62,7 +115,7 @@ describe("ItemStack", function()
 	describe("get_count", function()
 
 		it("stack size zero", function()
-			local stack = ItemStack()
+			local stack = ItemStack(nil)
 			assert.equals(0, stack:get_count())
 		end)
 
@@ -155,6 +208,55 @@ describe("ItemStack", function()
 			meta:set_string("foo", "bar")
 			meta:set_int("baz", 42)
 			assert.is_nil(stack:to_table())
+		end)
+
+	end)
+
+	describe("to_string", function()
+
+		it("empty stack", function()
+			local stack = ItemStack(nil)
+			assert.equals('', stack:to_string())
+		end)
+
+		it("empty stack with item name", function()
+			local stack = ItemStack("test")
+			stack:set_count(0)
+			assert.equals('', stack:to_string())
+		end)
+
+		it("default stack with item name", function()
+			local stack = ItemStack("test")
+			assert.equals('test', stack:to_string())
+		end)
+
+		it("item name and count", function()
+			local stack = ItemStack("test")
+			stack:set_count(101)
+			assert.equals('test 101', stack:to_string())
+		end)
+
+		it("item name, count and wear", function()
+			local stack = ItemStack("test")
+			stack:set_count(101)
+			stack:set_wear(1337)
+			assert.equals('test 101 1337', stack:to_string())
+		end)
+
+		it("item name, count, wear and meta", function()
+			local stack = ItemStack("test")
+			stack:set_count(101)
+			stack:set_wear(1337)
+			local meta = stack:get_meta()
+			meta:set_string("foo", "bar")
+			assert.equals('test 101 1337 return {["foo"] = "bar"}', stack:to_string())
+		end)
+
+		it("default stack with meta", function()
+			local stack = ItemStack("test")
+			local meta = stack:get_meta()
+			meta:set_string("foo", "bar")
+			assert.equals('test 1 0 return {["foo"] = "bar"}', stack:to_string())
 		end)
 
 	end)
