@@ -217,7 +217,7 @@ do -- Parse cli args
 	while arg[i] do
 		local v = arg[i]
 		if v == "-V" or v == "--version" or v == "-h" or v == "--help" then
-			print(({([[Mineunit v0.8-somehow-still-working
+			print(({([[Mineunit v0.10.1-better-than-ever
 				
 				Usage:
 					mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>] \
@@ -333,7 +333,7 @@ do -- Parse cli args
 				print("Path "..v.." is not directory, refusing to continue: " .. target)
 				return
 			end
-			args,core_root = target
+			args.core_root = target
 		elseif v == "--engine-version" then
 			if arg[i+1] and arg[i+1]:sub(1,1) ~= "-" then
 				i = i + 1
