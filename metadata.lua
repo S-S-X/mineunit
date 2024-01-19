@@ -73,11 +73,11 @@ function InvRef:set_size(listname, size)
 		setmetatable(self._lists[listname], { __tostring = invlist_tostring })
 		self._empty[listname] = true
 		for index = 1, newsize do
-			self._lists[listname][index] = ItemStack()
+			self._lists[listname][index] = ItemStack(nil)
 		end
 	elseif newsize > self._sizes[listname] then
 		for index = self._sizes[listname], newsize do
-			self._lists[listname][index] = ItemStack()
+			self._lists[listname][index] = ItemStack(nil)
 		end
 	elseif newsize < self._sizes[listname] then
 		self._empty[listname] = self._empty[listname] and true or nil

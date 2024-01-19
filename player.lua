@@ -354,7 +354,7 @@ function Player:do_metadata_inventory_take(pos, listname, index)
 			playerinv:add_item("main", stack)
 		end
 		-- Remove stack from inventory
-		inv:set_stack(listname, index, ItemStack())
+		inv:set_stack(listname, index, ItemStack(nil))
 		-- Callbacks
 		if def.on_metadata_inventory_put then
 			def.on_metadata_inventory_take(pos, listname, index, stack, self)
