@@ -1,4 +1,5 @@
 
+mineunit("common/serialize")
 mineunit("metadata")
 
 local ItemStack = {}
@@ -76,12 +77,17 @@ end
 --* `to_string()`: returns the stack in itemstring form.
 -- https://github.com/minetest/minetest/blob/5.4.0/src/inventory.cpp#L59-L85
 function ItemStack:to_string()
-	-- FIXME: Does not currently serialize metadata
-	return ("%s %d %d"):format(
-		self:get_name(),
-		self:get_count(),
-		self:get_wear()
-	)
+	if self:is_empty() then
+		return ""
+	elseif next(self:get_meta()._data) then
+		local meta = self:get_meta():to_table().fields
+		return ("%s %d %d %s"):format(self:get_name(), self:get_count(), self:get_wear(), core.serialize(meta))
+	elseif self:get_wear() ~= 0 then
+		return ("%s %d %d"):format(self:get_name(), self:get_count(), self:get_wear())
+	elseif self:get_count() ~= 1 then
+		return ("%s %d"):format(self:get_name(), self:get_count())
+	end
+	return self:get_name()
 end
 --* `to_table()`: returns the stack in Lua table form.
 function ItemStack:to_table()
@@ -201,11 +207,27 @@ end
 
 mineunit.export_object(ItemStack, {
 	name = "ItemStack",
-	constructor = function(self, value)
+	constructor = function(self, ...)
 		local obj
+		local argc = select("#", ...)
+		if argc == 0 then
+			-- Calling without any args is compatible only with some engine versions, this should be error instead.
+			-- Mineunit uses ItemStack() without any args internally, fix this.
+			-- Many tests use ItemStack() without any args internally, fix this too.
+			-- Add file path and line to make it easier to find problem source.
+			local info = debug.getinfo(3)
+			local src = ("%s:%d"):format(info.short_src, info.currentline)
+			mineunit:warning("ItemStack() called without arguments, use ItemStack(nil) instead ("..src..")")
+		end
+		-- Read arguments
+		assert(argc <= 1, "ItemStack(...) called with extra arguments, use exactly one argument")
+		--assert(#args[1] > 0, "ItemStack() called, use ItemStack(nil) instead")
+		local value = ({...})[1]
 		if value == nil then
 			obj = {}
 		elseif type(value) == "string" then
+			-- Error if there's only whitespace, TODO: Add for strict mode
+			assert(value:find("%S"), 'ItemStack(x) called with questionable arguments, did you mean ItemStack(nil)?')
 			local m = value:gmatch("%S+")
 			obj = {
 				-- This *should* fail if name is empty, do not "fix":
