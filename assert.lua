@@ -31,7 +31,7 @@ local function count(t)
 		end
 		return c
 	end
-	mineunit:warning("count(t)", "invalid value", type(t))
+	--mineunit:warning("count(t)", "invalid value", type(t))
 end
 
 local function tabletype(t)
@@ -42,10 +42,10 @@ local function tabletype(t)
 			return "hash"
 		end
 	end
-	mineunit:warning("tabletype(t)", "invalid value", type(t))
+	--mineunit:warning("tabletype(t)", "invalid value", type(t))
 end
 
-local function in_array(value, t)
+local function in_array(t, value)
 	for _, v in ipairs(t) do
 		if v == value then
 			return true
@@ -100,31 +100,66 @@ function spy.on(target_table, target_key)
 end
 
 local assert = require('luassert.assert')
+local format_argument = require('luassert.state').format_argument
 local say = require("say")
 
-local function is_table(_,args) return lua_type(args[1]) == "table" end
-say:set("assertion.is_table.negative", "Expected %s to be table")
-assert:register("assertion", "is_table", is_table, "assertion.is_table.negative")
+local function setmsg(state, msg)
+	if lua_type(msg) == "string" then
+		state.failure_message = msg
+	end
+end
 
-local function is_array(_,args) return tabletype(args[1]) == "array" end
-say:set("assertion.is_indexed.negative", "Expected %s to be indexed array")
-assert:register("assertion", "is_indexed", is_array, "assertion.is_indexed.negative")
+local function fmtargs(argc, args)
+	local results = {}
+	for i = 1, argc do
+		if args[i] == nil then
+			results[i] = tostring(args[i])
+		else
+			results[i] = format_argument(args[i]) or tostring(args[i])
+		end
+	end
+	return results
+end
 
-local function is_hash(_,args) return tabletype(args[1]) == "hash" end
-say:set("assertion.is_hashed.negative", "Expected %s to be hash table")
-assert:register("assertion", "is_hashed", is_hash, "assertion.is_hashed.negative")
+local function register(name, argc, msg, fn)
+	local function wrapper(state, args)
+		-- FIXME: Add internal assertion for args[argc + 1]. Not string == invalid assertion args.
+		local failmsg = args[argc + 1] or msg
+		if type(failmsg) == "string" then
+			setmsg(state, failmsg:format(unpack(fmtargs(argc, args))))
+		end
+		return fn(args)
+	end
+	assert:register("assertion", name, wrapper, "assertion."..name..".negative")
+end
 
-local function greaterthan(_,args) return args[1] > args[2] end
-say:set("assertion.gt.negative", "Expected %s to be more than %s")
-assert:register("assertion", "gt", greaterthan, "assertion.gt.negative")
+register("is_table", 1, "Expected %s to be table", function(args)
+	return lua_type(args[1]) == "table"
+end)
 
-local function lessthan(_,args) return args[1] < args[2] end
-say:set("assertion.lt.negative", "Expected %s to be less than %s")
-assert:register("assertion", "lt", lessthan, "assertion.lt.negative")
+register("is_indexed", 1, "Expected %s to be indexed array", function(args)
+	return tabletype(args[1]) == "array"
+end)
 
-local function check_in_array(_,args) return in_array(args[1], args[2]) end
-say:set("assertion.in_array.negative", "Expected %s to be in array %s")
-assert:register("assertion", "in_array", check_in_array, "assertion.in_array.negative")
+register("is_hashed", 1, "Expected %s to be hash table", function(args)
+	return tabletype(args[1]) == "hash"
+end)
+
+register("is_integer", 1, "Expected %s to be integer", function(args)
+	return type(args[1]) == "number" and args[1] == math.floor(args[1])
+end)
+
+register("gt", 2, "Expected %s to be more than %s", function(args)
+	return args[1] > args[2]
+end)
+
+register("lt", 2, "Expected %s to be less than %s", function(args)
+	return args[1] < args[2]
+end)
+
+register("in_array", 2, "Expected %s to be in array %s", function(args)
+	return in_array(args[2], args[1])
+end)
 
 local function check_nodename(state,args)
 	local msg = "Expected node %s at x=%d,y=%d,z=%d but found %s"
@@ -134,9 +169,9 @@ local function check_nodename(state,args)
 end
 assert:register("assertion", "nodename", check_nodename)
 
-local function check_param2(_,args) return core.get_node(args[2]).param2 == args[1] end
-say:set("assertion.param2.negative", "Expected param2 to be %s at %s")
-assert:register("assertion", "param2", check_param2, "assertion.param2.negative")
+register("param2", 2, "Expected param2 to be %s at %s", function(args)
+	return core.get_node(args[2]).param2 == args[1]
+end)
 
 local function close_enough(state, args)
 	local msg = "Expected %s = %s to be %s"
@@ -149,12 +184,30 @@ assert:register("assertion", "close_enough", close_enough)
 say:set("assertion.is_coordinate.negative", "Expected %s to be valid coordinates")
 assert:register("assertion", "is_coordinate", is_coordinate, "assertion.is_coordinate.negative")
 
--- TODO: Check this one, should it actually check for mineunit_type Player instead of tble or userdata
-local function player_or_name(_,args)
-	return (type(args[1]) == "string" and args[1] ~= "") or in_array(type(args[1]), {"table", "userdata"})
-end
-say:set("assertion.player_or_name.negative", "Expected %s to be player or name")
-assert:register("assertion", "player_or_name", player_or_name, "assertion.player_or_name.negative")
+-- TODO: Add configuration to allow relaxed requirements, very strict by default.
+-- Not meant to allow empty string, not meant to allow registration prefix, only itemname or modname:itemname.
+register("is_itemname", 1, "Expected %s to be valid item name", function(args)
+	return type(args[1]) == "string" and #args[1] > 0 and (
+		args[1]:match("^[%w_]+:[%w_]+$") or args[1]:match("^[%w_]+$")
+	)
+end)
+
+register("is_itemstring", 1, "Expected %s to be valid item string", function(args)
+	if type(args[1]) ~= "string" or #args[1] < 0 then
+		return false
+	end
+	local stack = ItemStack(args[1])
+	if mineunit_type(stack) ~= "ItemStack" then
+		return false
+	end
+	local name = stack:get_name()
+	return #name > 0 and (name:match("^[%w_]+:[%w_]+$") or name:match("^[%w_]+$"))
+end)
+
+-- TODO: Check this one, should it actually check for mineunit_type Player instead of table or userdata
+register("player_or_name", 1, "Expected %s to be player or name", function(args)
+	return (type(args[1]) == "string" and args[1] ~= "") or in_array({"table", "userdata"}, type(args[1]))
+end)
 
 local mineunit_types = {
 	"ItemStack",
@@ -165,7 +218,10 @@ local mineunit_types = {
 }
 for _, typename in ipairs(mineunit_types) do
 	local assertname = "is_" .. typename
-	local function checktype(_,args) return mineunit_type(args[1]) == typename end
+	local function checktype(state, args)
+		setmsg(state, args[2])
+		return mineunit_type(args[1]) == typename
+	end
 	say:set("assertion."..assertname..".negative", "Expected %s to be "..typename)
 	assert:register("assertion", assertname, checktype, "assertion."..assertname..".negative")
 end
@@ -241,6 +297,7 @@ return {
 	sequential = sequential,
 	count = count,
 	tabletype = tabletype,
+	in_array = in_array,
 	round = round,
 	is_coordinate = is_coordinate,
 	has_item = has_item,
