@@ -188,7 +188,7 @@ function mineunit:execute_on_joinplayer(player, options)
 		mineunit:debug("Auth privileges:", player:get_player_name(), dump(player._privs))
 		local message = core.run_callbacks(
 			core.registered_on_prejoinplayers,
-			RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
+			RunCallbacksMode.RUN_CALLBACKS_MODE_OR,
 			name,
 			address
 		)
