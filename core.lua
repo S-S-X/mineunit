@@ -50,7 +50,7 @@ mineunit("common/misc_helpers")
 mineunit("game/privileges")
 mineunit("game/features")
 mineunit("common/serialize")
-mineunit("common/fs")
+mineunit("fs")
 
 assert(minetest.registered_nodes["air"])
 assert(minetest.registered_nodes["ignore"])
