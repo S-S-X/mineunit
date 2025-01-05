@@ -28,6 +28,13 @@ local args = {
 	Xoutput = {},
 }
 
+mineunit_version = "0.11.1"
+local luaversion = (function()
+	local jit = rawget(_G, "jit")
+	return jit and jit.version or rawget(_G, "_VERSION")
+end)()
+mineunit_version_str = "Mineunit v" .. mineunit_version .. " (" .. luaversion .. ")"
+
 mineunit_conf_defaults = {}
 mineunit_conf_override = {}
 
@@ -216,8 +223,11 @@ do -- Parse cli args
 	local i = 1
 	while arg[i] do
 		local v = arg[i]
-		if v == "-V" or v == "--version" or v == "-h" or v == "--help" then
-			print(({([[Mineunit v0.10.1-better-than-ever
+		if v == "-V" or v == "--version" then
+			print(mineunit_version_str)
+			return
+		elseif v == "-h" or v == "--help" then
+			print(({(mineunit_version_str..[[
 				
 				Usage:
 					mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>] \
@@ -242,8 +252,11 @@ do -- Parse cli args
 					                Download core engine libraries for tag.
 					                This is simple wrapper around `git clone`.
 				
-					-v|--verbose    Be verbose, prints more useless crap to console.
+					-v|--verbose    Be more verbose by printing more useless crap to console.
+					                Can be repeated up to six times for even more annoying output.
 					-q|--quiet      Be quiet, most of time keeps your console fairly clean.
+					                Always disables regular Lua print which can make output
+					                somewhat less annoying when combined with --verbose output.
 				
 				Resources:
 					Luarocks package: https://luarocks.org/modules/S-S-X/mineunit
@@ -266,10 +279,14 @@ do -- Parse cli args
 		elseif v == "-r" or v == "--report" then
 			args.report = true
 		elseif v == "-v" or v == "--verbose" then
+			if args.verbose then
+				mineunit_conf_override.verbose = mineunit_conf_override.verbose
+					and mineunit_conf_override.verbose + 1 or 1
+			end
 			args.verbose = true
 		elseif v == "-q" or v == "--quiet" then
 			mineunit_conf_override.print = false
-			mineunit_conf_override.verbose = 1
+			mineunit_conf_override.verbose = mineunit_conf_override.verbose or 1
 			args.quiet = true
 		elseif v == "-x" or v == "--exclude" then
 			i = i + 1
