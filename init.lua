@@ -113,6 +113,7 @@ end
 mineunit._config.source_path = pl.path.normpath(("%s/%s"):format(mineunit:config("root"), mineunit:config("source_path")))
 
 function mineunit:set_modpath(name, path)
+	path = pl.path.normpath(path)
 	mineunit:info("Setting modpath", name, path)
 	self._config.modpaths[name] = path
 end
