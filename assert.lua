@@ -46,9 +46,9 @@ local function tabletype(t)
 end
 
 local function in_array(t, value)
-	for _, v in ipairs(t) do
+	for i, v in ipairs(t) do
 		if v == value then
-			return true
+			return i
 		end
 	end
 	return false
@@ -133,19 +133,19 @@ local function register(name, argc, msg, fn)
 	assert:register("assertion", name, wrapper, "assertion."..name..".negative")
 end
 
-register("is_table", 1, "Expected %s to be table", function(args)
+register("table", 1, "Expected %s to be table", function(args)
 	return lua_type(args[1]) == "table"
 end)
 
-register("is_indexed", 1, "Expected %s to be indexed array", function(args)
+register("indexed", 1, "Expected %s to be indexed array", function(args)
 	return tabletype(args[1]) == "array"
 end)
 
-register("is_hashed", 1, "Expected %s to be hash table", function(args)
+register("hashed", 1, "Expected %s to be hash table", function(args)
 	return tabletype(args[1]) == "hash"
 end)
 
-register("is_integer", 1, "Expected %s to be integer", function(args)
+register("integer", 1, "Expected %s to be integer", function(args)
 	return type(args[1]) == "number" and args[1] == math.floor(args[1])
 end)
 
@@ -186,13 +186,13 @@ assert:register("assertion", "is_coordinate", is_coordinate, "assertion.is_coord
 
 -- TODO: Add configuration to allow relaxed requirements, very strict by default.
 -- Not meant to allow empty string, not meant to allow registration prefix, only itemname or modname:itemname.
-register("is_itemname", 1, "Expected %s to be valid item name", function(args)
+register("itemname", 1, "Expected %s to be valid item name", function(args)
 	return type(args[1]) == "string" and #args[1] > 0 and (
 		args[1]:match("^[%w_]+:[%w_]+$") or args[1]:match("^[%w_]+$")
 	)
 end)
 
-register("is_itemstring", 1, "Expected %s to be valid item string", function(args)
+register("itemstring", 1, "Expected %s to be valid item string", function(args)
 	if type(args[1]) ~= "string" or #args[1] < 0 then
 		return false
 	end
@@ -223,12 +223,13 @@ for _, typename in ipairs(mineunit_types) do
 		return mineunit_type(args[1]) == typename
 	end
 	say:set("assertion."..assertname..".negative", "Expected %s to be "..typename)
-	assert:register("assertion", assertname, checktype, "assertion."..assertname..".negative")
+	assert:register("assertion", typename, checktype, "assertion."..assertname..".negative")
 end
 
 -- Inventory assertions
 
 local function resolve_args_inv_list_slot_stack(a, b, c, d)
+	local inv
 	if mineunit_type(a) == "Player" then
 		inv = a:get_inventory()
 	elseif is_coordinate(a) then
@@ -248,7 +249,7 @@ local function formatname(thing)
 	elseif mtype == "ItemStack" then
 		return thing:get_name()
 	elseif is_coordinate(thing) then
-		return pos.x..","..pos.y..","..pos.z
+		return thing.x..","..thing.y..","..thing.z
 	elseif type(thing) == "string" then
 		return thing
 	end
@@ -272,7 +273,7 @@ local function has_item(state, args)
 	if list then
 		if slot then
 			local actual = inv:get_stack(list, slot)
-			local msg = "Expected %s to have %s but found %s"
+			msg = "Expected %s to have %s but found %s"
 			state.failure_message = msg:format(formatname(args[1]), tostring(expected), tostring(actual))
 			return actual:get_name() == expected:get_name() and actual:get_count() == expected:get_count()
 		end

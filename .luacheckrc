@@ -18,7 +18,10 @@ globals = {
 read_globals = {
 	-- luassert
 	assert = { fields = {
-		"is_string", "is_table", "player_or_name", "is_ItemStack", "is_Player"
+		"is_string", "is_table", "player_or_name", "is_ItemStack", "is_Player",
+		"is_true", "is_itemstring", "is_itemname", "is_number",
+		"is_nil", "not_nil",
+		"is_indexed", "is_hashed", "in_array",
 	}},
 
 	-- Mineunit
