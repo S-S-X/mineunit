@@ -494,8 +494,15 @@ function Player:get_wielded_item() return self._inv:get_stack("main", self._wiel
 function Player:get_meta() return self._meta end
 function Player:get_inventory() return self._inv end
 
-function Player:get_player_velocity() DEPRECATED() end
-function Player:add_player_velocity(vel) DEPRECATED() end
+function Player:get_player_velocity()
+	mineunit:DEPRECATED("Player:get_player_velocity()")
+	return self:get_velocity()
+end
+
+function Player:add_player_velocity(vel)
+	mineunit:DEPRECATED("Player:add_player_velocity(vel)")
+	return self:add_velocity(vel)
+end
 
 function Player:get_look_dir()
 	local pitch, yaw = self:get_look_vertical(), self:get_look_horizontal() + math.pi
@@ -507,10 +514,22 @@ function Player:get_look_horizontal() return self._look_horizontal or 0 end
 function Player:set_look_vertical(radians) self._look_vertical = radians end
 function Player:set_look_horizontal(radians) self._look_horizontal = radians end
 
-function Player:get_look_pitch() DEPRECATED() end
-function Player:get_look_yaw() DEPRECATED() end
-function Player:set_look_pitch(radians) DEPRECATED() end
-function Player:set_look_yaw(radians) DEPRECATED() end
+function Player:get_look_pitch()
+	mineunit:DEPRECATED()
+	error("NOT IMPLEMENTED")
+end
+function Player:get_look_yaw()
+	mineunit:DEPRECATED()
+	error("NOT IMPLEMENTED")
+end
+function Player:set_look_pitch(radians)
+	mineunit:DEPRECATED()
+	error("NOT IMPLEMENTED")
+end
+function Player:set_look_yaw(radians)
+	mineunit:DEPRECATED()
+	error("NOT IMPLEMENTED")
+end
 
 function Player:get_breath() error("NOT IMPLEMENTED") end
 function Player:set_breath(value) error("NOT IMPLEMENTED") end
@@ -527,8 +546,15 @@ function Player:set_eye_offset(firstperson, thirdperson)
 	self._eye_offset_third = thirdperson
 end
 
-function Player:set_attribute(attribute, value) DEPRECATED() end
-function Player:get_attribute(attribute) DEPRECATED() end
+function Player:set_attribute(attribute, value)
+	mineunit:DEPRECATED()
+	error("NOT IMPLEMENTED")
+end
+
+function Player:get_attribute(attribute)
+	mineunit:DEPRECATED()
+	error("NOT IMPLEMENTED")
+end
 
 function Player:set_inventory_formspec(formspec) end
 function Player:get_inventory_formspec() return "" end

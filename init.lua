@@ -24,6 +24,7 @@ local default_config = {
 	source_path = ".",
 	time_step = -1,
 	engine_version = "mineunit",
+	deprecated = "throw"
 }
 
 for k,v in pairs(mineunit_conf_defaults or {}) do
@@ -96,6 +97,11 @@ end
 
 function mineunit:has_module(name)
 	return _mineunits[name] and true
+end
+
+function mineunit:config_set(key, value)
+	self:debug("Updating configuration", key, self._config[key], " -> ", value)
+	self._config[key] = value
 end
 
 function mineunit:config(key)
@@ -210,10 +216,17 @@ function sourcefile(name)
 	return dofile(path)
 end
 
-function DEPRECATED(msg)
-	-- TODO: Add configurable behavior to fail or warn when deprectaed things are used
-	-- Now it has to be fail. Warnings are for pussies, hard fail for serious Sam.
-	error(msg or "Attempted to use deprecated method")
+function mineunit:DEPRECATED(msg)
+	local action = self:config("deprecated")
+	if action == "ignore" then
+		return
+	elseif action == "throw" then
+		error(msg or "Attempted to use deprecated method")
+	elseif ({debug=1,info=1,warning=1,error=1})[action] then
+		self[action](self, msg or "Calling deprecated engine method")
+	else
+		error("Config: invalid value for 'deprecated'. Allowed values: throw, error, warning, info, debug, ignore.")
+	end
 end
 
 function mineunit.export_object(obj, def)

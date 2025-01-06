@@ -24,7 +24,6 @@ read_globals = {
 	-- Mineunit
 	"mineunit_config", "mineunit_conf_defaults", "mineunit_conf_override",
 	"NodeTimerRef", "MetaDataRef", "NodeMetaRef", "ObjectRef", "InvRef",
-	"DEPRECATED",
 
 	-- Minetest
 	string = {fields = {"split", "trim"}},
