@@ -70,4 +70,15 @@ describe("Mineunit assert", function()
 
 	end)
 
+	describe("gt/lt", function()
+		it("2 > 1 is true", function() assert.gt(2, 1) end)
+		it("2 > -1 is true", function() assert.gt(2, -1) end)
+		it("1 > 2 is false", function() assert.not_gt(1, 2) end)
+		it("2 > 2 is false", function() assert.not_gt(2, 2) end)
+		it("1 < 2 is true", function() assert.lt(1, 2) end)
+		it("-1 < 2 is true", function() assert.lt(-1, 2) end)
+		it("3 < 2 is false", function() assert.not_lt(3, 2) end)
+		it("2 < 2 is false", function() assert.not_lt(2, 2) end)
+	end)
+
 end)
