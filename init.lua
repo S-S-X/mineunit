@@ -151,6 +151,20 @@ function mineunit:mods_loaded()
 		if self._on_mods_loaded_exec_count > 0 then
 			mineunit:warning("mineunit:mods_loaded: Callbacks already executed " .. self._on_mods_loaded_exec_count .. " times")
 		end
+		if core.registered_on_mods_loaded then
+			for index, func in ipairs(core.registered_on_mods_loaded) do
+				if self._on_mods_loaded[index] ~= func then
+					mineunit:warning("Unsupported registration overrides detected for core.registered_on_mods_loaded")
+					local swap_index = mineunit.utils.in_array(self._on_mods_loaded, func)
+					if swap_index then
+						self._on_mods_loaded[swap_index], self._on_mods_loaded[index] =
+							self._on_mods_loaded[index], self._on_mods_loaded[swap_index]
+					else
+						table.insert(self._on_mods_loaded, index, func)
+					end
+				end
+			end
+		end
 		for _,func in ipairs(self._on_mods_loaded) do func() end
 		self._on_mods_loaded_exec_count = self._on_mods_loaded_exec_count + 1
 	end
