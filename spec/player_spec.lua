@@ -336,6 +336,44 @@ describe("Mineunit Player", function()
 
 	end)
 
+	describe(":do_place_from_above(...)", function()
+
+		it("has correct crosshair and pointed_thing", function()
+			validate_pointed_thing = function(pointed_thing, surface_pos, callback)
+				assert.equals("on_place", callback)
+				assert.is_hashed(pointed_thing)
+				assert.same({type="node",above={x=2,y=1,z=0},under={x=2,y=0,z=0}}, pointed_thing)
+				assert.nodename("stone", pointed_thing.under)
+
+				assert.is_hashed(surface_pos)
+				assert.close_enough( 0.0, surface_pos, "surface_pos.x")
+				assert.close_enough(-0.5, surface_pos, "surface_pos.y")
+				assert.close_enough( 0.0, surface_pos, "surface_pos.z")
+			end
+			SX:do_place_from_above({x=2,y=0,z=0})
+		end)
+
+	end)
+
+	describe(":do_use_from_above(...)", function()
+
+		it("has correct crosshair and pointed_thing", function()
+			validate_pointed_thing = function(pointed_thing, surface_pos, callback)
+				assert.equals("on_use", callback)
+				assert.is_hashed(pointed_thing)
+				assert.same({type="node",above={x=2,y=1,z=0},under={x=2,y=0,z=0}}, pointed_thing)
+				assert.nodename("stone", pointed_thing.under)
+
+				assert.is_hashed(surface_pos)
+				assert.close_enough( 0.0, surface_pos, "surface_pos.x")
+				assert.close_enough(-0.5, surface_pos, "surface_pos.y")
+				assert.close_enough( 0.0, surface_pos, "surface_pos.z")
+			end
+			SX:do_use_from_above({x=2,y=0,z=0})
+		end)
+
+	end)
+
 	describe(":do_metadata_inventory_put(...)", function()
 
 		setup(function()
