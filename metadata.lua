@@ -224,7 +224,7 @@ function InvRef:contains_item(listname, stack, match_meta)
 			local fieldcount = 0
 			local matching = true
 			for k,v in pairs(meta1) do
-				if not v == meta2[k] then
+				if v ~= meta2[k] then
 					matching = false
 					break
 				end

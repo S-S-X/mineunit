@@ -211,7 +211,7 @@ local function raycast_collision(pos, dir, range, resolution)
 	-- TODO: Add support for entities
 	range = range or 4
 	resolution = resolution or 1
-	local result
+	local result = nil
 	local distance = resolution
 	while result == nil and distance <= range do
 		local raypos = vector.add(pos, vector.multiply(dir, distance))
@@ -419,7 +419,7 @@ function Player:do_place_from_above(pos, controls)
 	-- Placed on above position, supporting node is under
 	self:set_pos(vector.add(pos, {x=0,y=1,z=0}))
 	self:do_set_look_xyz("Y-")
-	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y, z=pos.z}, under = {x=pos.x, y=pos.y-1, z=pos.z} }
+	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y+1, z=pos.z}, under = {x=pos.x, y=pos.y, z=pos.z} }
 	self:do_place(pointed_thing, controls)
 	-- TODO / TBD: Restore original position and camera orientation?
 end
@@ -440,7 +440,7 @@ function Player:do_set_look_xyz(xyz)
 		["Z+"] = {0, 0},
 		["Z-"] = {0, math.pi},
 	}
-	dir = look[xyz:sub(1,2):upper()]
+	local dir = look[xyz:sub(1,2):upper()]
 	assert(dir, "do_set_look_xyz requires string X+, X-, Y+, Y-, Z+ or Z-")
 	self:set_look_vertical(dir[1])
 	if dir[2] then
@@ -491,6 +491,7 @@ function Player:get_player_control_bits() error("NOT IMPLEMENTED") end
 function Player:get_player_name() return self._name end
 function Player:is_player() return self._is_player end
 function Player:get_wielded_item() return self._inv:get_stack("main", self._wield_index) end
+function Player:set_wielded_item(stack) return self._inv:set_stack("main", self._wield_index, stack) end
 function Player:get_meta() return self._meta end
 function Player:get_inventory() return self._inv end
 

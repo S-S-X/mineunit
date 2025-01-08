@@ -46,10 +46,6 @@ local tagged_paths = {
 require("mineunit.print")
 require("mineunit.globals")
 
-local function mineunit_path(name)
-	return pl.path.normpath(string.format("%s/%s", mineunit:config("mineunit_path"), name))
-end
-
 local function require_mineunit(name, root, tag)
 	local modulename = name:gsub("/", ".")
 	if root and tag and tag ~= "mineunit" then
@@ -110,7 +106,10 @@ function mineunit:config(key)
 	end
 	return default_config[key]
 end
-mineunit._config.source_path = pl.path.normpath(("%s/%s"):format(mineunit:config("root"), mineunit:config("source_path")))
+
+mineunit._config.source_path = pl.path.normpath(
+	("%s/%s"):format(mineunit:config("root"), mineunit:config("source_path"))
+)
 
 function mineunit:set_modpath(name, path)
 	path = pl.path.normpath(path)
@@ -208,7 +207,7 @@ function fixture(name)
 	if not _fixtures[name] then
 		mineunit:info("Loading fixture", path)
 		assert(pl.path.isfile(path), "Fixture not found: " .. path)
-		result = {dofile(path)}
+		local result = {dofile(path)}
 		_fixtures[name] = result
 		return unpack(result)
 	else
@@ -218,8 +217,8 @@ function fixture(name)
 end
 
 local function source_path(name)
-	local source_path = mineunit:config("source_path")
-	local path = pl.path.normpath(("%s/%s"):format(source_path, name))
+	local cfg_source_path = mineunit:config("source_path")
+	local path = pl.path.normpath(("%s/%s"):format(cfg_source_path, name))
 	mineunit:debug("source_path", path)
 	return path
 end
@@ -251,9 +250,9 @@ function mineunit.export_object(obj, def)
 		end
 		setmetatable(obj, {
 			__call = function(...)
-				local obj = def.constructor(...)
-				obj._mineunit_typename = def.typename or def.name
-				return obj
+				local ins = def.constructor(...)
+				ins._mineunit_typename = def.typename or def.name
+				return ins
 			end
 		})
 		if not def.private then
