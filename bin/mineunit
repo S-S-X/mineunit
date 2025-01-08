@@ -116,6 +116,9 @@ local function read_mineunit_conf(configpath)
 		configfile()
 		if configenv.exclude then
 			for _,v in ipairs(configenv.exclude) do
+				if v:sub(-4) == ".lua" then
+					v = v:sub(1, #sub - 4) .. "$"
+				end
 				table.insert(args.luacov.exclude, v)
 			end
 		end
