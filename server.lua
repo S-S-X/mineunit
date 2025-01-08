@@ -228,6 +228,19 @@ function mineunit:execute_on_chat_message(sender, message)
 	)
 end
 
+function mineunit:execute_on_player_receive_fields(player, formname, fields)
+	assert.is_Player(player, "Invalid call to mineunit:execute_on_player_receive_fields")
+	assert.is_string(formname, "Invalid call to mineunit:execute_on_player_receive_fields")
+	assert.is_table(fields, "Invalid call to mineunit:execute_on_player_receive_fields")
+	return core.run_callbacks(
+		core.registered_on_player_receive_fields,
+		RunCallbacksMode.RUN_CALLBACKS_MODE_OR_SC,
+		player,
+		formname,
+		fields
+	)
+end
+
 function mineunit:execute_modchannel_message(channel, sender, message)
 	-- TODO: Not tested at all
 	assert(type(channel) == "string", "Invalid call to mineunit:execute_modchannel_message")

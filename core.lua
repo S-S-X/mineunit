@@ -41,6 +41,8 @@ mineunit:apply_default_settings(_G.core.settings)
 _G.core.register_on_joinplayer = noop
 _G.core.register_on_leaveplayer = noop
 
+_G.minetest.register_on_player_receive_fields = noop
+
 mineunit("game/constants")
 mineunit("common/vector")
 mineunit("game/item")
@@ -76,7 +78,6 @@ _G.minetest.add_particlespawner = noop
 _G.minetest.registered_chatcommands = {}
 _G.minetest.register_chatcommand = noop
 _G.minetest.chat_send_player = function(...) print(unpack({...})) end
-_G.minetest.register_on_player_receive_fields = noop
 _G.minetest.register_on_placenode = noop
 _G.minetest.register_on_dignode = noop
 _G.minetest.register_on_mods_loaded = function(func) mineunit:register_on_mods_loaded(func) end
