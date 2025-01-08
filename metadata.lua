@@ -272,6 +272,37 @@ mineunit.export_object(InvRef, {
 	end,
 })
 
+local function getInvRef(thing)
+	local thingtype = mineunit.utils.type(thing) or type(thing)
+	if thingtype == "table" then
+		-- Coordinates
+		return core.get_meta(thing):get_inventory()
+	elseif thingtype == "MetaDataRef" or thingtype == "NodeMetaRef" or thingtype == "Player" then
+		-- Metadata
+		return thing:get_inventory()
+	elseif thingtype == "InvRef" then
+		-- Inventory
+		return thing
+	end
+	error("get_InvRef(thing): Invalid type '"..thingtype.."'.")
+end
+
+function mineunit:get_InvRef_data(thing)
+	thing = getInvRef(thing)
+	return {
+		lists = rawget(thing, "_lists"),
+		sizes = rawget(thing, "_sizes"),
+		empty = rawget(thing, "_empty"),
+	}
+end
+
+function mineunit:clear_InvRef(thing)
+	thing = getInvRef(thing)
+	for listname in pairs(rawget(thing, "_lists")) do
+		thing:set_list(listname, {})
+	end
+end
+
 --
 -- MetaDataRef
 --
