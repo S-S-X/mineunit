@@ -370,6 +370,7 @@ function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
 	local item = self:get_wielded_item()
 	local itemdef = item:get_definition()
 	if itemdef and itemdef.on_use then
+		mineunit:debugf("%s:do_use(%s, %s) with %s", self, pointed_thing, controls, item)
 		local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos, itemdef.range)
 		local returnstack
 		tempcontrols(self, controls)
@@ -379,12 +380,15 @@ function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
 			assert.is_ItemStack(returnstack)
 			self._inv:set_stack("main", self._wield_index, ItemStack(returnstack))
 		end
+	else
+		mineunit:debugf("%s:do_use(%s, %s) with unknown %s", self, pointed_thing, controls, item)
 	end
 end
 
 function Player:do_use_from_above(pos, controls)
 	-- Wrapper to move player above given position, look downwards and use on exact position
 	-- Targeted node is under, player looks from above position
+	mineunit:debugf("%s:do_use_from_above(%s, %s)", self, pos, controls)
 	self:set_pos(vector.add(pos, {x=0,y=1,z=0}))
 	self:do_set_look_xyz("Y-")
 	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y+1, z=pos.z}, under = {x=pos.x, y=pos.y, z=pos.z} }
@@ -399,6 +403,7 @@ function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
 	local itemdef = item:get_definition()
 	if itemdef then
 		local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos)
+		mineunit:debugf("%s:do_place(%s, %s) with %s", self, pointed_thing, controls, item)
 		local returnstack
 		tempcontrols(self, controls)
 		if itemdef.on_place and pointed_thing.type == "node" then
@@ -411,12 +416,15 @@ function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
 			assert.is_ItemStack(returnstack)
 			self._inv:set_stack("main", self._wield_index, ItemStack(returnstack))
 		end
+	else
+		mineunit:debugf("%s:do_place(%s, %s) with unknown %s", self, pointed_thing_or_pos, controls, item)
 	end
 end
 
 function Player:do_place_from_above(pos, controls)
 	-- Wrapper to move player above given position, look downwards and place to exact position
 	-- Placed on above position, supporting node is under
+	mineunit:debugf("%s:do_place_from_above(%s, %s)", self, pos, controls)
 	self:set_pos(vector.add(pos, {x=0,y=1,z=0}))
 	self:do_set_look_xyz("Y-")
 	local pointed_thing = { type = "node", above = {x=pos.x, y=pos.y+1, z=pos.z}, under = {x=pos.x, y=pos.y, z=pos.z} }
@@ -585,6 +593,10 @@ function Player:__index(key)
 		result = self._object[key]
 	end
 	return result
+end
+
+function Player:__tostring()
+	return self._name
 end
 
 mineunit("entity")

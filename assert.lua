@@ -302,5 +302,6 @@ return {
 	round = round,
 	is_coordinate = is_coordinate,
 	has_item = has_item,
-	type = mineunit_type
+	type = mineunit_type,
+	luatype = lua_type,
 }
