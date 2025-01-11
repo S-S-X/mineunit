@@ -181,6 +181,7 @@ function mineunit:execute_on_joinplayer(player, options)
 		max_jitter = options.max_jitter or 0,
 		avg_jitter = options.avg_jitter or 0,
 	})
+	player._formspec = nil
 	if core.get_auth_handler then
 		local name = player:get_player_name()
 		local data = core.get_auth_handler().get_auth(name)
@@ -210,6 +211,7 @@ end
 function mineunit:execute_on_leaveplayer(player, timeout)
 	assert.is_Player(player, "Invalid call to mineunit:execute_on_leaveplayer")
 	player._online = false
+	player._formspec = nil
 	return core.run_callbacks(
 		core.registered_on_leaveplayers,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
