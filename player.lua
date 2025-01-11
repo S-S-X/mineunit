@@ -4,8 +4,6 @@ function mineunit:get_players()
 	return players
 end
 
-function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
-
 function _G.core.get_player_privs(name)
 	assert.is_string(name, "core.get_player_privs: name: expected string, got "..type(name))
 	assert.is_Player(players[name], "core.get_player_privs: player not found: "..name)
@@ -72,6 +70,26 @@ function _G.core.get_connected_players()
 		end
 	end
 	return result
+end
+
+function _G.core.show_formspec(playername, formname, formspec)
+	local player = core.get_player_by_name(playername)
+	if player and mineunit:has_module("formspec") then
+		mineunit:debugf("core.show_formspec(%s, %s, %s)", playername, formname, formspec)
+		player._formspec = mineunit:Form(formname, formspec)
+	else
+		mineunit:debugf("core.show_formspec(%s, %s, <redacted>)", playername, formname)
+	end
+end
+
+function _G.core.close_formspec(playername, formname)
+	local player = core.get_player_by_name(playername)
+	if player then
+		mineunit:debugf("core.show_formspec(%s, %s, %s)", playername, formname, formspec)
+		player._formspec = nil
+	else
+		mineunit:debugf("core.show_formspec(%s, %s, <redacted>)", playername, formname)
+	end
 end
 
 local client_state = {
@@ -486,6 +504,7 @@ function Player:do_reset()
 	self._inv = InvRef()
 	self._inv:set_size("main", 32)
 	self._object:set_properties(table.copy(default_player_properties))
+	self._formspec = nil
 	self._hud_flags = { hotbar = true, healthbar = true, crosshair = true,
 		wielditem = true, breathbar = true, minimap = false, minimap_radar = false }
 end
@@ -622,6 +641,7 @@ mineunit.export_object(Player, {
 			_is_player = true,
 			_privs = privs or { server = 1, interact = 1, test_priv = 1 },
 			_object = ObjectRef(),
+			_formspec = nil,
 			_look_dir = {x=0,y=-1,z=0}, -- Reflects simplified pointed_thing used to place nodes
 			_eye_offset_first = {x=0,y=0,z=0},
 			_eye_offset_third = {x=0,y=0,z=0},

@@ -229,6 +229,7 @@ register("player_or_name", 1, "Expected %s to be player or name", function(args)
 end)
 
 local mineunit_types = {
+	"Form",
 	"ItemStack",
 	"InvRef",
 	"MetaDataRef",
