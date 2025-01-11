@@ -28,7 +28,7 @@ local args = {
 	Xoutput = {},
 }
 
-mineunit_version = "0.13.0"
+mineunit_version = "0.14.0"
 local luaversion = (function()
 	local jit = rawget(_G, "jit")
 	return jit and jit.version or rawget(_G, "_VERSION")
@@ -241,7 +241,7 @@ do -- Parse cli args
 					-r, --report    Build report after successful coverage analysis.
 					                Currently cannot be combined with --coverage
 					-x|--exclude <pattern>
-					                Exclude source file patterns from test coverage analysis.
+					                Exclude source file path patterns from test coverage analysis.
 					                Can be repeated for multiple patterns.
 				
 					--demo          Install demo tests to current directory.
@@ -260,6 +260,7 @@ do -- Parse cli args
 					-q|--quiet      Be quiet, most of time keeps your console fairly clean.
 					                Always disables regular Lua print which can make output
 					                somewhat less annoying when combined with --verbose output.
+					-V|--version    Display Lua and Mineunit version information.
 					-h|--help       Display this cheat sheet.
 					--help-assert   Display another cheat sheet, reference for special assertions.
 				
