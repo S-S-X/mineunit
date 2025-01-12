@@ -502,4 +502,67 @@ describe("Mineunit Player", function()
 
 	end)
 
+	describe("Formspec system", function()
+
+		mineunit("formspec")
+
+		local player = Player("p9", {})
+		before_each(function()
+			mineunit:execute_on_joinplayer(player)
+		end)
+
+		after_each(function()
+			mineunit:execute_on_leaveplayer(player)
+		end)
+
+		it("should show formspecs to the player", function()
+			core.show_formspec("p9", "fs1", "field[foo;bar;baz]")
+			local form = mineunit:get_player_formspec("p9")
+			assert.is_Form(form)
+			assert.equals("fs1", form:name())
+			assert.equals("field[foo;bar;baz]", form:text())
+		end)
+
+		it("should not hide formspecs when the form name does not match", function()
+			core.show_formspec("p9", "fs1", "field[foo;bar;baz]")
+			core.close_formspec("p9", "fs2")
+			local form = mineunit:get_player_formspec("p9")
+			assert.is_Form(form)
+			assert.equals("fs1", form:name())
+			assert.equals("field[foo;bar;baz]", form:text())
+		end)
+
+		it("should close formspecs when the form name matches", function()
+			core.show_formspec("p9", "fs1", "field[foo;bar;baz]")
+			core.close_formspec("p9", "fs1")
+			assert.is_nil(mineunit:get_player_formspec("p9"))
+		end)
+
+		it("should close formspecs when the empty form name is passed", function()
+			core.show_formspec("p9", "fs1", "field[foo;bar;baz]")
+			core.close_formspec("p9", "")
+			assert.is_nil(mineunit:get_player_formspec("p9"))
+		end)
+
+		it("should call callbacks correctly", function()
+			local count = 0
+			local realfields = { quit = "true" }
+			core.register_on_player_receive_fields(function(playername, formname, fields)
+				if formname == "fs1" then
+					count = 10
+				end
+			end)
+			core.register_on_player_receive_fields(function(playername, formname, fields)
+				assert.same(realfields, fields)
+				count = 1
+				return true
+			end)
+			core.show_formspec("p9", "fs1", "field[foo;bar;baz]")
+			local form = mineunit:get_player_formspec("p9")
+			form:send("p9", realfields)
+			assert.equal(1, count)
+		end)
+
+	end)
+
 end)
