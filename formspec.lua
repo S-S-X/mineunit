@@ -331,7 +331,7 @@ function mineunit:send_formspec_fields(player_or_name, fields)
 	assert.player_or_name(player_or_name, "mineunit:get_player_formspec: player_or_name: expected string or Player")
 	local player = type(player_or_name) == "string" and self:get_players()[player_or_name] or player_or_name
 	assert(player._formspec, "mineunit.send_formspec_fields: no formspec open")
-	assert(fields ~= nil and type(fields) ~= "table", "mineunit.send_formspec_fields: fields: expected table or nil, got "..type(fields))
+	assert(fields == nil or type(fields) == "table", "mineunit.send_formspec_fields: fields: expected table or nil, got "..type(fields))
 	return self:Form().send(player, fields)
 end
 
