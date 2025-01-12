@@ -81,23 +81,28 @@ function _G.core.show_formspec(playername, formname, formspec)
 		mineunit:debugf("core.show_formspec(%s, %s, %s)", playername, formname, formspec)
 		if formname == "" or formspec == "" then
 			player._formspec = nil
+			mineunit:warningf("core.show_formspec(%s, %s, <redacted>) destroyed form")
 		elseif mineunit:has_module("formspec")  then
 			player._formspec = mineunit:Form(formname, formspec)
 		else
 			player._formspec = { formname, formspec }
 		end
 	else
-		mineunit:debugf("core.show_formspec(%s, %s, <redacted>) failed, player not online", playername, formname)
+		mineunit:warningf("core.show_formspec(%s, %s, <redacted>) failed, player not online", playername, formname)
 	end
 end
 
 function _G.core.close_formspec(playername, formname)
 	local player = core.get_player_by_name(playername)
 	if player then
-		mineunit:debugf("core.show_formspec(%s, %s, %s)", playername, formname, formspec)
-		player._formspec = nil
+		if formname == "" or (player._formspec and player._formspec:name() == formname) then
+			player._formspec = nil
+			mineunit:debugf("core.close_formspec(%s, %s) destroyed form")
+		else
+			mineunit:infof("core.close_formspec(%s, %s) failed, this form is not active", playername, formname)
+		end
 	else
-		mineunit:debugf("core.show_formspec(%s, %s, <redacted>)", playername, formname)
+		mineunit:warningf("core.close_formspec(%s, %s) failed, player not online")
 	end
 end
 
