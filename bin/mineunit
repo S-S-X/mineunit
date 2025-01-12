@@ -28,7 +28,7 @@ local args = {
 	Xoutput = {},
 }
 
-mineunit_version = "0.12.0"
+mineunit_version = "0.13.0"
 local luaversion = (function()
 	local jit = rawget(_G, "jit")
 	return jit and jit.version or rawget(_G, "_VERSION")
@@ -306,7 +306,10 @@ do -- Parse cli args
 						end
 						return name .. "(" .. table.concat(assertargs, ", ") .. ")", length
 					end)()
-					print(indenthdr..header..(hdrlen < indent and (" "):rep(indent - hdrlen) or joiner)..c.dim(content))
+					print(indenthdr..header..(#content > 0
+						and (hdrlen < indent and (" "):rep(indent - hdrlen) or joiner)..c.dim(content)
+						or ""
+					))
 				end
 			else
 				function doc(name, ...)
@@ -322,22 +325,35 @@ do -- Parse cli args
 			doc("integer", "thing", "Thing is integer and not floating point value.")
 			doc("gt", "num1", "num2", "Number num1 is greater than num2.")
 			doc("lt", "num1", "num2", "Number num1 is smaller than num2.")
-			doc("in_array", "value", "array", "Value is in contiguously indexed array. Values behind index holes will not be accepted.")
+			doc("in_array", "value", "array", "Value is in contiguously indexed array. Values behind index holes "..
+				"will not be accepted.")
 			doc("nodename", "expected", "pos", "Node name at position matches expected value.")
 			doc("param2", "expected", "pos", "Value of param2 at position matches expected value.")
-			doc("close_enough", "num1", "num2", "Value of num1 is close enough to value of num2. Values should be very close but do not have to be exact.")
+			doc("close_enough", "num1", "num2", "Value of num1 is close enough to value of num2. Values should be "..
+				"very close but do not have to be exact.")
 			doc("coordinate", "thing", "Thing is valid three dimensional coodrinate.")
 			doc("itemname", "thing", "Thing is valid item name.")
-			doc("itemstring", "thing", "Thing is valid itemstring and can safely be used to initialize new ItemStack instance.")
-			doc("player_or_name", "thing", "Thing is either a valid Player instance or well known and registered player name.")
+			doc("itemstring", "thing", "Thing is valid itemstring and can safely be used to initialize new ItemStack "..
+				"instance.")
+			doc("player_or_name", "thing", "Thing is either a valid Player instance or well known and registered "..
+				"player name.")
 			doc("ItemStack", "thing", "Thing is ItemStack class instance.")
 			doc("InvRef", "thing", "Thing is valid inventory class instance.")
 			doc("MetaDataRef", "thing", "Thing is valid MetaData class instance.")
 			doc("NodeMetaRef", "thing", "Thing is valid NodeMeta class instance.")
 			doc("Player", "thing", "Thing is valid Player class instance.")
-			doc("has_item", "item", "pos", "Position contains item.")
+			doc("has_item", "Player", "itemstring|ItemStack", "")
+			doc("has_item", "Player", "listname", "itemstring|ItemStack", "")
+			doc("has_item", "Player", "listname", "slotnumber", "itemstring|ItemStack", "")
+			doc("has_item", "coordinate", "itemstring|ItemStack)", "")
+			doc("has_item", "coordinate", "listname", "itemstring|ItemStack", "")
+			doc("has_item", "coordinate", "listname", "slotnumber", "itemstring|ItemStack", "Check that player "..
+				"inventory or world position contains specified item. Optionally restricting to named inventory list "..
+				"and optional slot number.")
 			print("\nAssertions can be prefixed with is_ (default) or not_ modifiers.")
 			print("Special assertions are provided in addition to luassert builtin assertions.")
+			print("Most assertions accept one additional argument besides what has been")
+			print(" described here, if provided it will be used as assertion failure message.")
 			return
 		elseif v == "-c" or v == "--coverage" then
 			args.coverage = true
