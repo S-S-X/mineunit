@@ -71,9 +71,9 @@ describe("NodeMetaRef", function()
 				inv:set_size("main", 3)
 				inv:set_list("main", {})
 				local expected = {
-					ItemStack(),
-					ItemStack(),
-					ItemStack()
+					ItemStack(nil),
+					ItemStack(nil),
+					ItemStack(nil)
 				}
 				assert.is_true(inv:is_empty("main"))
 				assert.same(expected, inv:get_list("main"))
@@ -90,7 +90,7 @@ describe("NodeMetaRef", function()
 				local expected = {
 					ItemStack("test 1"),
 					ItemStack("foo 2"),
-					ItemStack(),
+					ItemStack(nil),
 				}
 				assert.is_false(inv:is_empty("main"))
 				assert.same(expected, inv:get_list("main"))
@@ -101,12 +101,12 @@ describe("NodeMetaRef", function()
 				local inv = meta:get_inventory()
 				inv:set_size("main", 3)
 				inv:set_list("main", {
-					ItemStack(),
+					ItemStack(nil),
 					ItemStack("test 1"),
 					ItemStack("foo 2")
 				})
 				local expected = {
-					ItemStack(),
+					ItemStack(nil),
 					ItemStack("test 1"),
 					ItemStack("foo 2"),
 				}
@@ -126,7 +126,7 @@ describe("NodeMetaRef", function()
 				local expected = {
 					ItemStack("test 1"),
 					ItemStack("foo 2"),
-					ItemStack()
+					ItemStack(nil)
 				}
 				assert.is_false(inv:is_empty("main"))
 				assert.same(expected, inv:get_list("main"))
@@ -144,7 +144,7 @@ describe("NodeMetaRef", function()
 				local expected = {
 					ItemStack("test 1"),
 					ItemStack("foo 2"),
-					ItemStack(),
+					ItemStack(nil),
 				}
 				assert.is_false(inv:is_empty("main"))
 				assert.same(expected, inv:get_list("main"))
@@ -159,9 +159,9 @@ describe("NodeMetaRef", function()
 					ItemStack("foo 0"),
 				})
 				local expected = {
-					ItemStack(),
-					ItemStack(),
-					ItemStack()
+					ItemStack(nil),
+					ItemStack(nil),
+					ItemStack(nil)
 				}
 				assert.is_true(inv:is_empty("main"))
 				assert.same(expected, inv:get_list("main"))

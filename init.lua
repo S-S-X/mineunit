@@ -58,12 +58,14 @@ local function require_mineunit(name, root, tag)
 			local module
 			package.path = root.."/"..tag.."/?.lua;"
 			mineunit:debug("Loading "..name.." from "..tag)
-			local success = pcall(function() module = require(modulename)end)
+			local success, err = pcall(function() module = require(modulename) end)
 			package.path = oldpath
 			if success then
+				mineunit:debug("Loaded "..name.." from "..tag)
 				return module
 			else
-				mineunit:error("Loading "..name.." from "..tag.." failed, trying to use builtin")
+				mineunit:debug(err)
+				mineunit:error("Loading "..name.." from "..tag.." failed, trying builtin")
 			end
 		end
 	end
@@ -131,11 +133,10 @@ end
 
 function mineunit:register_on_mods_loaded(func)
 	if self._on_mods_loaded_exec_count > 0 then
-		mineunit:warning("mineunit:register_on_mods_loaded: Registering after register_on_mods_loaded executed")
+		mineunit:warning("mineunit:register_on_mods_loaded: Registering after registered_on_mods_loaded executed")
 	end
-	if type(func) == "function" then
-		table.insert(self._on_mods_loaded, func)
-	end
+	assert(type(func) == "function", "register_on_mods_loaded requires function, got "..type(func))
+	table.insert(self._on_mods_loaded, func)
 end
 
 function mineunit:mods_loaded()
