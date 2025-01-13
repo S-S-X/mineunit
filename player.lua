@@ -1,3 +1,7 @@
+mineunit("formspec")
+mineunit("metadata")
+mineunit("entity")
+
 local players = {}
 
 function mineunit:get_players()
@@ -82,10 +86,12 @@ function _G.core.show_formspec(playername, formname, formspec)
 		if formname == "" or formspec == "" then
 			player._formspec = nil
 			mineunit:warningf("core.show_formspec(%s, %s, <redacted>) destroyed form")
-		elseif mineunit:has_module("formspec")  then
-			player._formspec = mineunit:Form(formname, formspec)
 		else
-			player._formspec = { formname, formspec }
+			if player._formspec_prepend then
+				player._formspec = mineunit:Form(formname, formspec .. player._formspec_prepend)
+			else
+				player._formspec = mineunit:Form(formname, formspec)
+			end
 		end
 	else
 		mineunit:warningf("core.show_formspec(%s, %s, <redacted>) failed, player not online", playername, formname)
@@ -109,7 +115,7 @@ end
 function mineunit:get_player_formspec(player_or_name)
 	assert.player_or_name(player_or_name, "mineunit:get_player_formspec: player_or_name: expected string or Player")
 	local player = type(player_or_name) == "string" and players[player_or_name] or player_or_name
-	return type(player._formspec) == "table" and unpack(player._formspec) or player._formspec
+	return player._formspec
 end
 
 local client_state = {
@@ -170,8 +176,6 @@ end
 --
 -- Mineunit player fixture API
 --
-
-mineunit("metadata")
 
 local Player = {}
 
@@ -604,8 +608,22 @@ function Player:get_attribute(attribute)
 	error("NOT IMPLEMENTED")
 end
 
-function Player:set_inventory_formspec(formspec) self._inventory_formspec = formspec end
-function Player:get_inventory_formspec() return self._inventory_formspec end
+function Player:set_inventory_formspec(formspec)
+	if formspec == "" then
+		-- Inventory is disabled if formspec is empty.
+		self._inventory_formspec = nil
+	else
+		-- Empty formspec name is player inventory
+		self._inventory_formspec = mineunit:Form("", formspec)
+	end
+end
+
+function Player:get_inventory_formspec()
+	return self._inventory_formspec
+		and self._inventory_formspec:text()
+		or nil
+end
+
 function Player:set_formspec_prepend(formspec) self._formspec_prepend = formspec end
 function Player:get_formspec_prepend(formspec) return self._formspec_prepend end
 
@@ -638,7 +656,6 @@ function Player:__tostring()
 	return self._name
 end
 
-mineunit("entity")
 mineunit.export_object(Player, {
 	name = "Player",
 	constructor = function(self, name, privs)
