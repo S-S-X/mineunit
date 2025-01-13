@@ -244,7 +244,7 @@ function mineunit:DEPRECATED(msg)
 end
 
 function mineunit.export_object(obj, def)
-	if not def.private and _G[def.name] ~= nil then
+	if not def.private and _G[def.name] ~= nil and not mineunit:config("silence_global_export_overrides") then
 		mineunit:errorf("mineunit.export_object overriding already reserved global name: %s", (def.name or "?"))
 	end
 	if not obj.__index then

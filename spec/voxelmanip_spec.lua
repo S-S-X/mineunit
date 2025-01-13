@@ -5,8 +5,10 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("VoxelManip", function()
 
 	require("mineunit")
+	mineunit:config_set("silence_global_export_overrides", true)
+	sourcefile("core")
+	sourcefile("world")
 	sourcefile("voxelmanip")
-	mineunit("core")
 
 	mineunit:set_current_modname("test")
 	minetest.register_node("test:node", {})

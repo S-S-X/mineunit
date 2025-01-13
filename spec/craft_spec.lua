@@ -4,9 +4,10 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("Craft API", function()
 
 	require("mineunit")
-	mineunit("core")
-	mineunit("itemstack")
-	mineunit("entity")
+	mineunit:config_set("silence_global_export_overrides", true)
+	sourcefile("core")
+	sourcefile("itemstack")
+	sourcefile("entity")
 	sourcefile("player")
 	fixture("items")
 
