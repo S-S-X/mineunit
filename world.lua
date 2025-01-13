@@ -262,4 +262,5 @@ function core.compare_block_status(pos, status)
 	return true
 end
 
+_G.world = world
 return world
