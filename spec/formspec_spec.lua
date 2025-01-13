@@ -4,10 +4,11 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("Mineunit formspec", function()
 
 	require("mineunit")
-	mineunit("core")
-	mineunit("formspec")
+	mineunit:config_set("silence_global_export_overrides", true)
+	sourcefile("core")
 	sourcefile("server")
 	sourcefile("player")
+	sourcefile("formspec")
 
 	local SX = Player("SX")
 
@@ -82,9 +83,13 @@ describe("Mineunit formspec", function()
 				1,count]
 		]]):gsub("[\r\n]\t\t\t*", "")
 
-		it("parse formspec", function()
-			local form = mineunit:Form("test_formspec", test_formspec)
-			assert.is_table(form._data)
+		it("parses formspecs", function()
+			local form = mineunit:Form("test:formname", test_formspec)
+			assert.is_Form(form)
+
+			assert.equals(form:name(), "test:formname")
+			assert.is_table(form:data())
+
 			local btn_exit = form:one("ex", "image_button_exit")
 			local btn_wp = form:one("w", "image_button_exit")
 
@@ -99,6 +104,11 @@ describe("Mineunit formspec", function()
 			assert.equals(0, #form:all(nil, "^button_exit"))
 
 			assert.equals(2, #form:all("p", nil))
+		end)
+
+		it("provides fields table", function()
+			local form = mineunit:Form("test:formname", test_formspec)
+			assert.is_table(form:fields())
 		end)
 
 	end)
