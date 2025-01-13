@@ -299,6 +299,20 @@ function Form:version()
 	error("Not implemented: Form:version()")
 end
 
+function Form:__index(key)
+	local value = rawget(Form, key)
+	if value ~= nil then
+		return value
+	end
+	value = rawget(self, key)
+	if value ~= nil then
+		return value
+	elseif key == "_data" then
+		rawset(self, "_data", parse(rawget(self, "_textcontent")))
+		return rawget(self, "_data")
+	end
+end
+
 function Form:__tostring()
 	return self._textcontent
 end
@@ -359,8 +373,7 @@ mineunit.export_object(Form, {
 		local obj = {
 			_name = formname,
 			_version = nil,
-			-- TODO: determine if deferred parse makes any sense
-			_data = parse(formspec),
+			_data = nil, -- deferrend _textcontent parsing
 			_textcontent = formspec,
 		}
 		setmetatable(obj, Form)
