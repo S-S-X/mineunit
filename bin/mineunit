@@ -28,7 +28,7 @@ local args = {
 	Xoutput = {},
 }
 
-mineunit_version = "0.11.1"
+mineunit_version = "0.12.0"
 local luaversion = (function()
 	local jit = rawget(_G, "jit")
 	return jit and jit.version or rawget(_G, "_VERSION")
@@ -257,6 +257,8 @@ do -- Parse cli args
 					-q|--quiet      Be quiet, most of time keeps your console fairly clean.
 					                Always disables regular Lua print which can make output
 					                somewhat less annoying when combined with --verbose output.
+					-h|--help       Display this cheat sheet.
+					--help-assert   Display another cheat sheet, reference for special assertions.
 				
 				Resources:
 					Luarocks package: https://luarocks.org/modules/S-S-X/mineunit
@@ -273,6 +275,66 @@ do -- Parse cli args
 				License:
 					MIT Expat with LGPL libraries, see LICENSE file for details.
 			]]):gsub("([\r\n])\t\t\t\t?", "%1"):gsub(" \\[\r\n]+\t*", " ")})[1])
+			return
+		elseif v == "--help-assert" then
+			local doc, indenthdr, indent = nil, "    ", 16
+			local width, joiner = 80 - indent - #indenthdr, "\n"..(" "):rep(indent + #indenthdr)
+			if args.output == "utfTerminal" then
+				local c = require("term.colors")
+				function doc(name, ...)
+					local args = {...}
+					local content = args[#args]
+					if #content > width then
+						local index, lines = 1, {}
+						while index < #content - width do
+							local maxl = content:sub(index, index + width)
+							local _, l = maxl:find(".*%s")
+							table.insert(lines, l and maxl:sub(1, l - 1) or maxl)
+							index = index + (l and l or width)
+						end
+						table.insert(lines, content:sub(index))
+						content = table.concat(lines, joiner)
+					end
+					local header, hdrlen = (function()
+						local assertargs, length = {}, #name + (#args - 1) * 2
+						for i = 1, #args - 1 do
+							table.insert(assertargs, c.cyan(args[i]))
+							length = length + #args[i]
+						end
+						return name .. "(" .. table.concat(assertargs, ", ") .. ")", length
+					end)()
+					print(indenthdr..header..(hdrlen < indent and (" "):rep(indent - hdrlen) or joiner)..c.dim(content))
+				end
+			else
+				function doc(name, ...)
+					local args = {...}
+					local content = args[#args]
+					print(indenthdr..name..joiner..content)
+				end
+			end
+			print(mineunit_version_str.."\n\nSpecial assertions:\n")
+			doc("table", "thing", "Thing is table, indexed or hashed.")
+			doc("indexed", "thing", "Thing is array without holes.")
+			doc("hashed", "thing)", "Thing is hash table / key value pair table.")
+			doc("integer", "thing", "Thing is integer and not floating point value.")
+			doc("gt", "num1", "num2", "Number num1 is greater than num2.")
+			doc("lt", "num1", "num2", "Number num1 is smaller than num2.")
+			doc("in_array", "value", "array", "Value is in contiguously indexed array. Values behind index holes will not be accepted.")
+			doc("nodename", "expected", "pos", "Node name at position matches expected value.")
+			doc("param2", "expected", "pos", "Value of param2 at position matches expected value.")
+			doc("close_enough", "num1", "num2", "Value of num1 is close enough to value of num2. Values should be very close but do not have to be exact.")
+			doc("coordinate", "thing", "Thing is valid three dimensional coodrinate.")
+			doc("itemname", "thing", "Thing is valid item name.")
+			doc("itemstring", "thing", "Thing is valid itemstring and can safely be used to initialize new ItemStack instance.")
+			doc("player_or_name", "thing", "Thing is either a valid Player instance or well known and registered player name.")
+			doc("ItemStack", "thing", "Thing is ItemStack class instance.")
+			doc("InvRef", "thing", "Thing is valid inventory class instance.")
+			doc("MetaDataRef", "thing", "Thing is valid MetaData class instance.")
+			doc("NodeMetaRef", "thing", "Thing is valid NodeMeta class instance.")
+			doc("Player", "thing", "Thing is valid Player class instance.")
+			doc("has_item", "item", "pos", "Position contains item.")
+			print("\nAssertions can be prefixed with is_ (default) or not_ modifiers.")
+			print("Special assertions are provided in addition to luassert builtin assertions.")
 			return
 		elseif v == "-c" or v == "--coverage" then
 			args.coverage = true

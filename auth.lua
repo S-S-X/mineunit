@@ -17,7 +17,7 @@ mineunit.export_object(AuthEntry, {
 		assert(type(name) == "string" and name ~= "", "Invalid AuthEntry name '"..tostring(name).."'")
 		local obj = {}
 		local player = mineunit:get_players()[name]
-		assert.is_player(player)
+		assert.is_Player(player)
 		obj.id = unique_id()
 		obj.name = name
 		obj.privileges = player._privs

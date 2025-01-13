@@ -24,6 +24,7 @@ local default_config = {
 	source_path = ".",
 	time_step = -1,
 	engine_version = "mineunit",
+	deprecated = "throw"
 }
 
 for k,v in pairs(mineunit_conf_defaults or {}) do
@@ -98,6 +99,11 @@ function mineunit:has_module(name)
 	return _mineunits[name] and true
 end
 
+function mineunit:config_set(key, value)
+	self:debug("Updating configuration", key, self._config[key], " -> ", value)
+	self._config[key] = value
+end
+
 function mineunit:config(key)
 	if self._config[key] ~= nil then
 		return self._config[key]
@@ -107,6 +113,7 @@ end
 mineunit._config.source_path = pl.path.normpath(("%s/%s"):format(mineunit:config("root"), mineunit:config("source_path")))
 
 function mineunit:set_modpath(name, path)
+	path = pl.path.normpath(path)
 	mineunit:info("Setting modpath", name, path)
 	self._config.modpaths[name] = path
 end
@@ -144,6 +151,20 @@ function mineunit:mods_loaded()
 		mineunit:info("Executing register_on_mods_loaded functions")
 		if self._on_mods_loaded_exec_count > 0 then
 			mineunit:warning("mineunit:mods_loaded: Callbacks already executed " .. self._on_mods_loaded_exec_count .. " times")
+		end
+		if core.registered_on_mods_loaded then
+			for index, func in ipairs(core.registered_on_mods_loaded) do
+				if self._on_mods_loaded[index] ~= func then
+					mineunit:warning("Unsupported registration overrides detected for core.registered_on_mods_loaded")
+					local swap_index = mineunit.utils.in_array(self._on_mods_loaded, func)
+					if swap_index then
+						self._on_mods_loaded[swap_index], self._on_mods_loaded[index] =
+							self._on_mods_loaded[index], self._on_mods_loaded[swap_index]
+					else
+						table.insert(self._on_mods_loaded, index, func)
+					end
+				end
+			end
 		end
 		for _,func in ipairs(self._on_mods_loaded) do func() end
 		self._on_mods_loaded_exec_count = self._on_mods_loaded_exec_count + 1
@@ -210,10 +231,17 @@ function sourcefile(name)
 	return dofile(path)
 end
 
-function DEPRECATED(msg)
-	-- TODO: Add configurable behavior to fail or warn when deprectaed things are used
-	-- Now it has to be fail. Warnings are for pussies, hard fail for serious Sam.
-	error(msg or "Attempted to use deprecated method")
+function mineunit:DEPRECATED(msg)
+	local action = self:config("deprecated")
+	if action == "ignore" then
+		return
+	elseif action == "throw" then
+		error(msg or "Attempted to use deprecated method")
+	elseif ({debug=1,info=1,warning=1,error=1})[action] then
+		self[action](self, msg or "Calling deprecated engine method")
+	else
+		error("Config: invalid value for 'deprecated'. Allowed values: throw, error, warning, info, debug, ignore.")
+	end
 end
 
 function mineunit.export_object(obj, def)
