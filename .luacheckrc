@@ -8,10 +8,19 @@ exclude_files = {
 }
 
 globals = {
+	-- Globals
+	"type",
+
+	-- Mineunit
 	"mineunit", "world",
-	"mineunit_path", "fixture", "fixture_path",
+	"mineunit_path", "fixture", "fixture_path", "sourcefile",
+
+	-- Engine
+	"INIT", "PLATFORM", "DIR_DELIM",
 	"core", "minetest",
 	"vector", "dump","dump2",
+
+	-- MTG
 	"default",
 }
 
@@ -30,6 +39,7 @@ read_globals = {
 
 	-- Minetest
 	string = {fields = {"split", "trim"}},
-	table = {fields = {"copy", "getn"}},
+	table = {fields = {"copy", "getn", "indexof", "insert_all", "key_value_swap", "shuffle"}},
+	math = {fields = {"hypot", "sign", "factorial"}},
 	"PseudoRandom", "ItemStack", "VoxelArea", "VoxelManip", "Settings",
 }

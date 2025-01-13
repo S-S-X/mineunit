@@ -417,7 +417,7 @@ end
 
 function Settings:get_names()
 	local result = {}
-	for k,_ in pairs(t) do
+	for k,_ in pairs(self._data) do
 		table.insert(result, k)
 	end
 	return result
@@ -432,7 +432,7 @@ function Settings:to_table()
 end
 
 local function load_conf_file(fname, target)
-	file = io.open(fname, "r")
+	local file = io.open(fname, "r")
 	if file then
 		mineunit:debug("Settings object loading values from:", fname)
 		for line in file:lines() do

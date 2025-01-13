@@ -30,7 +30,7 @@ local defaultrequest = {
 	multipart = false, -- Optional, if true performs a multipart HTTP request. Post only, data must be array
 	post_data = function(post_data)
 		if post_data ~= nil then
-			DEPRECATED("HTTPRequest.post_data: Deprecated, use `data` instead.")
+			mineunit:DEPRECATED("HTTPRequest.post_data: Deprecated, use `data` instead.")
 		end
 	end,
 }
@@ -120,12 +120,11 @@ core.http_add_fetch(httpenv)
 function core.request_http_api()
 	local http_mods = core.settings:get("secure.http_mods")
 	local trusted_mods = core.settings:get("secure.trusted_mods")
+	local modname = mineunit:get_current_modname()
 	http_mods = (http_mods and trusted_mods) and http_mods..","..trusted_mods or http_mods or trusted_mods
-
 	if http_mods then
-		local current_modname  = mineunit:get_current_modname()
-		for modname in http_mods:gmatch("[^%s,]+") do
-			if modname == current_modname then
+		for trusted in http_mods:gmatch("[^%s,]+") do
+			if trusted == modname then
 				return tablecopy(httpenv)
 			end
 		end

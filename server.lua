@@ -181,18 +181,19 @@ function mineunit:execute_on_joinplayer(player, options)
 		max_jitter = options.max_jitter or 0,
 		avg_jitter = options.avg_jitter or 0,
 	})
-	local name = player:get_player_name()
 	if core.get_auth_handler then
+		local name = player:get_player_name()
 		local data = core.get_auth_handler().get_auth(name)
 		core.set_player_privs(name, data.privileges)
-		mineunit:debug("Auth privileges:", player:get_player_name(), dump(player._privs))
+		mineunit:debugf("Auth privileges: %s, %t", player, player._privs)
 		local message = core.run_callbacks(
 			core.registered_on_prejoinplayers,
-			RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
+			RunCallbacksMode.RUN_CALLBACKS_MODE_OR,
 			name,
 			address
 		)
 		if message then
+			mineunit:debugf("Kicked %s (%s) by 'on_prejoinplayers': %s", player, address, message)
 			return message
 		end
 		mineunit:execute_globalstep()
@@ -225,6 +226,21 @@ function mineunit:execute_on_chat_message(sender, message)
 		RunCallbacksMode.RUN_CALLBACKS_MODE_OR_SC,
 		sender,
 		message
+	)
+end
+
+function mineunit:execute_on_player_receive_fields(player, formname, fields)
+	assert.is_Player(player, "Invalid call to mineunit:execute_on_player_receive_fields")
+	assert.is_string(formname, "Invalid call to mineunit:execute_on_player_receive_fields")
+	assert.is_table(fields, "Invalid call to mineunit:execute_on_player_receive_fields")
+	mineunit:debugf("on_player_receive_fields(%s, %s, %t)", player, formname, fields)
+	mineunit:debugf("%t", core.registered_on_player_receive_fields)
+	return core.run_callbacks(
+		core.registered_on_player_receive_fields,
+		RunCallbacksMode.RUN_CALLBACKS_MODE_OR_SC,
+		player,
+		formname,
+		fields
 	)
 end
 

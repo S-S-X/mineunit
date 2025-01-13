@@ -128,14 +128,12 @@ end
 local function has_meta(pos)
 	local node_id = minetest.hash_node_position(pos)
 	if worldmeta[node_id] then
-		-- FIXME: NodeMetaRef / MetaDataRef should have API for this
-		if count(worldmeta[node_id]._data) > 0 then
+		if next(worldmeta[node_id]._data) ~= nil then
 			return true
 		end
-		local inv = get_meta(pos):get_inventory()
-		local lists = inv:get_lists()
-		for _, list in ipairs(lists) do
-			if not inv:is_empty(list) then
+		local inv = core.get_meta(pos):get_inventory()
+		for listname in pairs(mineunit:get_InvRef_data(inv).lists) do
+			if not inv:is_empty(listname) then
 				return true
 			end
 		end
@@ -206,7 +204,6 @@ function world.find_nodes_with_meta(p1, p2)
 	assert.is_table(p2, "Invalid p2, table expected")
 	local sx, sy, sz = math.min(p1.x, p2.x), math.min(p1.y, p2.y), math.min(p1.z, p2.z)
 	local ex, ey, ez = math.max(p1.x, p2.x), math.max(p1.y, p2.y), math.max(p1.z, p2.z)
-	local get_meta = minetest.get_meta
 	local results = {}
 	for x = sx, ex do
 		for y = sy, ey do
