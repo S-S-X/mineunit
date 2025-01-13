@@ -3,12 +3,16 @@ name: mineunit
 on: [push, pull_request]
 
 jobs:
-  build:
+  mineunit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+      with:
+        path: mineunit
     - id: mineunit
       uses: mt-mods/mineunit-actions@master
+      with:
+        working-directory: mineunit
     - uses: RubbaBoy/BYOB@v1.3.0
       if: success() && github.event_name == 'push' && github.ref == 'refs/heads/master'
       with:
@@ -26,3 +30,24 @@ jobs:
           ```
           ${{ steps.mineunit.outputs.mineunit-stdout }}
           ```
+    - uses: KeisukeYamashita/create-comment@v1
+      if: success() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      with:
+        check-only-first-line: true
+        comment: |
+          <details><summary><i>Click for detailed source code test coverage report</i></summary>
+          
+          #### Test coverage ${{ steps.mineunit.outputs.coverage-total }} in ${{ steps.mineunit.outputs.coverage-files }} files:
+          
+          ```q
+          File                                      Hits Missed Coverage
+          --------------------------------------------------------------
+          ${{ steps.mineunit.outputs.mineunit-report }}
+          ```
+          
+          #### Mineunit stdout:
+          
+          ```
+          ${{ steps.mineunit.outputs.mineunit-stdout }}
+          ```
+          </details>
