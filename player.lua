@@ -4,7 +4,80 @@ function mineunit:get_players()
 	return players
 end
 
-function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
+function mineunit.get_player_formspec(playername)
+	assert.is_string(playername, "mineunit.get_player_formspec: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "core.get_player_formspec: player not found: "..playername)
+	local player = players[playername]
+	return player._formname, player._formspec
+end
+
+local function set_formspec(player, formname, formspec)
+	player._formname, player._formspec = formname, formspec
+	player._formspec_fields = {}
+end
+
+function _G.core.show_formspec(playername, formname, formspec)
+	assert.is_string(playername, "core.show_formspec: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "core.show_formspec: player not found: "..playername)
+	assert.is_string(formname, "core.show_formspec: formname: expected string, got "..type(formname))
+	assert.is_string(formspec, "core.show_formspec: formspec: expected string, got "..type(formspec))
+	local player = players[playername]
+	if formname == "" then
+		set_formspec(player)
+	elseif formspec == "" then
+		if player._formname == formname then
+			set_formspec(player)
+		end
+	else
+		set_formspec(player, formname, formspec)
+	end
+end
+
+function mineunit.send_formspec_fields(playername, fields)
+	assert.is_string(playername, "mineunit.send_formspec_fields: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "mineunit.send_formspec_fields: player not found: "..playername)
+	local player = players[playername]
+	assert(player._formname, "mineunit.send_formspec_fields: no formspec open")
+	assert(fields == nil or type(fields) == "table", "mineunit.send_formspec_fields: fields: expected table or nil, got "..type(fields))
+	if fields == nil then
+		fields = player._formspec_fields
+	end
+	for _, f in ipairs(core.registered_on_player_receive_fields) do
+		if f(player, player._formname, fields) then
+			break
+		end
+	end
+end
+
+function mineunit.set_formspec_fields(playername, fields)
+	assert.is_string(playername, "mineunit.set_formspec_fields: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "mineunit.set_formspec_fields: player not found: "..playername)
+	local player = players[playername]
+	assert(player._formname, "mineunit.set_formspec_fields: no formspec open")
+	local fsfields = player._formspec_fields
+	for k, v in pairs(fields) do
+		fsfields[k] = v
+	end
+end
+
+function mineunit.set_formspec_field(playername, key, value)
+	return mineunit.set_formspec_fields(playername, {key = value})
+end
+
+function mineunit.clear_formspec_fields(playername)
+	assert.is_string(playername, "mineunit.clear_formspec_fields: playername: expected string, got "..type(playername))
+	assert.is_Player(players[playername], "mineunit.clear_formspec_fields: player not found: "..playername)
+	local player = players[playername]
+	player._formspec_fields = {}
+end
+
+mineunit.formspec_action = {}
+
+function mineunit.formspec_action.quit(playername)
+	mineunit.set_formspec_field(playername, "quit", "true")
+	mineunit.send_formspec_fields(playername)
+	mineunit.clear_formspec_fields(playername)
+end
 
 function _G.core.get_player_privs(name)
 	assert.is_string(name, "core.get_player_privs: name: expected string, got "..type(name))
@@ -565,10 +638,10 @@ function Player:get_attribute(attribute)
 	error("NOT IMPLEMENTED")
 end
 
-function Player:set_inventory_formspec(formspec) end
-function Player:get_inventory_formspec() return "" end
-function Player:set_formspec_prepend(formspec) end
-function Player:get_formspec_prepend(formspec) return "" end
+function Player:set_inventory_formspec(formspec) self._inventory_formspec = formspec end
+function Player:get_inventory_formspec() return self._inventory_formspec end
+function Player:set_formspec_prepend(formspec) self._formspec_prepend = formspec end
+function Player:get_formspec_prepend(formspec) return self._formspec_prepend end
 
 function Player:hud_get_flags() return self._hud_flags end
 function Player:set_hud_flags(new_flags)
