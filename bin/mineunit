@@ -55,6 +55,10 @@ local function execread(cmd)
 	return tonumber(status), output
 end
 
+local function normpathrel(path)
+	return pl.path.relpath(pl.path.normpath(pl.path.abspath(path)))
+end
+
 local function run_report()
 	local force_config = {
 		deletestats = true,
@@ -73,20 +77,21 @@ local function run_report()
 	-- Clean input filenames, luacov ReporterBase causes duplicates otherwise
 	local run_file = reporter.ReporterBase._run_file
 	function reporter.ReporterBase._run_file(self, filename, ...)
-		return run_file(self, pl.path.normpath(filename), ...)
+		return run_file(self, normpathrel(filename), ...)
 	end
 
 	-- Create DefaultReporter instance for reporting
 	local rep, err = reporter.DefaultReporter:new(luacov_config)
 	if not rep then
 		print(err)
-		print("Run your Lua program with -lluacov and then rerun luacov.")
+		print("Run again with -c and then execute reporter with -r.")
+		print("Also make sure your cwd is where luacov.stats.out was generated.")
 		os.exit(1)
 	end
 
 	-- Clean filenames, luacov ReporterBase causes duplicates otherwise
 	local uniq_files = {}
-	for i=1,#rep._files do uniq_files[pl.path.normpath(rep._files[i])] = true end
+	for i=1,#rep._files do uniq_files[normpathrel(rep._files[i])] = true end
 	rep._files = {}
 	for fname,_ in pairs(uniq_files) do table.insert(rep._files, fname) end
 	table.sort(rep._files)
@@ -98,7 +103,7 @@ local function run_report()
 		return result
 	end
 	for k,v in pairs(rep._data) do
-		data[pl.path.normpath(k)] = merge(data[pl.path.normpath(k)], v)
+		data[normpathrel(k)] = merge(data[normpathrel(k)], v)
 	end
 	rep._data = data
 
