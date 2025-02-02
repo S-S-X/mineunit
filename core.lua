@@ -1,5 +1,4 @@
 local function noop(...) end
-local function dummy_coords(...) return { x = 123, y = 123, z = 123 } end
 local noop_object = {
 	__call = function(self,...) return self end,
 	__index = function(...) return function(...)end end,
