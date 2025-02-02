@@ -25,21 +25,25 @@ local formatters = {
 	["nil"] = tostring,
 	["xnil"] = tostring,
 	["table"] = function(thing)
-		if luatype(thing.under) == "table" or luatype(thing.above) == "table" then
+		local above = rawget(thing, "above")
+		local under = rawget(thing, "under")
+		if luatype(under) == "table" or luatype(above) == "table" then
+			local thingtype = rawget(thing, "type")
+			local ref = rawget(thing, "ref")
 			return "{"..
-				(thing.type ~= nil and "\n\ttype = "..tostring(thing.type) or "")..
-				(thing.above ~= nil and "\n\tabove = "..(thing.above
-					and "{x="..thing.above.x..",y="..thing.above.y..",z="..thing.above.z.."}"
-					or tostring(thing.above)
+				(thingtype ~= nil and "\n\ttype = "..tostring(thingtype) or "")..
+				(above ~= nil and "\n\tabove = "..(above
+					and "{x="..above.x..",y="..above.y..",z="..above.z.."}"
+					or tostring(above)
 				) or "")..
-				(thing.under ~= nil and "\n\tunder = "..(thing.under
-					and "{x="..thing.under.x..",y="..thing.under.y..",z="..thing.under.z.."}"
-					or tostring(thing.under)
+				(under ~= nil and "\n\tunder = "..(under
+					and "{x="..under.x..",y="..under.y..",z="..under.z.."}"
+					or tostring(under)
 				) or "")..
-				(thing.ref ~= nil and "\n\tref = "..tostring(thing.ref) or "")
+				(ref ~= nil and "\n\tref = "..tostring(ref) or "")
 				.."\n}"
 		elseif mineunit.utils.is_coordinate(thing) then
-			return "{x="..thing.x..",y="..thing.y..",z="..thing.z.."}"
+			return mineunit.utils.format_coordinate(thing)
 		end
 		return tostring(thing)
 	end,
