@@ -234,7 +234,6 @@ local submit_fields = {
 	animated_image = 1, -- Returns the index of the current frame.
 	button = 1, -- button and variants contains the button text as value. If not pressed, is `nil`.
 	image_button = 1,
-	image_button = 1,
 	item_image_button = 1,
 	button_exit = 1,
 	image_button_exit = 1,
@@ -345,7 +344,8 @@ function mineunit:send_formspec_fields(player_or_name, fields)
 	assert.player_or_name(player_or_name, "mineunit:get_player_formspec: player_or_name: expected string or Player")
 	local player = type(player_or_name) == "string" and self:get_players()[player_or_name] or player_or_name
 	assert(player._formspec, "mineunit.send_formspec_fields: no formspec open")
-	assert(fields == nil or type(fields) == "table", "mineunit.send_formspec_fields: fields: expected table or nil, got "..type(fields))
+	local ftype = type(fields)
+	assert.in_array(ftype, {"nil","table"}, "mineunit:send_formspec_fields: fields: expected table or nil, got "..ftype)
 	return self:Form().send(player, fields)
 end
 
@@ -382,5 +382,6 @@ mineunit.export_object(Form, {
 })
 
 function mineunit:Form(formname, formspec)
+	-- For this method, `self` can be either Mineunit or Player instance
 	return formname and Form(formname, formspec) or Form
 end
