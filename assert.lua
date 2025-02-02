@@ -67,12 +67,22 @@ local function is_coordinate(thing)
 	return false
 end
 
+local function format_coordinate(t)
+	local result = {}
+	for k in pairs(coordinate_keys) do
+		table.insert(result, k .. "=" .. (rawget(t, k) or "nil"))
+	end
+	return "{" .. table.concat(result, ",") .. "}"
+end
+
 -- Type overrides
 
 local lua_type = type
 
 local function mineunit_type(obj)
-	return lua_type(obj) == "table" and lua_type(obj._mineunit_typename) == "string" and obj._mineunit_typename
+	if lua_type(obj) == "table" then
+		return rawget(obj, "_mineunit_typename")
+	end
 end
 
 function type(value)
@@ -115,7 +125,8 @@ local function fmtargs(argc, args)
 		if args[i] == nil then
 			results[i] = tostring(args[i])
 		else
-			results[i] = format_argument(args[i]) or tostring(args[i])
+			local argtype = mineunit_type(args[i]) or lua_type(args[i]) or "<failed to get type>"
+			results[i] = format_argument(args[i] or assert(tostring(args[i]), "invalid __tostring " .. argtype))
 		end
 	end
 	return results
@@ -301,6 +312,7 @@ return {
 	in_array = in_array,
 	round = round,
 	is_coordinate = is_coordinate,
+	format_coordinate = format_coordinate,
 	has_item = has_item,
 	type = mineunit_type,
 	luatype = lua_type,
