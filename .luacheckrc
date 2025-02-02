@@ -2,9 +2,11 @@ unused_args = false
 
 -- Exclude regression tests / unit tests
 exclude_files = {
-	"**/core/**",
-	"**/spec/**",
-	"**/demo_spec/**",
+	"./core/**",
+	"./spec/**",
+	"./demo_spec/**",
+	"./common/**",
+	"./game/**",
 }
 
 globals = {
