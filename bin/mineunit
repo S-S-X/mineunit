@@ -265,6 +265,7 @@ do -- Parse cli args
 					-q|--quiet      Be quiet, most of time keeps your console fairly clean.
 					                Always disables regular Lua print which can make output
 					                somewhat less annoying when combined with --verbose output.
+					                Twice to shut up.
 					-V|--version    Display Lua and Mineunit version information.
 					-h|--help       Display this cheat sheet.
 					--help-assert   Display another cheat sheet, reference for special assertions.
@@ -372,8 +373,13 @@ do -- Parse cli args
 			end
 			args.verbose = true
 		elseif v == "-q" or v == "--quiet" then
+			if args.quiet then
+				args.disable_output = true
+				mineunit_conf_override.verbose = 0
+			else
+				mineunit_conf_override.verbose = mineunit_conf_override.verbose or 1
+			end
 			mineunit_conf_override.print = false
-			mineunit_conf_override.verbose = mineunit_conf_override.verbose or 1
 			args.quiet = true
 		elseif v == "-x" or v == "--exclude" then
 			i = i + 1
@@ -545,8 +551,7 @@ if args.coverage then
 end
 
 -- subscribe for additional output
-
-if args.output == "utfTerminal" and not args.quiet then
+if args.output == "utfTerminal" and not args.quiet and not args.disable_output then
 	local handler = require("busted.outputHandlers.base")()
 	local first_end
 	local skip_quiet = not args.verbose
@@ -646,15 +651,27 @@ end)
 busted.randomseed = os.time()
 
 -- Set up output handler to listen to events
-outputHandlerLoader(busted, args.output, {
-	defaultOutput = args.output,
-	enableSound = false,
-	verbose = args.verbose,
-	suppressPending = false,
-	language = "en",
-	deferPrint = false,
-	arguments = args.Xoutput,
-})
+if args.disable_output then
+	outputHandlerLoader(busted, "base", {
+		defaultOutput = "base",
+		enableSound = false,
+		verbose = false,
+		suppressPending = true,
+		language = "en",
+		deferPrint = false,
+		--arguments = args.Xoutput,
+	})
+else
+	outputHandlerLoader(busted, args.output, {
+		defaultOutput = args.output,
+		enableSound = false,
+		verbose = args.verbose,
+		suppressPending = false,
+		language = "en",
+		deferPrint = false,
+		arguments = args.Xoutput,
+	})
+end
 
 -- Pre-load the LuaJIT 'ffi' module if applicable
 --require("busted.luajit")()
