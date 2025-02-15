@@ -29,6 +29,26 @@ core.register_node(":stone", {
 	nodebox = {}
 })
 
+core.register_node(":cobble", {
+	description = "cobble",
+	buildable_to = false,
+	walkable = true,
+	drawtype = "nodebox",
+	node_box = {
+		type = "fixed",
+		fixed = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
+	},
+	collision_box = {
+		type = "fixed",
+		fixed = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
+	},
+	selection_box = {
+		type = "fixed",
+		fixed = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
+	},
+	nodebox = {}
+})
+
 core.register_node(":bridge", {
 	description = "bridge",
 	buildable_to = false,
@@ -81,6 +101,12 @@ minetest.register_node(":bush_stem", {
 		type = "fixed",
 		fixed = {-7 / 16, -0.5, -7 / 16, 7 / 16, 0.5, 7 / 16},
 	},
+})
+
+minetest.register_craft({
+	type = "cooking",
+	output = "stone",
+	recipe = "cobble",
 })
 
 minetest.register_craft({
