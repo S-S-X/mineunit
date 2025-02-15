@@ -31,23 +31,25 @@ function core.get_all_craft_recipes(output)
 	return #results > 0 and results or nil
 end
 
-local function has_groups(t)
-	for k,v in pairs(t) do
-		if type(v) == "string" then
-			if v:match("^group:") then
-				return true
-			end
-		elseif type(v) == "userdata" then
-			if v:get_name():match("^group:") then
-				return true
-			end
-		elseif type(v) == "table" then
+local function has_groups(thing)
+	if type(thing) == "string" then
+		if thing:match("^group:") then
+			return true
+		end
+	elseif type(thing) == "table" then
+		for _,v in pairs(thing) do
 			if has_groups(v) then
 				return true
 			end
-		else
-			error("Invalid type in list")
 		end
+	elseif type(thing) == "userdata" then
+		for _,v in pairs(thing) do
+			if v:get_name():match("^group:") then
+				return true
+			end
+		end
+	else
+		error("Invalid type in list")
 	end
 	return false
 end
@@ -94,7 +96,7 @@ function core.register_craft(t)
 		if t.replacements then
 			assert.is_indexed(t.replacements, "core.register_craft: t.replacements indexed table expected, got %s")
 		end
-		local groups = type(t.recipe) == "table" and has_groups(t.recipe)
+		local groups = has_groups(t.recipe)
 		CM:registerCraft("cooking", groups and "PRIORITY_SHAPELESS_AND_GROUPS" or "PRIORITY_SHAPELESS", t.output, t)
 	elseif t.type == "fuel" then
 		assert.is_string(t.recipe, "core.register_craft: t.recipe string expected, got " .. type(t.recipe))
@@ -102,7 +104,7 @@ function core.register_craft(t)
 			assert.is_number(t.burntime, "core.register_craft: t.burntime number expected, got " .. type(t.burntime))
 		end
 		t.burntime = t.burntime or 1
-		local groups = type(t.recipe) == "table" and has_groups(t.recipe)
+		local groups = has_groups(t.recipe)
 		CM:registerCraft("fuel", groups and "PRIORITY_SHAPELESS_AND_GROUPS" or "PRIORITY_SHAPELESS", "", t)
 	else
 		error("Recipe type not supported: " .. tostring(t.type))

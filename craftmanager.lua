@@ -30,7 +30,7 @@ local RecipePriority = init_lookup_table({
 --	"CRAFT_METHOD_NORMAL", "CRAFT_METHOD_COOKING", "CRAFT_METHOD_FUEL",
 --})
 
-local CRAFT_HASH_TYPE_MAX = 1 -- FIXME: Implement HASH_TYPE_COUNT and increase this number
+local CRAFT_HASH_TYPE_MAX = 2
 local HASH_TYPE_NAME = 1
 local HASH_TYPE_COUNT = 2
 
@@ -88,6 +88,25 @@ local function decrement_input(input)
 	return {}
 end
 
+local function match_fuel(input, def)
+	local item = #input.items == 1 and input.items[1]:get_name()
+	if item and input.type == def.type then
+		local recipe = def.recipe
+		if item == recipe then
+			return true
+		end
+		local itemdef = core.registered_items[item]
+		if itemdef then
+			local group = recipe:match("group:(.+)")
+			if group then
+				local groups = itemdef.groups
+				return groups and groups[group]
+			end
+		end
+	end
+	return false
+end
+
 --
 -- CraftManager
 --
@@ -112,15 +131,19 @@ function CraftManager:getCraftResult(input, decrementInput)
 			local def = hash_collisions[i] -- @CraftDefinition
 			local priority = assert(def._recipe_priority) -- @RecipePriority
 
-			if priority > priority_best --[[ FIXME: Check input recipe compatibility: and def:check(input) ]] then
-				local out = { item = def.output, time = def.time or def.cooktime or 0 }
-				assert(out.item) -- Not inlined because assert seems to return 3 arguments where last two are nil
-				out.item = ItemStack(out.item)
-				if out.item:is_known() then
-					output = out
-					priority_best = priority
-				else
-					mineunit:warning("trying to craft non-existent " .. out.item .. ", ignoring recipe")
+			if priority > priority_best then
+				--[[ FIXME: Full input recipe compatibility check, currently only for fuel recipes ]]
+				if input.type ~= "fuel" or match_fuel(input, def) then
+					-- FIXME: pick `time` value based on `method`
+					local out = { item = def.output, time = def.time or def.cooktime or def.burntime or 0 }
+					assert(def.type == "fuel" or out.item)
+					out.item = ItemStack(out.item)
+					if out.item:is_known() then
+						output = out
+						priority_best = priority
+					else
+						mineunit:warning("trying to craft non-existent " .. out.item .. ", ignoring recipe")
+					end
 				end
 			end
 		end
