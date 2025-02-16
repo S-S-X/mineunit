@@ -287,6 +287,12 @@ Options:
 	-c, --coverage  Execute luacov test coverage analysis.
 	-r, --report    Build report after successful coverage analysis.
 	                Currently cannot be combined with --coverage
+	-p|--pattern <pattern>
+	                Only run test files matching the Lua pattern (default: _spec).
+	                Can be repeated for multiple patterns.
+	-F|--filter <pattern>
+	                Only run test names matching the Lua pattern.
+	                Can be repeated for multiple patterns.
 	-x|--exclude <pattern>
 	                Exclude source file path patterns from test coverage analysis.
 	                Can be repeated for multiple patterns.
