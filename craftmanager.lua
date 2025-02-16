@@ -125,11 +125,11 @@ function CraftManager:getCraftResult(input, decrementInput)
 
 	for hash_type = 1, CRAFT_HASH_TYPE_MAX, 1 do -- @CraftHashType
 		local hash = getHashForGrid(hash_type, input_names)
-		local hash_collisions = self.hashed_crafts[hash_type][hash] or {}
+		local hash_collisions = self.hashed_crafts[input.type][hash_type][hash] or {}
 
 		for i = #hash_collisions, 1, -1 do
 			local def = hash_collisions[i] -- @CraftDefinition
-			local priority = assert(def._recipe_priority) -- @RecipePriority
+			local priority = assert(def._recipe_priority) + 1 - hash_type -- @RecipePriority
 
 			if priority > priority_best then
 				--[[ FIXME: Full input recipe compatibility check, currently only for fuel recipes ]]
@@ -193,8 +193,8 @@ function CraftManager:registerCraft(method, priority, output, def)
 	-- FIXME: Hashing should be done after mods been loaded and before globalstep starts
 	local hc = self.hashed_crafts
 	local items = self.get_craft_items(def)
-	table.insert(ensuretable(hc[HASH_TYPE_NAME], getHashForGrid(HASH_TYPE_NAME, items)), def)
-	table.insert(ensuretable(hc[HASH_TYPE_COUNT], getHashForGrid(HASH_TYPE_COUNT, items)), def)
+	table.insert(ensuretable(hc[method][HASH_TYPE_NAME], getHashForGrid(HASH_TYPE_NAME, items)), def)
+	table.insert(ensuretable(hc[method][HASH_TYPE_COUNT], getHashForGrid(HASH_TYPE_COUNT, items)), def)
 end
 
 -- @return \nil
@@ -207,10 +207,14 @@ function CraftManager:clear()
 		cooking = {},
 		fuel = {},
 	}
+	-- Create table for craft hashes, each sub table represents priority for hash type
+	self.hashed_crafts = {}
+	for k in pairs(self.registered_crafts) do
+		self.hashed_crafts[k] = {{},{},{}}
+	end
 	-- Alias normal -> shaped
 	self.registered_crafts.normal = self.registered_crafts.shaped
-	-- Create table for craft hashes, each sub table represents priority for hash type
-	self.hashed_crafts = {{},{},{}}
+	self.hashed_crafts.normal = self.hashed_crafts.shaped
 end
 
 -- @return \nil
