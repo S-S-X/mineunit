@@ -5,8 +5,8 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("Mineunit core", function()
 
 	require("mineunit")
-	mineunit("fs")
-	mineunit("assert")
+	mineunit:config_set("silence_global_export_overrides", true)
+	sourcefile("fs")
 
 	describe("deprecation", function()
 

@@ -5,10 +5,9 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("NodeMetaRef", function()
 
 	require("mineunit")
+	mineunit:config_set("silence_global_export_overrides", true)
 	sourcefile("itemstack")
-	-- itemstack already loads metadata as dependency
-	--sourcefile("metadata")
-	mineunit("assert")
+	sourcefile("metadata")
 
 	core.registered_items = {
 		test = { stack_max = 100 },

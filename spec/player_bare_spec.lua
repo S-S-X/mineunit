@@ -4,7 +4,8 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("Mineunit Player", function()
 
 	require("mineunit")
-	mineunit("itemstack")
+	mineunit:config_set("silence_global_export_overrides", true)
+	sourcefile("itemstack")
 	sourcefile("player")
 
 	describe("core.check_player_privs (player)", function()

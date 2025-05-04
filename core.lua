@@ -1,13 +1,11 @@
 local function noop(...) end
-local function dummy_coords(...) return { x = 123, y = 123, z = 123 } end
 local noop_object = {
 	__call = function(self,...) return self end,
 	__index = function(...) return function(...)end end,
 }
 
 mineunit("craft")
-
-_G.world = mineunit("world")
+mineunit("world")
 
 _G.core.is_singleplayer = function() return true end
 _G.core.notify_authentication_modified = noop

@@ -5,8 +5,8 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("ItemStack", function()
 
 	require("mineunit")
+	mineunit:config_set("silence_global_export_overrides", true)
 	sourcefile("itemstack")
-	mineunit("assert")
 
 	core.registered_items = {
 		test = { stack_max = 100 }

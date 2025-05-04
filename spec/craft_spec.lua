@@ -4,9 +4,10 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("Craft API", function()
 
 	require("mineunit")
-	mineunit("core")
-	mineunit("itemstack")
-	mineunit("entity")
+	mineunit:config_set("silence_global_export_overrides", true)
+	sourcefile("core")
+	sourcefile("itemstack")
+	sourcefile("entity")
 	sourcefile("player")
 	fixture("items")
 
@@ -99,7 +100,32 @@ describe("Craft API", function()
 			assert.same(expected_result, input)
 		end)
 
-		it("returns results", function()
+		it("returns expected results for cooking method", function()
+			local input = {
+				method = "cooking",
+				width = 3,
+				items = {
+					ItemStack("cobble 1")
+				},
+			}
+			local expected_result = {
+				time = 3,
+				replacements = {},
+				item = ItemStack("stone 1")
+			}
+			local expected_leftover = {
+				width = 3,
+				items = {
+					ItemStack(nil)
+				},
+				method = "cooking"
+			}
+			local result, leftover = core.get_craft_result(input)
+			assert.same(expected_result, result)
+			assert.same(expected_leftover, leftover)
+		end)
+
+		it("returns expected results for normal method", function()
 			local input = {
 				method = "normal",
 				width = 3,
@@ -118,6 +144,81 @@ describe("Craft API", function()
 					ItemStack(nil)
 				},
 				method = "normal"
+			}
+			local result, leftover = core.get_craft_result(input)
+			assert.same(expected_result, result)
+			assert.same(expected_leftover, leftover)
+		end)
+
+		it("accepts itemstrings for normal method", function()
+			local input = {
+				method = "normal",
+				width = 3,
+				items = {
+					"tree 1"
+				},
+			}
+			local expected_result = {
+				time = 0,
+				replacements = {},
+				item = ItemStack("wood 4")
+			}
+			local expected_leftover = {
+				width = 3,
+				items = {
+					ItemStack(nil)
+				},
+				method = "normal"
+			}
+			local result, leftover = core.get_craft_result(input)
+			assert.same(expected_result, result)
+			assert.same(expected_leftover, leftover)
+		end)
+
+		it("returns expected results for fuel method", function()
+			local input = {
+				method = "fuel",
+				width = 1,
+				items = {
+					ItemStack("wood 3")
+				},
+			}
+			local expected_result = {
+				time = 7,
+				replacements = {},
+				item = ItemStack(nil)
+			}
+			local expected_leftover = {
+				width = 1,
+				items = {
+					ItemStack("wood 2")
+				},
+				method = "fuel"
+			}
+			local result, leftover = core.get_craft_result(input)
+			assert.same(expected_result, result)
+			assert.same(expected_leftover, leftover)
+		end)
+
+		it("accepts itemstrings for fuel method", function()
+			local input = {
+				method = "fuel",
+				width = 1,
+				items = {
+					"wood 3"
+				},
+			}
+			local expected_result = {
+				time = 7,
+				replacements = {},
+				item = ItemStack(nil)
+			}
+			local expected_leftover = {
+				width = 1,
+				items = {
+					ItemStack("wood 2")
+				},
+				method = "fuel"
 			}
 			local result, leftover = core.get_craft_result(input)
 			assert.same(expected_result, result)

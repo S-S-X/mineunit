@@ -6,6 +6,10 @@ local args = {
 	output = "utfTerminal",
 	coverage = false,
 	report = false,
+	runner = {
+		include = nil,
+		filter = nil,
+	},
 	luacov = {
 		--deletestats = true,
 		includeuntestedfiles = true,
@@ -28,7 +32,7 @@ local args = {
 	Xoutput = {},
 }
 
-mineunit_version = "0.13.0"
+mineunit_version = "0.14.0"
 local luaversion = (function()
 	local jit = rawget(_G, "jit")
 	return jit and jit.version or rawget(_G, "_VERSION")
@@ -55,6 +59,10 @@ local function execread(cmd)
 	return tonumber(status), output
 end
 
+local function normpathrel(path)
+	return pl.path.relpath(pl.path.normpath(pl.path.abspath(path)))
+end
+
 local function run_report()
 	local force_config = {
 		deletestats = true,
@@ -73,20 +81,21 @@ local function run_report()
 	-- Clean input filenames, luacov ReporterBase causes duplicates otherwise
 	local run_file = reporter.ReporterBase._run_file
 	function reporter.ReporterBase._run_file(self, filename, ...)
-		return run_file(self, pl.path.normpath(filename), ...)
+		return run_file(self, normpathrel(filename), ...)
 	end
 
 	-- Create DefaultReporter instance for reporting
 	local rep, err = reporter.DefaultReporter:new(luacov_config)
 	if not rep then
 		print(err)
-		print("Run your Lua program with -lluacov and then rerun luacov.")
+		print("Run again with -c and then execute reporter with -r.")
+		print("Also make sure your cwd is where luacov.stats.out was generated.")
 		os.exit(1)
 	end
 
 	-- Clean filenames, luacov ReporterBase causes duplicates otherwise
 	local uniq_files = {}
-	for i=1,#rep._files do uniq_files[pl.path.normpath(rep._files[i])] = true end
+	for i=1,#rep._files do uniq_files[normpathrel(rep._files[i])] = true end
 	rep._files = {}
 	for fname,_ in pairs(uniq_files) do table.insert(rep._files, fname) end
 	table.sort(rep._files)
@@ -98,7 +107,7 @@ local function run_report()
 		return result
 	end
 	for k,v in pairs(rep._data) do
-		data[pl.path.normpath(k)] = merge(data[pl.path.normpath(k)], v)
+		data[normpathrel(k)] = merge(data[normpathrel(k)], v)
 	end
 	rep._data = data
 
@@ -240,8 +249,14 @@ do -- Parse cli args
 					-c, --coverage  Execute luacov test coverage analysis.
 					-r, --report    Build report after successful coverage analysis.
 					                Currently cannot be combined with --coverage
+					-p|--pattern <pattern>
+					                Only run test files matching the Lua pattern (default: _spec).
+					                Can be repeated for multiple patterns.
+					-F|--filter <pattern>
+					                Only run test names matching the Lua pattern.
+					                Can be repeated for multiple patterns.
 					-x|--exclude <pattern>
-					                Exclude source file patterns from test coverage analysis.
+					                Exclude source file path patterns from test coverage analysis.
 					                Can be repeated for multiple patterns.
 				
 					--demo          Install demo tests to current directory.
@@ -260,6 +275,8 @@ do -- Parse cli args
 					-q|--quiet      Be quiet, most of time keeps your console fairly clean.
 					                Always disables regular Lua print which can make output
 					                somewhat less annoying when combined with --verbose output.
+					                Twice to shut up.
+					-V|--version    Display Lua and Mineunit version information.
 					-h|--help       Display this cheat sheet.
 					--help-assert   Display another cheat sheet, reference for special assertions.
 				
@@ -366,9 +383,30 @@ do -- Parse cli args
 			end
 			args.verbose = true
 		elseif v == "-q" or v == "--quiet" then
+			if args.quiet then
+				args.disable_output = true
+				mineunit_conf_override.verbose = 0
+			else
+				mineunit_conf_override.verbose = mineunit_conf_override.verbose or 1
+			end
 			mineunit_conf_override.print = false
-			mineunit_conf_override.verbose = mineunit_conf_override.verbose or 1
 			args.quiet = true
+		elseif v == "-p" or v == "--pattern" then
+			i = i + 1
+			if not arg[i] then
+				print("Missing value for " .. v)
+				return
+			end
+			args.runner.include = args.runner.include or {}
+			table.insert(args.runner.include, arg[i])
+		elseif v == "-F" or v == "--filter" then
+			i = i + 1
+			if not arg[i] then
+				print("Missing value for " .. v)
+				return
+			end
+			args.runner.filter = args.runner.filter or {}
+			table.insert(args.runner.filter, arg[i])
 		elseif v == "-x" or v == "--exclude" then
 			i = i + 1
 			if not arg[i] then
@@ -539,8 +577,7 @@ if args.coverage then
 end
 
 -- subscribe for additional output
-
-if args.output == "utfTerminal" and not args.quiet then
+if args.output == "utfTerminal" and not args.quiet and not args.disable_output then
 	local handler = require("busted.outputHandlers.base")()
 	local first_end
 	local skip_quiet = not args.verbose
@@ -640,15 +677,27 @@ end)
 busted.randomseed = os.time()
 
 -- Set up output handler to listen to events
-outputHandlerLoader(busted, args.output, {
-	defaultOutput = args.output,
-	enableSound = false,
-	verbose = args.verbose,
-	suppressPending = false,
-	language = "en",
-	deferPrint = false,
-	arguments = args.Xoutput,
-})
+if args.disable_output then
+	outputHandlerLoader(busted, "base", {
+		defaultOutput = "base",
+		enableSound = false,
+		verbose = false,
+		suppressPending = true,
+		language = "en",
+		deferPrint = false,
+		--arguments = args.Xoutput,
+	})
+else
+	outputHandlerLoader(busted, args.output, {
+		defaultOutput = args.output,
+		enableSound = false,
+		verbose = args.verbose,
+		suppressPending = false,
+		language = "en",
+		deferPrint = false,
+		arguments = args.Xoutput,
+	})
+end
 
 -- Pre-load the LuaJIT 'ffi' module if applicable
 --require("busted.luajit")()
@@ -657,7 +706,7 @@ outputHandlerLoader(busted, args.output, {
 filterLoader(busted, {
 	tags = nil,
 	excludeTags = nil,
-	filter = nil,
+	filter = args.runner.filter,
 	filterOut = nil,
 	list = nil,
 	nokeepgoing = false,
@@ -666,7 +715,7 @@ filterLoader(busted, {
 
 -- Load test directories/files
 local testFileLoader = require("busted.modules.test_file_loader")(busted, args.loaders)
-testFileLoader({"spec"}, {"_spec"}, {
+testFileLoader({"spec"}, args.runner.include or {"_spec"}, {
 	excludes = {},
 	verbose = args.verbose,
 	recursive = nil,

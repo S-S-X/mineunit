@@ -5,10 +5,10 @@ package.path = "./?.lua;../?/init.lua;../?.lua;" --.. package.path
 describe("Mineunit assert", function()
 
 	require("mineunit")
-	mineunit("player")
-	mineunit("itemstack")
-	mineunit("metadata")
-	mineunit("assert")
+	mineunit:config_set("silence_global_export_overrides", true)
+	sourcefile("player")
+	sourcefile("itemstack")
+	sourcefile("metadata")
 
 	describe("is_Player", function()
 		local test_assert = assert.is_Player
@@ -34,7 +34,7 @@ describe("Mineunit assert", function()
 		it("does not accept string", function() assert.error(function() test_assert("SX") end) end)
 		it("does not accept empty arguments", function() assert.error(function() test_assert() end) end)
 		it("does not accept nil", function() assert.error(function() test_assert(nil) end) end)
-		it("accepts ItemStack", function() test_assert(InvRef()) end)
+		it("accepts InvRef", function() test_assert(InvRef()) end)
 	end)
 
 	describe("is_MetaDataRef", function()
@@ -44,7 +44,7 @@ describe("Mineunit assert", function()
 		it("does not accept empty arguments", function() assert.error(function() test_assert() end) end)
 		it("does not accept nil", function() assert.error(function() test_assert(nil) end) end)
 		it("does not accept InvRef", function() assert.error(function() test_assert(InvRef()) end) end)
-		it("accepts ItemStack", function() test_assert(MetaDataRef()) end)
+		it("accepts MetaDataRef", function() test_assert(MetaDataRef()) end)
 	end)
 
 	describe("is_NodeMetaRef", function()
@@ -54,11 +54,10 @@ describe("Mineunit assert", function()
 		it("does not accept empty arguments", function() assert.error(function() test_assert() end) end)
 		it("does not accept nil", function() assert.error(function() test_assert(nil) end) end)
 		it("does not accept InvRef", function() assert.error(function() test_assert(InvRef()) end) end)
-		it("accepts ItemStack", function() test_assert(NodeMetaRef()) end)
+		it("accepts NodeMetaRef", function() test_assert(NodeMetaRef()) end)
 	end)
 
 	describe("type override", function()
-
 		it("returns Player as userdata", function() assert.equals("userdata", type(Player())) end)
 		it("returns ItemStack as userdata", function() assert.equals("userdata", type(ItemStack(nil))) end)
 		it("returns InvRef as userdata", function() assert.equals("userdata", type(InvRef())) end)
@@ -67,7 +66,6 @@ describe("Mineunit assert", function()
 			inv:set_size("mylist", 1)
 			assert.equals("table", type(inv:get_list("mylist")))
 		end)
-
 	end)
 
 	describe("gt/lt", function()

@@ -244,22 +244,21 @@ function mineunit:DEPRECATED(msg)
 end
 
 function mineunit.export_object(obj, def)
-	if _G[def.name] == nil or def.private then
-		if not obj.__index then
-			obj.__index = obj
+	if not def.private and _G[def.name] ~= nil and not mineunit:config("silence_global_export_overrides") then
+		mineunit:errorf("mineunit.export_object overriding already reserved global name: %s", (def.name or "?"))
+	end
+	if not obj.__index then
+		obj.__index = obj
+	end
+	setmetatable(obj, {
+		__call = function(...)
+			local ins = def.constructor(...)
+			ins._mineunit_typename = def.typename or def.name
+			return ins
 		end
-		setmetatable(obj, {
-			__call = function(...)
-				local ins = def.constructor(...)
-				ins._mineunit_typename = def.typename or def.name
-				return ins
-			end
-		})
-		if not def.private then
-			_G[def.name] = obj
-		end
-	else
-		error("Error: mineunit.export_object object name is already reserved:" .. (def.name or "?"))
+	})
+	if not def.private then
+		_G[def.name] = obj
 	end
 end
 
