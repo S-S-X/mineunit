@@ -1,5 +1,5 @@
 package = "mineunit"
-version = "scm-4"
+version = "scm-5"
 source = {
 	url = "git+https://github.com/S-S-X/mineunit.git",
 }
@@ -11,7 +11,8 @@ description = {
 dependencies = {
 	"lua >= 5.1",
 	"busted >= 2.0",
-	"luacov >= 0.14"
+	"luacov >= 0.14",
+	"luabitop >= 1.0.2-3"
 }
 build = {
 	type = 'make',
