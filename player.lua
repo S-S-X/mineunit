@@ -627,6 +627,18 @@ mineunit.export_object(Player, {
 			_eye_offset_third = {x=0,y=0,z=0},
 		}
 		Player.do_reset(obj)
+		if mineunit:has_module("auth") then
+			local privileges = {}
+			for k, v in pairs(obj._privs) do
+				privileges[k] = v and true
+			end
+			mineunit:create_auth({
+				name = obj._name,
+				password = "",
+				privileges = privileges,
+				last_login = 0,
+			})
+		end
 		obj._object:set_pos({x=0,y=0,z=0})
 		players[obj._name] = obj
 		setmetatable(obj, Player)
