@@ -2,6 +2,8 @@ mineunit("player")
 
 -- AuthEntry class
 
+local valid_name = mineunit.utils.is_valid_name
+
 local last_unique_id = -1
 local function unique_id()
 	last_unique_id = last_unique_id + 1
@@ -13,16 +15,14 @@ local AuthEntry = {}
 mineunit.export_object(AuthEntry, {
 	name = "AuthEntry",
 	typename = "table",
-	constructor = function(self, name)
-		assert(type(name) == "string" and name ~= "", "Invalid AuthEntry name '"..tostring(name).."'")
-		local obj = {}
-		local player = mineunit:get_players()[name]
-		assert.is_Player(player)
-		obj.id = unique_id()
-		obj.name = name
-		obj.privileges = player._privs
-		obj.password = ""
-		obj.last_login = 0
+	constructor = function(self, data)
+		local obj = {
+			id = unique_id(),
+			name = assert(data.name, "Invalid AuthEntry name"),
+			password = type(data.password) == "string" and data.password or "",
+			privileges = data.privileges,
+			last_login = data.last_login or -1,
+		}
 		setmetatable(obj, AuthEntry)
 		return obj
 	end,
@@ -35,24 +35,38 @@ local auth = {}
 local entries = {}
 
 function auth.read(name)
-	if not entries[name] then
-		entries[name] = AuthEntry(name)
+	-- Return value only when available, never return nil
+	if entries[name] then
+		return entries[name]
 	end
-	return entries[name]
 end
 
 function auth.save(entry)
+	assert.is_table(entry)
 	local player = mineunit:get_players()[entry.name]
-	assert.is_Player(player)
-	player._privs = entry.privileges
+	if player then
+		player._privs = entry.privileges
+	end
+	return true
 end
 
-function auth.create()
-	mineunit:info("auth.create() called")
+function auth.create(data)
+	mineunit:info("auth.create(data) called")
+	assert.is_table(data, "auth.create(data): table required")
+	assert.is_table(data.privileges, "auth.create(data): privileges table invalid or missing.")
+	assert.is_integer(data.last_login, "auth.create(data): last_login must be integer value.")
+	if valid_name(data.name) then
+		local entry = AuthEntry(data)
+		entries[entry.name] = entry
+	else
+		-- TODO: This can be skipped when not in strict mode, checking for string type is still mandatory
+		error("auth.create(data): invalid player name: "..tostring(data.name))
+	end
 end
 
-function auth.delete()
+function auth.delete(name)
 	mineunit:info("auth.delete() called")
+	entries[name] = nil
 end
 
 function auth.list_names()
@@ -61,6 +75,12 @@ end
 
 function auth.reload()
 	mineunit:info("auth.reload() called")
+end
+
+function mineunit:create_auth(data)
+	-- Assume correct parameters
+	local entry = AuthEntry(data)
+	entries[entry.name] = entry
 end
 
 _G.core.auth = auth
