@@ -94,6 +94,15 @@ function type(value)
 end
 
 --
+-- Mineunit utilities
+--
+
+local function is_valid_name(name)
+	return lua_type(name) == "string" and #name > 0 and #name < 21
+		and name:find("[^abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789%-_]") == nil
+end
+
+--
 -- Mineunit luassert extensions
 --
 
@@ -215,9 +224,8 @@ register("itemstring", 1, "Expected %s to be valid item string", function(args)
 	return #name > 0 and (name:match("^[%w_]+:[%w_]+$") or name:match("^[%w_]+$"))
 end)
 
--- TODO: Check this one, should it actually check for mineunit_type Player instead of table or userdata
 register("player_or_name", 1, "Expected %s to be player or name", function(args)
-	return (type(args[1]) == "string" and args[1] ~= "") or in_array({"table", "userdata"}, type(args[1]))
+	return is_valid_name(args[1]) or mineunit_type(args[1]) == "Player"
 end)
 
 local mineunit_types = {
@@ -312,6 +320,7 @@ return {
 	in_array = in_array,
 	round = round,
 	is_coordinate = is_coordinate,
+	is_valid_name = is_valid_name,
 	format_coordinate = format_coordinate,
 	has_item = has_item,
 	type = mineunit_type,
