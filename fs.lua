@@ -1,17 +1,46 @@
-local pl = {
-	dir = require 'pl.dir',
-	path = require 'pl.path',
-}
+local pl_dir = require("pl.dir")
+local pl_path = require("pl.path")
 
-core.mkdir = function()
-	-- no-op
-	-- TODO: create directory and implement io.* functions
+local basename = pl_path.basename
+
+local function normpath(path)
+	return pl_path.normpath(pl_path.abspath(path))
 end
 
-core.get_dir_list = function(path, list_dirs)
+local fs = {}
+
+function core.mkdir(path)
+	path = normpath(path)
+	assert.is_nil(fs[path])
+	fs[path] = {}
+end
+
+function core.get_dir_list(path, list_dirs)
+	path = normpath(path)
 	local results = {}
-	for _,name in ipairs(list_dirs and pl.dir.getdirectories(path) or pl.dir.getfiles(path)) do
-		table.insert(results, pl.path.basename(name))
+	if list_dirs == nil then
+		for name in pl_path.dir(path) do
+			if name ~= "." and name ~= ".." then
+				table.insert(results, name)
+			end
+		end
+	elseif list_dirs == true then
+		for _,name in ipairs(dir.getdirectories(path)) do
+			table.insert(results, basename(name))
+		end
+	elseif list_dirs == false then
+		for _,name in ipairs(dir.getfiles(path)) do
+			table.insert(results, basename(name))
+		end
+	else
+		error("Invalid list_dirs argument for core.get_dir_list(path, list_dirs)")
 	end
 	return results
+end
+
+function core.safe_file_write(path, content)
+	path = normpath(path)
+	assert.not_table(fs[path])
+	assert.is_string(content)
+	fs[path] = content
 end
