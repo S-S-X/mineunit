@@ -60,12 +60,14 @@ assert(minetest.registered_items["unknown"])
 mineunit("metadata")
 mineunit("itemstack")
 
-local mod_storage
-_G.minetest.get_mod_storage = function()
-	if not mod_storage then
-		mod_storage = MetaDataRef()
+local mod_storage = {}
+_G.core.get_mod_storage = function()
+	local modname = core.get_current_modname()
+	if not mod_storage[modname] then
+		mineunit:debugf("core.get_mod_storage(): initializing new storage for mod name %s", modname)
+		mod_storage[modname] = MetaDataRef()
 	end
-	return mod_storage
+	return mod_storage[modname]
 end
 
 _G.minetest.sound_play = noop
