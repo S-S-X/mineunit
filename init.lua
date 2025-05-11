@@ -24,7 +24,8 @@ local default_config = {
 	source_path = ".",
 	time_step = -1,
 	engine_version = "mineunit",
-	deprecated = "throw"
+	deprecated = "throw",
+	singleplayer = true
 }
 
 for k,v in pairs(mineunit_conf_defaults or {}) do
@@ -73,13 +74,11 @@ mineunit.__index = mineunit
 local _mineunits = {}
 setmetatable(mineunit, {
 	__call = function(self, name)
-		local res
-		if not _mineunits[name] then
+		if _mineunits[name] == nil then
 			mineunit:debug("Loading mineunit module", name)
-			res = require_mineunit(name, mineunit:config("core_root"), mineunit:config("engine_version"))
+			_mineunits[name] = {require_mineunit(name, mineunit:config("core_root"), mineunit:config("engine_version"))}
 		end
-		_mineunits[name] = true
-		return res
+		return unpack(_mineunits[name])
 	end,
 })
 

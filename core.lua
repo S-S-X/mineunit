@@ -7,7 +7,7 @@ local noop_object = {
 mineunit("craft")
 mineunit("world")
 
-_G.core.is_singleplayer = function() return true end
+_G.core.is_singleplayer = function() return mineunit:config("singleplayer") end
 _G.core.notify_authentication_modified = noop
 
 _G.core.set_node = world.set_node
