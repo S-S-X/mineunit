@@ -1,3 +1,4 @@
+local io = mineunit:builtin("io")
 
 local Settings = {}
 
