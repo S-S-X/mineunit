@@ -32,7 +32,7 @@ local args = {
 	Xoutput = {},
 }
 
-mineunit_version = "0.14.1"
+mineunit_version = "0.14.2"
 local luaversion = (function()
 	local jit = rawget(_G, "jit")
 	return jit and jit.version or rawget(_G, "_VERSION")
