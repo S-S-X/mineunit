@@ -16,11 +16,12 @@ return ({["REAL FILESYSTEM"] = function()
 local pl_dir = require("pl.dir")
 
 function core.mkdir(path)
-	-- TODO: Engine behavior when directory cannot be created?
 	path = normpath(path)
-	if pl_dir.makepath(path) ~= true then
-		mineunit:errorf("core.mkdir: could not create directory: %s", path)
+	if pl_dir.makepath(path) == true then
+		return true
 	end
+	mineunit:warningf("(real fs) core.mkdir: could not create directory: %s", path)
+	return false
 end
 
 function core.get_dir_list(path, list_dirs)
@@ -41,7 +42,7 @@ function core.get_dir_list(path, list_dirs)
 			table.insert(results, basename(name))
 		end
 	else
-		error("Invalid list_dirs argument for core.get_dir_list(path, list_dirs)")
+		error("(real fs) Invalid list_dirs argument for core.get_dir_list(path, list_dirs)")
 	end
 	return results
 end
@@ -49,8 +50,8 @@ end
 function core.safe_file_write(path, content)
 	assert.is_string(content)
 	path = normpath(path)
-	local file = io.open(path, "w")
-	assert(file and io.type(file) == "file", "core.safe_file_write: could not open file for writing: "..path)
+	local file = io.open(path, "wb")
+	assert(file and io.type(file) == "file", "(real fs) core.safe_file_write: could not open file for writing: "..path)
 	file:write(content)
 	file:close()
 end
@@ -59,12 +60,22 @@ end, ["FAKE FILESYSTEM"] = function()
 -- Use fake filesystem with engine filesystem API
 
 local fs = {}
+fs["."] = fs
+
+local normal_normpath = normpath
+local function normpath(path)
+	-- TODO: Empty path? Only parent ..?
+	return path == "." and "." or normal_normpath(path)
+end
 
 function core.mkdir(path)
 	path = normpath(path)
-	assert.is_nil(fs[path])
-	assert.not_in_array(basename(path), {".", ".."})
-	fs[path] = {}
+	if fs[path] == nil and ({".",".."})[basename(path)] == nil then
+		fs[path] = {}
+		return true
+	end
+	mineunit:warningf("(fake fs) core.mkdir: could not create directory: %s", path)
+	return false
 end
 
 function core.get_dir_list(path, list_dirs)
@@ -72,12 +83,18 @@ function core.get_dir_list(path, list_dirs)
 	local fsobj = fs[normpath(path)]
 	if list_dirs == nil then
 		for name, content in pairs(fsobj) do
-			table.insert(results, basename(name))
+			name = basename(name)
+			if name ~= "." then
+				table.insert(results, name)
+			end
 		end
 	elseif list_dirs == true then
 		for name, content in pairs(fsobj) do
 			if type(content) == "table" then
-				table.insert(results, basename(name))
+				name = basename(name)
+				if name ~= "." then
+					table.insert(results, name)
+				end
 			end
 		end
 	elseif list_dirs == false then
@@ -87,7 +104,7 @@ function core.get_dir_list(path, list_dirs)
 			end
 		end
 	else
-		error("Invalid list_dirs argument for core.get_dir_list(path, list_dirs)")
+		error("(fake fs) Invalid list_dirs argument for core.get_dir_list(path, list_dirs)")
 	end
 	return results
 end
