@@ -132,6 +132,7 @@ files["./fs.lua"].read_globals = Writable{
 	core = {
 		"mkdir",
 		"get_dir_list",
+		"safe_file_write",
 	}
 }
 files["./core.lua"].read_globals = Writable{
