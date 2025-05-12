@@ -19,4 +19,19 @@ describe("Mineunit filesystem API", function()
 		end
 	end)
 
+	it("creates directory", function()
+		core.mkdir("test1")
+	end)
+
+	it("writes file", function()
+		core.safe_file_write("test1_txt", "Hello Mineunit!")
+	end)
+
+	it("lists files", function()
+		local things = core.get_dir_list(".", nil)
+		assert.array(things).has.no.holes()
+		assert.equals(2, #things)
+		assert.array({ "test1", "test1_txt" }).has(things)
+	end)
+
 end)
