@@ -47,6 +47,16 @@ local tagged_paths = {
 require("mineunit.print")
 require("mineunit.globals")
 
+local alternative_modules = {}
+local function add_alternative_module(name)
+	if mineunit:config("silence_global_export_overrides") == true then
+		alternative_modules[name] = dofile("mineunit."..name)
+	else
+		assert(alternative_modules[name] == nil)
+		alternative_modules[name] = require("mineunit."..name)
+	end
+end
+
 local function require_mineunit(name, root, tag)
 	local modulename = name:gsub("/", ".")
 	if root and tag and tag ~= "mineunit" then
@@ -75,8 +85,14 @@ local _mineunits = {}
 setmetatable(mineunit, {
 	__call = function(self, name)
 		if _mineunits[name] == nil then
-			mineunit:debug("Loading mineunit module", name)
-			_mineunits[name] = {require_mineunit(name, mineunit:config("core_root"), mineunit:config("engine_version"))}
+			if alternative_modules[name] then
+				_mineunits[name] = {alternative_modules[name]()}
+			else
+				mineunit:debug("Loading mineunit module", name)
+				local core_root = mineunit:config("core_root")
+				local engine_version = mineunit:config("engine_version")
+				_mineunits[name] = {require_mineunit(name, core_root, engine_version)}
+			end
 		end
 		return unpack(_mineunits[name])
 	end,
@@ -355,6 +371,9 @@ do -- Read mod.conf config file
 		mineunit:warning("Loading file mod.conf failed")
 	end
 end
+
+-- Prepare alternative modules
+add_alternative_module("fs")
 
 -- Save original modname and set modpath
 mineunit._config["original_modname"] = mineunit:config("modname")
