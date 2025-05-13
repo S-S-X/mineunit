@@ -1,6 +1,8 @@
 --
 -- Common things used everywhere
 --
+local lua_os = mineunit:builtin("os")
+local lua_io = mineunit:builtin("io")
 local pl_path = require("pl.path")
 local basename = pl_path.basename
 local function normpath(path)
@@ -50,8 +52,8 @@ end
 function core.safe_file_write(path, content)
 	assert.is_string(content)
 	path = normpath(path)
-	local file = io.open(path, "wb")
-	assert(file and io.type(file) == "file", "(real fs) core.safe_file_write: could not open file for writing: "..path)
+	local file = lua_io.open(path, "wb")
+	assert(file and lua_io.type(file) == "file", "(real fs) core.safe_file_write: could not open file for writing: "..path)
 	file:write(content)
 	file:close()
 end
@@ -61,6 +63,143 @@ end, ["FAKE FILESYSTEM"] = function()
 
 local fs = {}
 fs["."] = fs
+
+os = {
+	clock = lua_os.clock,
+	date = lua_os.date,
+	difftime = lua_os.difftime,
+	execute = lua_os.execute,
+	exit = lua_os.exit,
+	getenv = lua_os.getenv,
+	remove = function(filename)
+		filename = basename(filename)
+		if not fs[filename] then
+			return nil, "ENOENT"
+		end
+		fs[filename] = nil
+		return true
+	end,
+	rename = function(oldname, newname)
+		oldname, newname = basename(oldname), basename(newname)
+		if fs[newname] and type(fs[newname]) ~= type(fs[oldname]) then
+			-- TODO: Error messages?
+			return nil, "EIO"
+		end
+		fs[newname], fs[oldname] = fs[oldname], nil
+		return true
+	end,
+	setlocale = lua_os.setlocale,
+	time = lua_os.time,
+	tmpname = lua_os.tmpname,
+}
+
+local File = {}
+File.__index = File
+
+function File:close()
+end
+
+function File:flush()
+end
+
+function File:lines()
+end
+
+-- "*n": reads a number; this is the only format that returns a number instead of a string.
+-- "*a": reads the whole file, starting at the current position. On end of file, it returns the empty string.
+-- "*l": reads the next line (skipping the end of line), returning nil on end of file. This is the default format.
+-- number: reads a string with up to this number of characters, returning nil on end of file. If number is zero, it reads nothing and returns an empty string, or nil on end of file.
+function File:read()
+end
+
+-- "set": base is position 0 (beginning of the file).
+-- "cur": base is current position (default).
+-- "end": base is end of file.
+function File:seek(arg1, arg2) -- File:seek([whence] [, offset])
+	local whence = type(arg1) == "string" and arg1 or "src"
+	local offset = type(arg1) == "number" and arg1 or (arg2 or 0)
+	assert.is_string(whence)
+	assert.is_integer(offset)
+	local newpos = 0
+	if rawget(self, "type") ~= "file" then
+		return nil, "EBADFD"
+	end
+	if whence == "cur" then
+		newpos = rawget(self, "fpos") + arg2 or 0
+	elseif whence == "end" then
+		newpos = #fs[rawget(self, "path")]
+	elseif whence ~= "set" then
+		return nil, "Invalid arguments"
+	end
+	rawset(self, "fpos", newpos)
+	return true
+end
+
+function File:setvbuf()
+	return true
+end
+
+function File:write(...)
+	if rawget(self, "type") ~= "file" then
+		return nil, "EBADFD"
+	end
+	-- FIXME: Write numbers
+	-- FIXME: Other file modes
+	local mode = rawget(self, "mode")
+	if mode:find("w") and not mode:find("+") then
+		fs[rawget(self, "path")] = table.concat({...})
+	else
+		fs[rawget(self, "path")] = fs[rawget(self, "path")] .. table.concat({...})
+	end
+	return true
+end
+
+File.__newindex = error
+
+local function File_new(args)
+	local obj = {
+		type = args.type,
+		mode = args.mode or "r",
+		time = args.time or (core.get_us_time and core.get_us_time() or 0),
+		path = normpath(args.path),
+		fpos = 0,
+	}
+	obj.__index = obj
+	setmetatable(obj, file)
+	return obj
+end
+
+io = {
+	close = function(obj)
+		return obj and obj:close() or lua_io.close()
+	end,
+	flush = lua_io.flush,
+	input = lua_io.input,
+	lines = function(filename)
+		if filename then
+			local content = fs[basename(filename)]
+			assert.is_string(content)
+			-- TODO: Should this include line feed? What about carriage return?
+			return content:gmatch("([^\n]*)\n?")
+		end
+		return lua_io.lines()
+	end,
+	open = function(filename, mode)
+		assert.is_string(filename)
+		return File_new({ path = filename, mode = mode })
+	end,
+	output = lua_io.output,
+	popen = lua_io.popen,
+	read = lua_io.read,
+	stderr = lua_io.stderr,
+	stdin = lua_io.stdin,
+	stdout = lua_io.stdout,
+	tmpfile = lua_io.tmpfile,
+	type = function(obj)
+		return obj and obj.type or lua_io.type()
+	end,
+	write = lua_io.write,
+}
 
 local normal_normpath = normpath
 local function normpath(path)

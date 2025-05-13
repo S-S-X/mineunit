@@ -1,6 +1,7 @@
 -- FIXME: Sorry, not exactly nice in its current state
 -- Have extra time and energy? Feel free to clean it a bit
 
+local io = io
 local pl = {
 	path = require 'pl.path',
 	--dir = require 'pl.dir',
@@ -46,6 +47,12 @@ local tagged_paths = {
 
 require("mineunit.print")
 require("mineunit.globals")
+
+local builtins = {
+	debug = debug,
+	os = os,
+	io = io,
+}
 
 local alternative_modules = {}
 local function add_alternative_module(name)
@@ -104,6 +111,10 @@ if mineunit_config then
 			mineunit._config[key] = mineunit_config[key]
 		end
 	end
+end
+
+function mineunit:builtin(name)
+	return builtins[name]
 end
 
 function mineunit:has_module(name)
