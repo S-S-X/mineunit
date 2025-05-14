@@ -281,7 +281,9 @@ end
 
 function core.mkdir(path)
 	path = normpath(path)
-	if fs[path] == nil and ({".",".."})[basename(path)] == nil then
+	if type(fs[path]) == "table" then
+		return true
+	elseif fs[path] == nil then
 		fs[path] = {}
 		return true
 	end
