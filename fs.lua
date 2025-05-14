@@ -97,12 +97,19 @@ local File = {}
 File.__index = File
 
 function File:close()
+	assert(rawget(self, "_type") == "file", "EBADFD")
+	rawset(self, "_type", "closed file")
+	return true
 end
 
 function File:flush()
+	assert(rawget(self, "_type") == "file", "EBADFD")
+	return true
 end
 
 function File:lines()
+	assert(rawget(self, "_type") == "file", "EBADFD")
+	return io.lines(rawget(self, "_path"))
 end
 
 -- "*n": reads a number; this is the only format that returns a number instead of a string.
@@ -110,75 +117,139 @@ end
 -- "*l": reads the next line (skipping the end of line), returning nil on end of file. This is the default format.
 -- number: reads a string with up to this number of characters, returning nil on end of file. If number is zero, it reads nothing and returns an empty string, or nil on end of file.
 function File:read()
+	assert(rawget(self, "_type") == "file", "EBADFD")
+	-- FIXME: This is not how it works
+	if not rawget(self, "_read") then
+		return nil, "EBADFD"
+	elseif #fs[rawget(self, "_path")] < 1 then
+		return nil
+	end
+	return fs[rawget(self, "_path")]
 end
 
 -- "set": base is position 0 (beginning of the file).
 -- "cur": base is current position (default).
 -- "end": base is end of file.
-function File:seek(arg1, arg2) -- File:seek([whence] [, offset])
-	local whence = type(arg1) == "string" and arg1 or "src"
-	local offset = type(arg1) == "number" and arg1 or (arg2 or 0)
+function File:seek(whence, offset) -- File:seek([whence] [, offset])
+	if whence == nil then whence = "src" end
+	if offset == nil then offset = 0 end
 	assert.is_string(whence)
 	assert.is_integer(offset)
 	local newpos = 0
-	if rawget(self, "type") ~= "file" then
+	if rawget(self, "_type") ~= "file" then
 		return nil, "EBADFD"
 	end
 	if whence == "cur" then
-		newpos = rawget(self, "fpos") + arg2 or 0
+		newpos = rawget(self, "_fpos") + offset
 	elseif whence == "end" then
-		newpos = #fs[rawget(self, "path")]
+		newpos = #fs[rawget(self, "_path")]
 	elseif whence ~= "set" then
 		return nil, "Invalid arguments"
 	end
-	rawset(self, "fpos", newpos)
+	rawset(self, "_fpos", newpos)
 	return true
 end
 
 function File:setvbuf()
+	assert(rawget(self, "_type") == "file", "EBADFD")
 	return true
 end
 
 function File:write(...)
-	if rawget(self, "type") ~= "file" then
-		return nil, "EBADFD"
-	end
+	assert(rawget(self, "_type") == "file", "EBADFD")
 	-- FIXME: Write numbers
-	-- FIXME: Other file modes
-	local mode = rawget(self, "mode")
-	if mode:find("w") and not mode:find("+") then
-		fs[rawget(self, "path")] = table.concat({...})
+	-- TODO: Other file modes
+	local mode = rawget(self, "_mode")
+	local _fpos = rawget(self, "_fpos")
+	local size = #fs[rawget(self, "_path")]
+	if mode == 0 then
+		return nil, "EBADFD"
+	elseif mode == 1 then
+		-- Replace
+		local s = table.concat({...})
+		if #s >= size - _fpos then
+			-- Either both sides or last part can be ignored
+			if _fpos > 0 then
+				fs[rawget(self, "_path")] = fs[rawget(self, "_path")]:sub(1,_fpos)..s
+			else
+				fs[rawget(self, "_path")] = s
+			end
+		elseif _fpos < 1 then
+			-- Beginning can be ignored
+			fs[rawget(self, "_path")] = s..fs[rawget(self, "_path")]:sub(#s+1)
+		else
+			-- Both sides are important
+			fs[rawget(self, "_path")] = table.concat({
+				fs[rawget(self, "_path")]:sub(1,_fpos),s,fs[rawget(self, "_path")]:sub(#s+1)
+			})
+		end
+	elseif mode == 2 and _fpos < 1 then
+		-- Truncate
+		fs[rawget(self, "_path")] = table.concat({...})
+	elseif mode == 2 then
+		-- Truncate at _fpos
+		fs[rawget(self, "_path")] = table.concat({fs[rawget(self, "_path")]:sub(1,_fpos),...})
+	elseif mode == 3 then
+		-- Append only
+		fs[rawget(self, "_path")] = table.concat({fs[rawget(self, "_path")],...})
 	else
-		fs[rawget(self, "path")] = fs[rawget(self, "path")] .. table.concat({...})
+		error("Invalid file mode, this is probably a bug in Mineunit fs module.")
 	end
+	rawset(self, "_fpos", _fpos + #fs[rawget(self, "_path")] - size)
 	return true
 end
 
 File.__newindex = error
 
 local function File_new(args)
-	local obj = {
-		type = args.type,
-		mode = args.mode or "r",
-		time = args.time or (core.get_us_time and core.get_us_time() or 0),
-		path = normpath(args.path),
-		fpos = 0,
+	local file = {
+		_type = "file",
+		_mode = 0, -- 0 = readonly, 1 = replace, 2 = truncate, 3 = noseek
+		_read = false,
+		_time = args.time or (core.get_us_time and core.get_us_time() or 0),
+		_path = normpath(args.path),
+		_fpos = 0,
 	}
-	obj.__index = obj
-	setmetatable(obj, file)
-	return obj
+	-- FIXME: Check if file is valid, implement all modes properly
+	local m = (args.mode or " "):gmatch(".")
+	if type(fs[file._path]) ~= "table" and setmetatable({
+			r = function()
+				if m() == "+" or m() == "+" then
+					file._mode = 1
+				end
+				file._read = true
+				return type(fs[file._path]) == "string"
+			end,
+			a = function()
+				if not fs[file._path] then
+					fs[file._path] = ""
+				end
+				file._mode = 3
+				file._fpos = #fs[file._path]
+				return true
+			end,
+			w = function()
+				fs[file._path] = ""
+				file._mode = 2
+				return true
+			end,
+		},{ __index = function(s,k) return rawget(s,k) or function() end end })[m()]() then
+		setmetatable(file, File)
+		return file
+	end
+	return nil, "ENOENT"
 end
 
 io = {
-	close = function(obj)
-		return obj and obj:close() or lua_io.close()
+	close = function(file)
+		return file and file:close() or lua_io.close()
 	end,
 	flush = lua_io.flush,
 	input = lua_io.input,
 	lines = function(filename)
 		if filename then
-			local content = fs[basename(filename)]
-			assert.is_string(content)
+			local content = fs[normpath(filename)]
+			assert.is_string(content, "ENOENT: "..tostring(filename))
 			-- TODO: Should this include line feed? What about carriage return?
 			return content:gmatch("([^\n]*)\n?")
 		end
@@ -195,8 +266,9 @@ io = {
 	stdin = lua_io.stdin,
 	stdout = lua_io.stdout,
 	tmpfile = lua_io.tmpfile,
-	type = function(obj)
-		return obj and obj.type or lua_io.type()
+	type = function(file)
+		-- FIXME: Return nil for non file arguments (also nil) and lua_io.type() for no arguments
+		return file and rawget(file, "_type") or lua_io.type(nil)
 	end,
 	write = lua_io.write,
 }
@@ -253,6 +325,11 @@ function core.safe_file_write(path, content)
 	assert.is_string(content)
 	assert.not_table(fs[path])
 	fs[path] = content
+end
+
+function mineunit:reset_fs()
+	fs = {}
+	fs["."] = fs
 end
 
 end})[mineunit:config("use_real_fs") == true and "REAL FILESYSTEM" or "FAKE FILESYSTEM"]

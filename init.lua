@@ -56,12 +56,8 @@ local builtins = {
 
 local alternative_modules = {}
 local function add_alternative_module(name)
-	if mineunit:config("silence_global_export_overrides") == true then
-		alternative_modules[name] = dofile("mineunit."..name)
-	else
-		assert(alternative_modules[name] == nil)
-		alternative_modules[name] = require("mineunit."..name)
-	end
+	assert(alternative_modules[name] == nil)
+	alternative_modules[name] = require("mineunit."..name)
 end
 
 local function require_mineunit(name, root, tag)
