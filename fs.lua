@@ -116,15 +116,29 @@ end
 -- "*a": reads the whole file, starting at the current position. On end of file, it returns the empty string.
 -- "*l": reads the next line (skipping the end of line), returning nil on end of file. This is the default format.
 -- number: reads a string with up to this number of characters, returning nil on end of file. If number is zero, it reads nothing and returns an empty string, or nil on end of file.
-function File:read()
+function File:read(what)
 	assert(rawget(self, "_type") == "file", "EBADFD")
-	-- FIXME: This is not how it works
 	if not rawget(self, "_read") then
 		return nil, "EBADFD"
 	elseif #fs[rawget(self, "_path")] < 1 then
 		return nil
+	elseif type(what) == "number" then
+		local s = fs[rawget(self, "_path")]
+		local fpos = rawget(self, "_fpos")
+		return s:sub(fpos + 1, fpos + what)
+	else
+		what = what and what:sub(1,2) or "*l"
+		if what == "*n" then
+			error("NOT IMPLEMENTED")
+		elseif what == "*a" then
+			return fs[rawget(self, "_path")]
+		elseif what == "*l" then
+			local iter = rawget(self, "_iter") or self:lines()
+			rawset(self, "_iter", iter)
+			return iter()
+		end
 	end
-	return fs[rawget(self, "_path")]
+	error("Invalid argument")
 end
 
 -- "set": base is position 0 (beginning of the file).
@@ -160,42 +174,42 @@ function File:write(...)
 	-- FIXME: Write numbers
 	-- TODO: Other file modes
 	local mode = rawget(self, "_mode")
-	local _fpos = rawget(self, "_fpos")
+	local fpos = rawget(self, "_fpos")
 	local size = #fs[rawget(self, "_path")]
 	if mode == 0 then
 		return nil, "EBADFD"
 	elseif mode == 1 then
 		-- Replace
 		local s = table.concat({...})
-		if #s >= size - _fpos then
+		if #s >= size - fpos then
 			-- Either both sides or last part can be ignored
-			if _fpos > 0 then
-				fs[rawget(self, "_path")] = fs[rawget(self, "_path")]:sub(1,_fpos)..s
+			if fpos > 0 then
+				fs[rawget(self, "_path")] = fs[rawget(self, "_path")]:sub(1,fpos)..s
 			else
 				fs[rawget(self, "_path")] = s
 			end
-		elseif _fpos < 1 then
+		elseif fpos < 1 then
 			-- Beginning can be ignored
 			fs[rawget(self, "_path")] = s..fs[rawget(self, "_path")]:sub(#s+1)
 		else
 			-- Both sides are important
 			fs[rawget(self, "_path")] = table.concat({
-				fs[rawget(self, "_path")]:sub(1,_fpos),s,fs[rawget(self, "_path")]:sub(#s+1)
+				fs[rawget(self, "_path")]:sub(1,fpos),s,fs[rawget(self, "_path")]:sub(#s+1)
 			})
 		end
-	elseif mode == 2 and _fpos < 1 then
+	elseif mode == 2 and fpos < 1 then
 		-- Truncate
 		fs[rawget(self, "_path")] = table.concat({...})
 	elseif mode == 2 then
-		-- Truncate at _fpos
-		fs[rawget(self, "_path")] = table.concat({fs[rawget(self, "_path")]:sub(1,_fpos),...})
+		-- Truncate at fpos
+		fs[rawget(self, "_path")] = table.concat({fs[rawget(self, "_path")]:sub(1,fpos),...})
 	elseif mode == 3 then
 		-- Append only
 		fs[rawget(self, "_path")] = table.concat({fs[rawget(self, "_path")],...})
 	else
 		error("Invalid file mode, this is probably a bug in Mineunit fs module.")
 	end
-	rawset(self, "_fpos", _fpos + #fs[rawget(self, "_path")] - size)
+	rawset(self, "_fpos", fpos + #fs[rawget(self, "_path")] - size)
 	return true
 end
 
