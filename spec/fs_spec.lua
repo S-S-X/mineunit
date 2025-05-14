@@ -37,7 +37,8 @@ describe("Mineunit filesystem API", function()
 	it("io reads file created by core.safe_file_write", function()
 		local file = io.open("test1.txt", "r")
 		assert.equals("file", io.type(file))
-		assert.equals("Hello Mineunit!\nHello safe_file_write!", file:read())
+		assert.equals("Hello Mineunit!", file:read())
+		assert.equals("Hello safe_file_write!", file:read())
 		file:close()
 	end)
 
@@ -52,7 +53,8 @@ describe("Mineunit filesystem API", function()
 	it("io reads file created by io.write", function()
 		local file = io.open("io_test1.txt", "r")
 		assert.equals("file", io.type(file))
-		assert.equals("Hello Mineunit!\nHello io.write!", file:read())
+		assert.equals("Hello Mineunit!", file:read())
+		assert.equals("Hello io.write!", file:read())
 		file:close()
 	end)
 
@@ -79,9 +81,9 @@ describe("Mineunit fake io", function()
 		local filelist = core.get_dir_list(".", nil)
 		assert.is_indexed(filelist)
 		assert.equals(0, #filelist)
-		core.safe_file_write("io.open r with file", "Hello Mineunit I/O!")
-		core.safe_file_write("io.open a with file", "Hello Mineunit I/O!")
-		core.safe_file_write("io.open w with file", "Hello Mineunit I/O!")
+		core.safe_file_write("io.open r with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open a with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open w with file", "Hello Mineunit\nI/O!")
 		core.safe_file_write("io.open r with empty file", "")
 		assert.equals(4, #core.get_dir_list(".", nil))
 	end -- )
@@ -93,7 +95,7 @@ describe("Mineunit fake io", function()
 		end)
 	end
 
-	describe("read", function()
+	describe("read(*a)", function()
 
 		test("io.open", "r", "without file", function(file)
 			assert.is_nil(file)
@@ -101,12 +103,12 @@ describe("Mineunit fake io", function()
 
 		test("io.open", "r", "with file", function(file)
 			assert.not_nil(file)
-			assert.equals("Hello Mineunit I/O!", file:read())
+			assert.equals("Hello Mineunit\nI/O!", file:read("*a"))
 		end)
 
 		test("io.open", "r", "with empty file", function(file)
 			assert.not_nil(file)
-			local a, b = file:read()
+			local a, b = file:read("*a")
 			-- Output is nil without errors
 			assert.is_nil(a)
 			assert.is_nil(b)
@@ -114,7 +116,7 @@ describe("Mineunit fake io", function()
 
 		test("io.open", "a", "without file", function(file)
 			assert.not_nil(file)
-			local a, b = file:read()
+			local a, b = file:read("*a")
 			-- Output is nil with error
 			assert.is_nil(a)
 			assert.is_string(b)
@@ -122,7 +124,7 @@ describe("Mineunit fake io", function()
 
 		test("io.open", "a", "with file", function(file)
 			assert.not_nil(file)
-			local a, b = file:read()
+			local a, b = file:read("*a")
 			-- Output is nil with error
 			assert.is_nil(a)
 			assert.is_string(b)
@@ -130,7 +132,7 @@ describe("Mineunit fake io", function()
 
 		test("io.open", "w", "without file", function(file)
 			assert.not_nil(file)
-			local a, b = file:read()
+			local a, b = file:read("*a")
 			-- Output is nil with error
 			assert.is_nil(a)
 			assert.is_string(b)
@@ -138,7 +140,61 @@ describe("Mineunit fake io", function()
 
 		test("io.open", "w", "with file", function(file)
 			assert.not_nil(file)
-			local a, b = file:read()
+			local a, b = file:read("*a")
+			-- Output is nil with error
+			assert.is_nil(a)
+			assert.is_string(b)
+		end)
+
+	end)
+
+	describe("read(*l)", function()
+
+		test("io.open", "r", "without file", function(file)
+			assert.is_nil(file)
+		end)
+
+		test("io.open", "r", "with file", function(file)
+			assert.not_nil(file)
+			assert.equals("Hello Mineunit", file:read("*l"))
+			assert.equals("I/O!", file:read("*l"))
+		end)
+
+		test("io.open", "r", "with empty file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read("*l")
+			-- Output is nil without errors
+			assert.is_nil(a)
+			assert.is_nil(b)
+		end)
+
+		test("io.open", "a", "without file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read("*l")
+			-- Output is nil with error
+			assert.is_nil(a)
+			assert.is_string(b)
+		end)
+
+		test("io.open", "a", "with file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read("*l")
+			-- Output is nil with error
+			assert.is_nil(a)
+			assert.is_string(b)
+		end)
+
+		test("io.open", "w", "without file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read("*l")
+			-- Output is nil with error
+			assert.is_nil(a)
+			assert.is_string(b)
+		end)
+
+		test("io.open", "w", "with file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read("*l")
 			-- Output is nil with error
 			assert.is_nil(a)
 			assert.is_string(b)
