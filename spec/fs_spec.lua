@@ -110,7 +110,7 @@ describe("Mineunit fake io", function()
 			assert.not_nil(file)
 			local a, b = file:read("*a")
 			-- Output is nil without errors
-			assert.is_nil(a)
+			assert.equals("", a)
 			assert.is_nil(b)
 		end)
 
