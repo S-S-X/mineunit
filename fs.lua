@@ -64,7 +64,12 @@ end, ["FAKE FILESYSTEM"] = function()
 local fs = {}
 fs["."] = fs
 
+local File = {}
+File.__index = File
+
+-- luacheck: push globals os
 os = {
+-- luacheck: pop
 	clock = lua_os.clock,
 	date = lua_os.date,
 	difftime = lua_os.difftime,
@@ -93,8 +98,75 @@ os = {
 	tmpname = lua_os.tmpname,
 }
 
-local File = {}
-File.__index = File
+-- luacheck: push globals io
+io = {
+-- luacheck: pop
+	close = function(file)
+		return file and file:close() or lua_io.close()
+	end,
+	flush = lua_io.flush,
+	input = lua_io.input,
+	lines = function(filename)
+		if filename then
+			local content = fs[normpath(filename)]
+			assert.is_string(content, "ENOENT: "..tostring(filename))
+			-- TODO: Should this include line feed? What about carriage return?
+			return content:gmatch("([^\n]*)\n?")
+		end
+		return lua_io.lines()
+	end,
+	open = function(filename, mode)
+		assert.is_string(filename)
+		local file = {
+			_type = "file",
+			_mode = 0, -- 0 = readonly, 1 = replace, 2 = truncate, 3 = noseek
+			_read = false,
+			_time = core.get_us_time and core.get_us_time() or 0,
+			_path = normpath(filename),
+			_fpos = 0,
+		}
+		-- FIXME: Check if file is valid, implement all modes properly
+		local m = (mode or " "):gmatch(".")
+		if type(fs[file._path]) ~= "table" and setmetatable({
+				r = function()
+					if m() == "+" or m() == "+" then
+						file._mode = 1
+					end
+					file._read = true
+					return type(fs[file._path]) == "string"
+				end,
+				a = function()
+					if not fs[file._path] then
+						fs[file._path] = ""
+					end
+					file._mode = 3
+					file._fpos = #fs[file._path]
+					return true
+				end,
+				w = function()
+					fs[file._path] = ""
+					file._mode = 2
+					return true
+				end,
+			},{ __index = function(s,k) return rawget(s,k) or function() end end })[m()]() then
+			setmetatable(file, File)
+			return file
+		end
+		return nil, "ENOENT"
+	end,
+	output = lua_io.output,
+	popen = lua_io.popen,
+	read = lua_io.read,
+	stderr = lua_io.stderr,
+	stdin = lua_io.stdin,
+	stdout = lua_io.stdout,
+	tmpfile = lua_io.tmpfile,
+	type = function(file)
+		-- FIXME: Return nil for non file arguments (also nil) and lua_io.type() for no arguments
+		return file and rawget(file, "_type") or lua_io.type(nil)
+	end,
+	write = lua_io.write,
+}
 
 function File:close()
 	assert(rawget(self, "_type") == "file", "EBADFD")
@@ -115,27 +187,34 @@ end
 -- "*n": reads a number; this is the only format that returns a number instead of a string.
 -- "*a": reads the whole file, starting at the current position. On end of file, it returns the empty string.
 -- "*l": reads the next line (skipping the end of line), returning nil on end of file. This is the default format.
--- number: reads a string with up to this number of characters, returning nil on end of file. If number is zero, it reads nothing and returns an empty string, or nil on end of file.
+-- number: reads a string with up to this number of characters, returning nil on end of file. If number is zero,
+--       it reads nothing and returns an empty string, or nil on end of file.
 function File:read(what)
 	assert(rawget(self, "_type") == "file", "EBADFD")
+	local fpos = rawget(self, "_fpos")
+	local size = #fs[rawget(self, "_path")]
 	if not rawget(self, "_read") then
 		return nil, "EBADFD"
-	elseif #fs[rawget(self, "_path")] < 1 then
-		return nil
 	elseif type(what) == "number" then
-		local s = fs[rawget(self, "_path")]
-		local fpos = rawget(self, "_fpos")
-		return s:sub(fpos + 1, fpos + what)
+		local s = fs[rawget(self, "_path")]:sub(fpos + 1, fpos + what)
+		rawset(self, "_fpos", fpos + #s)
+		return fpos + #s < size and s or nil
 	else
 		what = what and what:sub(1,2) or "*l"
 		if what == "*n" then
 			error("NOT IMPLEMENTED")
 		elseif what == "*a" then
-			return fs[rawget(self, "_path")]
+			rawset(self, "_fpos", size)
+			return fs[rawget(self, "_path")]:sub(fpos + 1)
+		elseif what == "*l" and size < 1 then
+			return nil
 		elseif what == "*l" then
+			-- TODO: Check how fpos should work and implement it
 			local iter = rawget(self, "_iter") or self:lines()
 			rawset(self, "_iter", iter)
-			return iter()
+			local s = iter()
+			rawset(self, "_fpos", fpos + #s)
+			return s
 		end
 	end
 	error("Invalid argument")
@@ -215,80 +294,8 @@ end
 
 File.__newindex = error
 
-local function File_new(args)
-	local file = {
-		_type = "file",
-		_mode = 0, -- 0 = readonly, 1 = replace, 2 = truncate, 3 = noseek
-		_read = false,
-		_time = args.time or (core.get_us_time and core.get_us_time() or 0),
-		_path = normpath(args.path),
-		_fpos = 0,
-	}
-	-- FIXME: Check if file is valid, implement all modes properly
-	local m = (args.mode or " "):gmatch(".")
-	if type(fs[file._path]) ~= "table" and setmetatable({
-			r = function()
-				if m() == "+" or m() == "+" then
-					file._mode = 1
-				end
-				file._read = true
-				return type(fs[file._path]) == "string"
-			end,
-			a = function()
-				if not fs[file._path] then
-					fs[file._path] = ""
-				end
-				file._mode = 3
-				file._fpos = #fs[file._path]
-				return true
-			end,
-			w = function()
-				fs[file._path] = ""
-				file._mode = 2
-				return true
-			end,
-		},{ __index = function(s,k) return rawget(s,k) or function() end end })[m()]() then
-		setmetatable(file, File)
-		return file
-	end
-	return nil, "ENOENT"
-end
-
-io = {
-	close = function(file)
-		return file and file:close() or lua_io.close()
-	end,
-	flush = lua_io.flush,
-	input = lua_io.input,
-	lines = function(filename)
-		if filename then
-			local content = fs[normpath(filename)]
-			assert.is_string(content, "ENOENT: "..tostring(filename))
-			-- TODO: Should this include line feed? What about carriage return?
-			return content:gmatch("([^\n]*)\n?")
-		end
-		return lua_io.lines()
-	end,
-	open = function(filename, mode)
-		assert.is_string(filename)
-		return File_new({ path = filename, mode = mode })
-	end,
-	output = lua_io.output,
-	popen = lua_io.popen,
-	read = lua_io.read,
-	stderr = lua_io.stderr,
-	stdin = lua_io.stdin,
-	stdout = lua_io.stdout,
-	tmpfile = lua_io.tmpfile,
-	type = function(file)
-		-- FIXME: Return nil for non file arguments (also nil) and lua_io.type() for no arguments
-		return file and rawget(file, "_type") or lua_io.type(nil)
-	end,
-	write = lua_io.write,
-}
-
 local normal_normpath = normpath
-local function normpath(path)
+normpath = function(path)
 	-- TODO: Empty path? Only parent ..?
 	return path == "." and "." or normal_normpath(path)
 end
