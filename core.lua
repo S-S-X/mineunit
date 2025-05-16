@@ -41,6 +41,10 @@ _G.core.register_on_leaveplayer = noop
 
 _G.minetest.register_on_player_receive_fields = noop
 
+_G.core.get_dir_list = function(_, list_dirs) return list_dirs and { "fs-not-loaded" } or { "fs-not-loaded.txt" } end
+_G.core.mkdir = noop
+_G.core.safe_file_write = noop
+
 mineunit("game/constants")
 mineunit("common/vector")
 mineunit("game/item")
@@ -50,7 +54,6 @@ mineunit("common/misc_helpers")
 mineunit("game/privileges")
 mineunit("game/features")
 mineunit("common/serialize")
-mineunit("fs")
 
 assert(minetest.registered_nodes["air"])
 assert(minetest.registered_nodes["ignore"])
@@ -76,6 +79,7 @@ _G.minetest.add_particlespawner = noop
 _G.minetest.registered_chatcommands = {}
 _G.minetest.register_chatcommand = noop
 _G.minetest.chat_send_player = function(...) print(unpack({...})) end
+_G.minetest.chat_send_all = function(...) print(unpack({...})) end
 _G.minetest.register_on_placenode = noop
 _G.minetest.register_on_dignode = noop
 _G.minetest.register_on_mods_loaded = function(func) mineunit:register_on_mods_loaded(func) end

@@ -6,7 +6,6 @@ describe("Mineunit core", function()
 
 	require("mineunit")
 	mineunit:config_set("silence_global_export_overrides", true)
-	sourcefile("fs")
 
 	describe("deprecation", function()
 
@@ -43,18 +42,6 @@ describe("Mineunit core", function()
 			end)
 		end
 
-	end)
-
-	describe("fs", function()
-		it("has functions", function()
-			local functions = {
-				"mkdir",
-				"get_dir_list",
-			}
-			for _,fn in ipairs(functions) do
-				assert.equals("function", type(core[fn]), "core."..fn.." is not valid function.")
-			end
-		end)
 	end)
 
 end)

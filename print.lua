@@ -5,6 +5,11 @@
 local luaprint = _G.print
 local luatype = mineunit.utils and mineunit.utils.luatype or _G.type
 
+-- Used in case engine core libraries have not been loaded yet
+function dump(thing)
+	return require('luassert.state').format_argument(thing) or tostring(thing)
+end
+
 function mineunit:prepend_print(s)
 	self._prepend_output = s
 end

@@ -32,6 +32,9 @@ local args = {
 	Xoutput = {},
 }
 
+local io = io
+local os = os
+
 mineunit_version = "0.14.2"
 local luaversion = (function()
 	local jit = rawget(_G, "jit")

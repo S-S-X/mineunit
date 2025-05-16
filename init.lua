@@ -1,6 +1,7 @@
 -- FIXME: Sorry, not exactly nice in its current state
 -- Have extra time and energy? Feel free to clean it a bit
 
+local io = io
 local pl = {
 	path = require 'pl.path',
 	--dir = require 'pl.dir',
@@ -47,6 +48,18 @@ local tagged_paths = {
 require("mineunit.print")
 require("mineunit.globals")
 
+local builtins = {
+	debug = debug,
+	os = os,
+	io = io,
+}
+
+local alternative_modules = {}
+local function add_alternative_module(name)
+	assert(alternative_modules[name] == nil)
+	alternative_modules[name] = require("mineunit."..name)
+end
+
 local function require_mineunit(name, root, tag)
 	local modulename = name:gsub("/", ".")
 	if root and tag and tag ~= "mineunit" then
@@ -75,8 +88,14 @@ local _mineunits = {}
 setmetatable(mineunit, {
 	__call = function(self, name)
 		if _mineunits[name] == nil then
-			mineunit:debug("Loading mineunit module", name)
-			_mineunits[name] = {require_mineunit(name, mineunit:config("core_root"), mineunit:config("engine_version"))}
+			if alternative_modules[name] then
+				_mineunits[name] = {alternative_modules[name]()}
+			else
+				mineunit:debug("Loading mineunit module", name)
+				local core_root = mineunit:config("core_root")
+				local engine_version = mineunit:config("engine_version")
+				_mineunits[name] = {require_mineunit(name, core_root, engine_version)}
+			end
 		end
 		return unpack(_mineunits[name])
 	end,
@@ -88,6 +107,10 @@ if mineunit_config then
 			mineunit._config[key] = mineunit_config[key]
 		end
 	end
+end
+
+function mineunit:builtin(name)
+	return builtins[name]
 end
 
 function mineunit:has_module(name)
@@ -355,6 +378,9 @@ do -- Read mod.conf config file
 		mineunit:warning("Loading file mod.conf failed")
 	end
 end
+
+-- Prepare alternative modules
+add_alternative_module("fs")
 
 -- Save original modname and set modpath
 mineunit._config["original_modname"] = mineunit:config("modname")
