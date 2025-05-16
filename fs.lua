@@ -9,6 +9,17 @@ local function normpath(path)
 	return pl_path.normpath(pl_path.abspath(path))
 end
 
+do
+	local io_open = io.open
+	io.open = function(path, ...)
+		local result = {io_open(path, ...)}
+		if result[1] == nil then
+			mineunit:warningf("(real io) could not open file '%s'.", path)
+		end
+		return unpack(result)
+	end
+end
+
 --
 -- Choose from alternatives: real_fs or fake_fs
 --
@@ -147,11 +158,12 @@ io = {
 					fs[file._path] = ""
 					file._mode = 2
 					return true
-				end,
+				end,__index = function() error("(fake io) io.open unknown mode") end
 			},{ __index = function(s,k) return rawget(s,k) or function() end end })[m()]() then
 			setmetatable(file, File)
 			return file
 		end
+		mineunit:warningf("(fake io) could not open file '%s'.", filename)
 		return nil, "ENOENT"
 	end,
 	output = lua_io.output,
@@ -196,9 +208,12 @@ function File:read(what)
 	if not rawget(self, "_read") then
 		return nil, "EBADFD"
 	elseif type(what) == "number" then
-		local s = fs[rawget(self, "_path")]:sub(fpos + 1, fpos + what)
-		rawset(self, "_fpos", fpos + #s)
-		return fpos + #s < size and s or nil
+		if fpos + what <= size then
+			local s = fs[rawget(self, "_path")]:sub(fpos + 1, fpos + what)
+			rawset(self, "_fpos", fpos + #s)
+			return s
+		end
+		return nil
 	else
 		what = what and what:sub(1,2) or "*l"
 		if what == "*n" then
@@ -209,21 +224,18 @@ function File:read(what)
 		elseif what == "*l" and size < 1 then
 			return nil
 		elseif what == "*l" then
-			-- TODO: Check how fpos should work and implement it
-			local iter = rawget(self, "_iter") or self:lines()
-			rawset(self, "_iter", iter)
-			local s = iter()
-			rawset(self, "_fpos", fpos + #s)
+			local s = fs[rawget(self, "_path")]:sub(fpos + 1):match("[^\n]*")
+			rawset(self, "_fpos", math.min(size, fpos + #s + 1))
 			return s
 		end
 	end
-	error("Invalid argument")
+	error("(fake io) file:read() Invalid argument")
 end
 
 -- "set": base is position 0 (beginning of the file).
 -- "cur": base is current position (default).
 -- "end": base is end of file.
-function File:seek(whence, offset) -- File:seek([whence] [, offset])
+function File:seek(whence, offset)
 	if whence == nil then whence = "src" end
 	if offset == nil then offset = 0 end
 	assert.is_string(whence)
@@ -236,7 +248,9 @@ function File:seek(whence, offset) -- File:seek([whence] [, offset])
 		newpos = rawget(self, "_fpos") + offset
 	elseif whence == "end" then
 		newpos = #fs[rawget(self, "_path")]
-	elseif whence ~= "set" then
+	elseif whence == "set" then
+		newpos = offset
+	else
 		return nil, "Invalid arguments"
 	end
 	rawset(self, "_fpos", newpos)
@@ -251,7 +265,6 @@ end
 function File:write(...)
 	assert(rawget(self, "_type") == "file", "EBADFD")
 	-- FIXME: Write numbers
-	-- TODO: Other file modes
 	local mode = rawget(self, "_mode")
 	local fpos = rawget(self, "_fpos")
 	local size = #fs[rawget(self, "_path")]
@@ -286,7 +299,7 @@ function File:write(...)
 		-- Append only
 		fs[rawget(self, "_path")] = table.concat({fs[rawget(self, "_path")],...})
 	else
-		error("Invalid file mode, this is probably a bug in Mineunit fs module.")
+		error("(fake io) Invalid file mode, this is probably a bug in Mineunit fs module.")
 	end
 	rawset(self, "_fpos", fpos + #fs[rawget(self, "_path")] - size)
 	return true
@@ -315,7 +328,9 @@ end
 function core.get_dir_list(path, list_dirs)
 	local results = {}
 	local fsobj = fs[normpath(path)]
-	if list_dirs == nil then
+	if type(fsobj) ~= "table" then
+		return results
+	elseif list_dirs == nil then
 		for name, content in pairs(fsobj) do
 			name = basename(name)
 			if name ~= "." then
@@ -350,9 +365,31 @@ function core.safe_file_write(path, content)
 	fs[path] = content
 end
 
-function mineunit:reset_fs()
+function mineunit:fs_reset()
 	fs = {}
 	fs["."] = fs
+end
+
+function mineunit:fs_copy(src, dst)
+	if type(src) == "table" then
+		for _, path in ipairs(src) do
+			return mineunit:copy(path, dst)
+		end
+	else
+		-- Copy real file into Mineunit fake fs
+		dst = dst or src
+		if dst:sub(-1) == DIR_DELIM then
+			dst = dst .. basename(src)
+		end
+		if src:sub(1) ~= DIR_DELIM then
+			src = mineunit:get_worldpath() .. DIR_DELIM .. src
+		end
+		local srcfile = mineunit:builtin("io").open(src, "rb")
+		local dstfile = io.open(dst, "wb")
+		dstfile:write(srcfile:read("*a"))
+		srcfile:close()
+		dstfile:close()
+	end
 end
 
 end})[mineunit:config("use_real_fs") == true and "REAL FILESYSTEM" or "FAKE FILESYSTEM"]
