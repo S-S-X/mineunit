@@ -77,16 +77,80 @@ describe("Mineunit fake io", function()
 
 	do -- could also consider before_each(function()
 		-- Fake fs storage reset and validate
-		mineunit:reset_fs()
+		mineunit:fs_reset()
 		local filelist = core.get_dir_list(".", nil)
 		assert.is_indexed(filelist)
 		assert.equals(0, #filelist)
+		-- Create some test files
 		core.safe_file_write("io.open r with file", "Hello Mineunit\nI/O!")
 		core.safe_file_write("io.open a with file", "Hello Mineunit\nI/O!")
 		core.safe_file_write("io.open w with file", "Hello Mineunit\nI/O!")
 		core.safe_file_write("io.open r with empty file", "")
-		assert.equals(4, #core.get_dir_list(".", nil))
+		-- b
+		core.safe_file_write("io.open rb with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open ab with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open wb with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open rb with empty file", "")
+		-- +
+		core.safe_file_write("io.open r+ with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open a+ with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open w+ with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open r+ with empty file", "")
+		-- b+
+		core.safe_file_write("io.open rb+ with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open ab+ with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open wb+ with file", "Hello Mineunit\nI/O!")
+		core.safe_file_write("io.open rb+ with empty file", "")
+		-- copy files
+		mineunit:fs_copy("testfile.bin") -- 0180 0000 adff 0a42 0908 0706 05
+		-- Validate file count
+		assert.equals(17, #core.get_dir_list(".", nil))
 	end -- )
+
+	describe("io.open binary", function()
+
+		it("read(n) straight", function()
+			local file = io.open("testfile.bin", "rb")
+			assert.equals("\1", file:read(1))
+			assert.equals("\128", file:read(1))
+			assert.equals("\0\0", file:read(2))
+			assert.equals("\173\255", file:read(2))
+			assert.equals("\10\66\9", file:read(3))
+			assert.equals("\8\7\6\5", file:read(4))
+			assert.is_nil(file:read(1))
+			file:close()
+		end)
+
+		it("read(n) with seek", function()
+			local file = io.open("testfile.bin", "rb")
+			file:seek("set", 1)
+			assert.equals("\128", file:read(1))
+			file:seek("cur", 1)
+			assert.equals("\0\173\255", file:read(3))
+			file:seek("cur", -1)
+			assert.equals("\255\10\66\9", file:read(4))
+			file:seek("set", 0)
+			assert.equals("\1", file:read(1))
+			file:seek("end", 0)
+			assert.is_nil(file:read(1))
+			file:close()
+		end)
+
+		it("read(n|*l) with seek", function()
+			local file = io.open("testfile.bin", "rb")
+			file:seek("cur", 1)
+			assert.equals("\128\0", file:read(2))
+			assert.equals("\0\173\255", file:read("*l"))
+			assert.equals("\66\9\8\7\6\5", file:read("*l"))
+			file:seek("set", 0)
+			assert.equals("\1\128\0\0\173\255", file:read("*l"))
+			assert.equals("\66", file:read(1))
+			assert.equals("\9\8\7\6\5", file:read("*l"))
+			assert.is_nil(file:read(1))
+			file:close()
+		end)
+
+	end)
 
 	-- Test wrapper to reduce typo errors in tests
 	local function test(name, mode, spec, fn)
@@ -95,11 +159,71 @@ describe("Mineunit fake io", function()
 		end)
 	end
 
-	describe("read(*a)", function()
+	describe("io.open failures", function()
 
 		test("io.open", "r", "without file", function(file)
 			assert.is_nil(file)
 		end)
+
+		test("io.open", "rb", "without file", function(file)
+			assert.is_nil(file)
+		end)
+
+	end)
+
+	describe("read(n)", function()
+
+		test("io.open", "rb", "with file", function(file)
+			assert.not_nil(file)
+			assert.equals("Hel", file:read(3))
+			assert.equals("lo ", file:read(3))
+			file:seek("set", 6)
+			assert.equals("Min", file:read(3))
+		end)
+
+		test("io.open", "rb", "with empty file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read(3)
+			-- Output is nil without errors
+			assert.is_nil(a)
+			assert.is_nil(b)
+		end)
+
+		test("io.open", "ab", "without file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read(3)
+			-- Output is nil with error
+			assert.is_nil(a)
+			assert.is_string(b)
+		end)
+
+		test("io.open", "ab", "with file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read(3)
+			-- Output is nil with error
+			assert.is_nil(a)
+			assert.is_string(b)
+		end)
+
+		test("io.open", "wb", "without file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read(3)
+			-- Output is nil with error
+			assert.is_nil(a)
+			assert.is_string(b)
+		end)
+
+		test("io.open", "wb", "with file", function(file)
+			assert.not_nil(file)
+			local a, b = file:read(3)
+			-- Output is nil with error
+			assert.is_nil(a)
+			assert.is_string(b)
+		end)
+
+	end)
+
+	describe("read(*a)", function()
 
 		test("io.open", "r", "with file", function(file)
 			assert.not_nil(file)
@@ -149,10 +273,6 @@ describe("Mineunit fake io", function()
 	end)
 
 	describe("read(*l)", function()
-
-		test("io.open", "r", "without file", function(file)
-			assert.is_nil(file)
-		end)
 
 		test("io.open", "r", "with file", function(file)
 			assert.not_nil(file)
