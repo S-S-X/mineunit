@@ -569,15 +569,47 @@ require("busted")(busted)
 local exit = require("busted.compatibility").exit
 
 mineunit = {}
+
+-- Mineunit event subscriptions
+local internal_subs = {
+	-- dynamic
+}
 local subs = {
 	describe_start = {},
 	describe_end = {},
 	test_start = {},
 	test_end = {},
 }
-local function run_subs(what, ...) for _, cb in ipairs(subs[what]) do cb(...) end end
-local function reset_subs() for k, _ in pairs(subs) do subs[k] = {} end end
-function mineunit:subscribe(what, callback) table.insert(subs[what], callback) end
+
+local function run_subs(what, ...)
+	if internal_subs[what] then
+		for _, cb in ipairs(internal_subs[what]) do cb(...) end
+	end
+	if subs[what] then
+		for _, cb in ipairs(subs[what]) do cb(...) end
+	end
+end
+
+local function internal_subscribe(what, callback)
+	internal_subs[what] = internal_subs[what] or {}
+	table.insert(internal_subs[what], callback)
+end
+
+function mineunit:subscribe(what, callback)
+	table.insert(subs[what], callback)
+end
+
+internal_subscribe("file_start", function()
+	-- Remove all subscriptions before starting new test set
+	for k, _ in pairs(subs) do subs[k] = {} end
+end)
+
+busted.subscribe({'file', 'start'}, function(...) run_subs("file_start", ...) end)
+busted.subscribe({'file', 'end'}, function(...) run_subs("file_end", ...) end)
+busted.subscribe({'describe', 'start'}, function(...) run_subs("describe_start", ...) end)
+busted.subscribe({'describe', 'end'}, function(...) run_subs("describe_end", ...) end)
+busted.subscribe({'test', 'start'}, function(...) run_subs("test_start", ...) end)
+busted.subscribe({'test', 'end'}, function(...) run_subs("test_end", ...) end)
 
 require("mineunit.print")
 busted.export('mineunit', mineunit)
@@ -598,16 +630,15 @@ if args.output == "utfTerminal" and not args.quiet and not args.disable_output t
 		end
 		return '?:?'
 	end
-	busted.subscribe({'file', 'start'}, function(element, parent)
+	internal_subscribe("file_start", function(element, parent)
 		mineunit:prepend_flush()
 		io.stdout:write(c.cyan('++ Executing ' .. handler.getFullName(element)))
 		mineunit:prepend_print('\n')
-		reset_subs()
 	end)
-	busted.subscribe({'file', 'end'}, function()
+	internal_subscribe("file_end", function()
 		mineunit:prepend_print('\n')
 	end)
-	busted.subscribe({'describe', 'start'}, function(element, parent, ...)
+	internal_subscribe("describe_start", function(element, parent, ...)
 		local header = c.yellow('⭆ Starting test set ' .. c.bright .. getFileLine(element))
 		local testname = c.cyan(handler.getFullName(element))
 		if skip_quiet then
@@ -617,13 +648,11 @@ if args.output == "utfTerminal" and not args.quiet and not args.disable_output t
 			io.stdout:write(header .. ' ⯈ ' .. testname)
 			mineunit:prepend_print('\n')
 		end
-		run_subs("describe_start", element, parent, ...)
 	end)
-	busted.subscribe({'describe', 'end'}, function(...)
+	internal_subscribe("describe_end", function(...)
 		mineunit:prepend_print('\n')
-		run_subs("describe_end", ...)
 	end)
-	busted.subscribe({'test', 'start'}, function(element, parent, ...)
+	internal_subscribe("test_start", function(element, parent, ...)
 		local header = c.bright(c.white .. '🢆') .. c.yellow(' Running tests from ' .. c.bright .. getFileLine(element))
 		local testname = c.bright(c.cyan .. handler.getFullName(element))
 		if skip_quiet then
@@ -634,9 +663,8 @@ if args.output == "utfTerminal" and not args.quiet and not args.disable_output t
 			mineunit:prepend_print('\n')
 		end
 		first_end = true
-		run_subs("test_start", element, parent, ...)
 	end)
-	busted.subscribe({'test', 'end'}, function(element, parent, status)
+	internal_subscribe("test_end", function(element, parent, status)
 		local space = ''
 		if not skip_quiet and first_end then
 			first_end = false
@@ -655,7 +683,6 @@ if args.output == "utfTerminal" and not args.quiet and not args.disable_output t
 			io.stdout:write(space..c.green('●'))
 			mineunit:prepend_print('\n')
 		end
-		run_subs("test_end", element, parent, status)
 	end)
 end
 
@@ -740,6 +767,7 @@ testFileLoader({"spec"}, args.runner.include or {"_spec"}, {
 	recursive = nil,
 })
 
+-- Execute tests
 local execute = require("busted.execute")(busted)
 execute(args.runs, {
 	seed = nil,
@@ -747,6 +775,7 @@ execute(args.runs, {
 	sort = false,
 })
 
+-- All done
 busted.publish({ 'exit' })
 
 if args.coverage then
