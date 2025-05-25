@@ -16,7 +16,7 @@ describe("Mineunit formspec", function()
 
 		local test_called = 0
 		local test_formname = "test:formname"
-		function test_callback(player, formname, fields)
+		local function test_callback(player, formname, fields)
 			assert.is_Player(player)
 			assert.not_nil(formname)
 			assert.equals(formname, test_formname)
