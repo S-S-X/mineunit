@@ -1,6 +1,15 @@
--- Type overrides
+-- Load and configure required modules
 
 local lua_type = type
+local spy = require('luassert.spy')
+local assert = require('luassert.assert')
+local format_argument = require('luassert.state').format_argument
+local say = require("say")
+
+assert:set_parameter("TableFormatLevel", 4)
+assert:set_parameter("TableFormatShowRecursion", true)
+
+-- Type overrides
 
 local function noop() end
 
@@ -19,6 +28,12 @@ function type(value)
 end
 
 -- Utilities
+
+local function explode_version(versionstring, default)
+	local m = versionstring:gmatch("%d+")
+	local major, minor, patch = tonumber(m() or default), tonumber(m() or default), tonumber(m() or default)
+	return major, minor, patch
+end
 
 local function round(value)
 	return (value < 0) and math.ceil(value - 0.5) or math.floor(value + 0.5)
@@ -115,7 +130,6 @@ end
 --
 
 -- Patch spy.on method, see https://github.com/Olivine-Labs/luassert/pull/174
-local spy = require('luassert.spy')
 function spy.on(target_table, target_key)
 	assert(target_table, "Invalid argument #1 for spy.on(target_table, target_key)")
 	local s = spy.new(target_table[target_key])
@@ -125,13 +139,6 @@ function spy.on(target_table, target_key)
 	s.target_key = target_key
 	return s
 end
-
-local assert = require('luassert.assert')
-assert:set_parameter("TableFormatLevel", 4)
-assert:set_parameter("TableFormatShowRecursion", true)
-
-local format_argument = require('luassert.state').format_argument
-local say = require("say")
 
 local function register_positive_fmt(name, fmtstr)
 	say:set("assertion." .. name .. ".positive", fmtstr)
@@ -360,6 +367,7 @@ _G.assert = assert
 
 return {
 	count = count,
+	explode_version = explode_version,
 	format_coordinate = format_coordinate,
 	has_item = has_item,
 	in_array = in_array,

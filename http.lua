@@ -100,7 +100,7 @@ setmetatable(MineunitHTTPServer, {
 mineunit.http_server = MineunitHTTPServer()
 
 --
--- Minetest HTTP API
+-- Engine HTTP API
 --
 
 local httpenv = {
@@ -114,7 +114,7 @@ local httpenv = {
 	end,
 }
 
--- Minetest core function to inject fetch method
+-- Engine function to inject fetch method
 core.http_add_fetch(httpenv)
 
 function core.request_http_api()
