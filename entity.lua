@@ -71,12 +71,8 @@ function ObjectRef:set_wielded_item(item)
 	--: replaces the wielded item, returns `true` if
 	-- successful.
 end
-function ObjectRef:set_armor_groups(t)
-	-- {group1=rating, group2=rating, ...}
-end
-function ObjectRef:get_armor_groups()
-	--: returns a table with the armor group ratings
-end
+function ObjectRef:set_armor_groups(t) self._armor_groups = t end
+function ObjectRef:get_armor_groups() return table.copy(self._armor_groups) end
 function ObjectRef:set_animation(frame_range, frame_speed, frame_blend, frame_loop)
 	-- * `frame_range`: table {x=num, y=num}, default: `{x=1, y=1}`
 	-- * `frame_speed`: number, default: `15.0`
@@ -155,6 +151,7 @@ mineunit.export_object(ObjectRef, {
 			_pitch = 0,
 			_roll = 0,
 			_properties = {},
+			_armor_groups = {},
 		}
 		setmetatable(obj, ObjectRef)
 		return obj
