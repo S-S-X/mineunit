@@ -4,6 +4,12 @@
 
 local luaprint = _G.print
 local luatype = mineunit.utils and mineunit.utils.luatype or _G.type
+local debug = debug
+
+-- Used in case engine core libraries have not been loaded yet
+function dump(thing)
+	return require('luassert.state').format_argument(thing) or tostring(thing)
+end
 
 function mineunit:prepend_print(s)
 	self._prepend_output = s
@@ -24,6 +30,8 @@ end
 local formatters = {
 	["nil"] = tostring,
 	["xnil"] = tostring,
+	["function"] = tostring,
+	["userdata"] = tostring,
 	--luacheck: push ignore 561 cyclomatic complexity
 	["table"] = function(thing)
 		local above = rawget(thing, "above")
@@ -52,6 +60,12 @@ local formatters = {
 	["xtable"] = tostring,
 	["number"] = tostring,
 	["xnumber"] = tostring,
+	["string"] = tostring,
+	["Xstring"] = function(s)
+		return s:gsub("(.)(.?)", function(a,b)
+			return b == "" and ("%02x"):format(a:byte()) or ("%02x%02x "):format(a:byte(),b:byte())
+		end)
+	end,
 	["boolean"] = tostring,
 	["xboolean"] = tostring,
 }
@@ -68,12 +82,17 @@ local function fmtprint(fmtstr, ...)
 				args[index] = formatters[t](args[index])
 			elseif argtype == "x" then
 				args[index] = formatters["x"..t](args[index])
+			elseif argtype == "X" then
+				args[index] = formatters["X"..t](args[index])
 			elseif argtype == "t" then
 				args[index] = dump(args[index])
+			elseif argtype == "D" then
+				local trace = debug.getinfo(4, "Sl")
+				table.insert(args, index, trace.source:sub(2) .. ":" .. tostring(trace.currentline))
 			end
 		end
 	end
-	return printwrapper(fmtstr:gsub("%%t", "%%s"):format(unpack(args)))
+	return printwrapper(fmtstr:gsub("%%[tDX]", "%%s"):format(unpack(args)))
 end
 
 function mineunit:debug(...)   if self:config("verbose") > 3 then printwrapper("D:",...) end end
