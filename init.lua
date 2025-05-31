@@ -7,8 +7,13 @@ local pl = {
 }
 
 local lua_dofile = dofile
-function _G.dofile(path, ...)
-	return lua_dofile(pl.path.normpath(path), ...)
+function _G.dofile(path)
+	return lua_dofile(pl.path.normpath(path))
+end
+
+local lua_loadfile = loadfile
+function _G.loadfile(path, ...)
+	return lua_loadfile(pl.path.normpath(path), ...)
 end
 
 local default_config = {
@@ -43,28 +48,96 @@ mineunit._on_mods_loaded = {}
 mineunit._on_mods_loaded_exec_count = 0
 
 local tagged_paths = {
+	["."] = true,
 	["common"] = true,
 	["game"] = true
+}
+
+local blacklist_names = {
+	["common/strict"] = true,
+}
+
+local preload_modules = {
+	["game/auth"] = "auth",
 }
 
 require("mineunit.print")
 require("mineunit.globals")
 
-local function require_mineunit(name, root, tag)
+local _mineunits = {}
+local _subloader_preload
+
+local function require_filter(path, namepattern, loader, ...)
+	path = pl.path.normpath(path)
+	local name = path:gsub(namepattern, "%1")
+	if _mineunits[name] then
+		mineunit:debugf("Potential source of errors: reusing %s", name)
+		return _mineunits[name]
+	elseif blacklist_names[name] then
+		mineunit:debugf("Loader blacklisted %s", name)
+		return
+	end
+	mineunit:debugf("Loader accepted %s", name)
+	if preload_modules[name] then
+		mineunit:debugf("Loader preloading %s for %s", preload_modules[name], name)
+		_subloader_preload = name
+		mineunit(preload_modules[name], { strict = true })
+		--_mineunits[name] = {require_mineunit(redirect_names[name], nil, nil, true)}
+		--return _mineunits[name]
+	end
+	local result = {loader(path, ...)}
+	_mineunits[name] = result
+	return result
+end
+
+local _subloader_active = false
+local function require_mineunit(name, root, tag, strict)
 	mineunit:debugf("Loading mineunit module %s", name)
 	local modulename = name:gsub("/", ".")
 	if root and tag and tag ~= "mineunit" then
 		local path = name:match("^([^/]+)/")
 		if path and tagged_paths[path] then
+			mineunit:debugf("Loading %s from %s (%s)", name, tag, _subloader_active)
+			local namepattern = "^.*/" .. tag:gsub("([%.%-%+%*%%%(%)%[%]])", "%%%1") .. "/(.*)%.lua$"
 			local oldpath = package.path
-			local module
-			package.path = root.."/"..tag.."/?.lua;"
-			mineunit:debugf("Loading %s from %s", name, tag)
+			local module, original_dofile, original_loadfile
+			if not _subloader_active then
+				mineunit:debug("Enabling loader overrides")
+				local newpath = root.."/"..tag.."/?.lua;"
+				package.path = newpath
+				original_dofile = rawget(_G, "dofile")
+				original_loadfile = rawget(_G, "loadfile")
+				rawset(_G, "dofile", function (fpath)
+					_subloader_active = true
+					package.path = oldpath
+					local submod = require_filter(fpath, namepattern, lua_dofile)
+					package.path = newpath
+					_subloader_active = false
+					return submod and unpack(submod) or nil
+				end)
+				rawset(_G, "loadfile", function (fpath, ...)
+					_subloader_active = true
+					package.path = oldpath
+					local submod = require_filter(fpath, namepattern, lua_loadfile, ...)
+					package.path = newpath
+					_subloader_active = false
+					return submod and unpack(submod) or nil
+				end)
+			end
 			local success, err = pcall(function() module = require(modulename) end)
-			package.path = oldpath
+			if not _subloader_active then
+				mineunit:debug("Disabling loader overrides")
+				rawset(_G, "dofile", original_dofile)
+				rawset(_G, "loadfile", original_loadfile)
+				package.path = oldpath
+			end
 			if success then
 				mineunit:debugf("Loaded %s from %s", name, tag)
 				return module
+			elseif strict or _subloader_active then
+				mineunit:error(err)
+				mineunit:errorf("Loading %s from %s failed", name, tag)
+				error("Loading " .. name .. " from " .. tag .. " failed")
 			else
 				mineunit:debug(err)
 				mineunit:errorf("Loading %s from %s failed, trying builtin", name, tag)
@@ -75,11 +148,17 @@ local function require_mineunit(name, root, tag)
 end
 
 mineunit.__index = mineunit
-local _mineunits = {}
 setmetatable(mineunit, {
-	__call = function(self, name)
-		if _mineunits[name] == nil then
-			_mineunits[name] = {require_mineunit(name, mineunit:config("core_root"), mineunit:config("engine_version"))}
+	__call = function(self, name, options)
+		if name == _subloader_preload then
+			mineunit:debugf("Loader skipping queued module %s", name)
+			return
+		elseif _mineunits[name] == nil then
+			-- FIXME: hack to get around bad choices around module loader choices
+			local strict = options and options.strict
+			_mineunits[name] = {require_mineunit(
+				name, mineunit:config("core_root"), mineunit:config("engine_version"), strict
+			)}
 		end
 		return unpack(_mineunits[name])
 	end,
