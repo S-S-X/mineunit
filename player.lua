@@ -136,44 +136,6 @@ mineunit("metadata")
 
 local Player = {}
 
--- Exported while playing default minetest game
-local default_player_properties = {
-	selectionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 },
-	nametag = "",
-	nametag_bgcolor = false,
-	infotext = "",
-	static_save = true,
-	backface_culling = false,
-	makes_footstep_sound = true,
-	is_visible = true,
-	textures = { "character.png" },
-	physical = false,
-	stepheight = 0.60000002384186,
-	collisionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 },
-	initial_sprite_basepos = { y = 0, x = 0 },
-	use_texture_alpha = false,
-	show_on_minimap = true,
-	automatic_face_movement_dir = false,
-	spritediv = { y = 1, x = 1 },
-	breath_max = 10,
-	nametag_color = { a = 255, b = 255, g = 255, r = 255 },
-	visual_size = { y = 1, x = 1, z = 1 },
-	mesh = "character.b3d",
-	visual = "mesh",
-	collide_with_objects = true,
-	damage_texture_modifier = "^[brighten",
-	shaded = true,
-	pointable = true,
-	zoom_fov = 0,
-	eye_height = 1.4700000286102,
-	colors = {{ a = 255, b = 255, g = 255, r = 255 }},
-	automatic_rotate = 0,
-	hp_max = 20,
-	wield_item = "", -- TODO: This should probably be actual item in Player:_wield_index inventory slot
-	automatic_face_movement_max_rotation_per_sec = -1,
-	glow = 0
-}
-
 --
 -- Mineunit player API methods
 --
@@ -480,13 +442,61 @@ end
 function Player:do_reset()
 	self._controls = {}
 	self._oldcontrols = nil
+	self._breath = 10
+	self._hp = 20
 	self._wield_index = 1
 	self._meta = MetaDataRef()
 	self._inv = InvRef()
 	self._inv:set_size("main", 32)
-	self._object:set_properties(table.copy(default_player_properties))
-	self._hud_flags = { hotbar = true, healthbar = true, crosshair = true,
-		wielditem = true, breathbar = true, minimap = false, minimap_radar = false }
+	self._hud_flags = {
+		hotbar = true,
+		healthbar = true,
+		crosshair = true,
+		wielditem = true,
+		breathbar = true,
+		minimap = false,
+		minimap_radar = false,
+	}
+	local selectionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 }
+	self._object:set_properties({
+		selectionbox = selectionbox,
+		nametag = "",
+		nametag_bgcolor = false,
+		infotext = "",
+		static_save = true,
+		backface_culling = false,
+		makes_footstep_sound = true,
+		is_visible = true,
+		textures = { "character.png" },
+		physical = false,
+		stepheight = 0.60000002384186,
+		collisionbox = selectionbox,
+		initial_sprite_basepos = { y = 0, x = 0 },
+		use_texture_alpha = false,
+		show_on_minimap = true,
+		automatic_face_movement_dir = false,
+		spritediv = { y = 1, x = 1 },
+		breath_max = 10,
+		nametag_color = { a = 255, b = 255, g = 255, r = 255 },
+		visual_size = { y = 1, x = 1, z = 1 },
+		mesh = "character.b3d",
+		visual = "mesh",
+		collide_with_objects = true,
+		damage_texture_modifier = "^[brighten",
+		shaded = true,
+		pointable = true,
+		zoom_fov = core.settings:get_bool("creative_mode", false) and 15 or 0,
+		eye_height = 1.4700000286102,
+		colors = {{ a = 255, b = 255, g = 255, r = 255 }},
+		automatic_rotate = 0,
+		hp_max = 20,
+		wield_item = "", -- TODO: This should probably be actual item in Player:_wield_index inventory slot
+		automatic_face_movement_max_rotation_per_sec = -1,
+		glow = 0
+	})
+	self._object:set_armor_groups({
+		immortal = core.settings:get_bool("enable_damage") and 1 or nil
+	})
 end
 
 --
@@ -539,10 +549,10 @@ function Player:set_look_yaw(radians)
 	error("NOT IMPLEMENTED")
 end
 
-function Player:get_breath() error("NOT IMPLEMENTED") end
-function Player:set_breath(value) error("NOT IMPLEMENTED") end
+function Player:get_breath() return self._breath end
+function Player:set_breath(value) self._breath = math.max(0, math.min(10, value)) end
 function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMENTED") end
-function Player:get_fov() error("NOT IMPLEMENTED") end
+function Player:get_fov() return 0, false, 0 end
 
 function Player:get_eye_offset() return self._eye_offset_first, self._eye_offset_third end
 function Player:set_eye_offset(firstperson, thirdperson)
@@ -570,9 +580,9 @@ function Player:set_formspec_prepend(formspec) end
 function Player:get_formspec_prepend(formspec) return "" end
 
 function Player:hud_get_flags() return self._hud_flags end
-function Player:set_hud_flags(new_flags)
+function Player:hud_set_flags(new_flags)
 	for flag, value in pairs(new_flags) do
-		if nil ~= self._hud_flags[flag] then
+		if self._hud_flags[flag] ~= nil then
 			self._hud_flags[flag] = not not value
 		end
 	end
@@ -609,21 +619,16 @@ mineunit.export_object(Player, {
 			-- Players are always online if server module is not loaded
 			_online = not (mineunit.execute_on_joinplayer and true or false),
 			_address = nil,
-			_connection_info = nil, --[[{
-				min_rtt = 0,
-				max_rtt = 0,
-				avg_rtt = 0,
-				min_jitter = 0,
-				max_jitter = 0,
-				avg_jitter = 0,
-			},--]]
+			_connection_info = nil, -- server module injects connection info during join
 			_client_info = nil,
-			_is_player = true,
-			_privs = privs or { server = 1, interact = 1, test_priv = 1 },
+			_is_player = true, -- TODO: Why is this here? Consider removing it.
+			_privs = privs or { server = 1, interact = 1, test_priv = 1 }, -- Auth module can override privs
 			_object = ObjectRef(),
 			_look_dir = {x=0,y=-1,z=0}, -- Reflects simplified pointed_thing used to place nodes
 			_eye_offset_first = {x=0,y=0,z=0},
 			_eye_offset_third = {x=0,y=0,z=0},
+			_breath = nil,
+			_hp = nil,
 		}
 		Player.do_reset(obj)
 		if mineunit:has_module("auth") then
