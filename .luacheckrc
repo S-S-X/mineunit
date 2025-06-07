@@ -26,12 +26,24 @@ files["./jit-p.lua"].ignore = { "561" }
 
 -- Mineunit source files
 files["./assert.lua"].globals = { "type" }
+files["./assert.lua"].read_globals = Writable{
+	mineunit = {
+		"debughooks",
+	},
+}
 files["./init.lua"].globals = { "mineunit", "fixture", "fixture_path", "sourcefile", }
+files["./config.lua"].read_globals = Writable{
+	mineunit = {
+		"_config",
+		"config",
+		"config_set",
+	},
+}
 files["./globals.lua"].globals = { "INIT", "PLATFORM", "DIR_DELIM" }
 files["./globals.lua"].read_globals = Writable{
 	mineunit = {
 		"utils",
-		"set_timeofday"
+		"set_timeofday",
 	},
 }
 files["./settings.lua"].read_globals = Writable{ mineunit = { "apply_default_settings" } }
@@ -100,22 +112,26 @@ files["./fs.lua"].read_globals = Writable{
 		"fs_reset",
 		"fs_copy",
 		"fs_getfile",
-		"fs_raw"
+		"fs_raw",
 	},
 	core = {
 		"mkdir",
 		"get_dir_list",
 	}
 }
-
-files["./core.lua"].globals = { "world" }
+files["./core.lua"].read_globals = Writable{
+	core = {
+		"send_join_message",
+		"send_leave_message",
+	}
+}
 files["./voxelmanip.lua"].read_globals = Writable{
 	world = { "nodes" },
 	core = { "get_voxel_manip" },
 }
 
 globals = {
-	-- MTG
+	-- FIXME: MTG
 	"default",
 }
 
@@ -140,8 +156,9 @@ read_globals = {
 	"fixture", "fixture_path", "sourcefile",
 	mineunit = { fields = {
 		-- static functions
-		"deep_merge", -- function (data, target, defaults)
+		"dofile", -- function (path, ...)
 		"export_object", -- function (obj, def)
+		"loadfile", -- function (path, ...)
 		-- instance methods
 		"apply_default_settings", -- function (self, settings)
 		"builtin", -- function (self, name)
@@ -195,6 +212,7 @@ read_globals = {
 		CraftManager = {},
 		utils = { fields = {
 			"count", -- function (t)
+			"explode_version", -- function(versionstring, default)
 			"format_coordinate", -- function (t)
 			--"has_item", -- assertion validator, should probably be removed
 			"in_array", -- function (t, value)
@@ -206,7 +224,20 @@ read_globals = {
 			"sequential", -- function (t)
 			"tabletype", -- function (t)
 			"type", -- function (thing)
-		}}
+		}},
+		debughooks = { fields = {
+			"available",
+			"noop",
+			"restore",
+			"delete",
+			"push",
+			"pop",
+			"get",
+			"call",
+			"reset",
+			"enable",
+			"disable",
+		}},
 	}},
 	"world",
 	"NodeTimerRef", "MetaDataRef", "NodeMetaRef", "ObjectRef", "InvRef", "Player",
