@@ -1,3 +1,4 @@
+local hooks = mineunit.debughooks
 
 --
 -- Storage for node timers
@@ -88,7 +89,7 @@ local function run_abm(spec)
 			local pos = core.get_position_from_hash(id)
 			if not spec.neighbors or match_neighbor(pos, spec._neighbors_nodes, spec._neighbors_groups) then
 				-- FIXME: active_object_count, active_object_count_wider. Entities not supported by mineunit.
-				spec.action(pos, node, 0, 0)
+				hooks:call(spec.action, pos, node, 0, 0)
 			end
 		end
 	end
@@ -115,25 +116,32 @@ local entitystep_collision_data = {
 	collisions = {}
 }
 function mineunit:execute_entitystep(dtime, filter)
+	hooks:pop()
 	if filter then
 		-- Execute on_step for named entities
 		mineunit:debug("Executing entity step", filter)
 		local list = mineunit:get_entities()[filter]
 		for _, entity in ipairs(list) do
-			entity:get_luaentity():on_step(dtime, table.copy(entitystep_collision_data))
+			local luaentity = entity:get_luaentity()
+			local cdata = table.copy(entitystep_collision_data)
+			hooks:call(luaentity.on_step, luaentity, dtime, cdata)
 		end
 	else
 		-- Execute on_step for all entities
 		for group, list in pairs(mineunit:get_entities()) do
 			mineunit:debug("Executing entity step", group)
 			for _, entity in ipairs(list) do
-				entity:get_luaentity():on_step(dtime, table.copy(entitystep_collision_data))
+				local luaentity = entity:get_luaentity()
+				local cdata = table.copy(entitystep_collision_data)
+				hooks:call(luaentity.on_step, luaentity, dtime, cdata)
 			end
 		end
 	end
+	hooks:push()
 end
 
 function mineunit:execute_globalstep(dtime)
+	hooks:pop()
 	-- Default server step is 0.1 seconds
 	assert(dtime == nil or type(dtime) == "number", "Invalid call to mineunit:execute_globalstep")
 	dtime = dtime or 0.1
@@ -141,7 +149,8 @@ function mineunit:execute_globalstep(dtime)
 		mineunit:execute_entitystep(dtime)
 	end
 	for node_id, timer in pairs(world_nodetimers) do
-		timer:_step(dtime, core.get_position_from_hash(node_id))
+		local pos = core.get_position_from_hash(node_id)
+		hooks:call(timer._step, timer, dtime, pos)
 	end
 	for _,spec in pairs(core.registered_abms) do
 		spec._dtime = spec._dtime and spec._dtime + dtime or dtime
@@ -150,6 +159,7 @@ function mineunit:execute_globalstep(dtime)
 			spec._dtime = 0
 		end
 	end
+	hooks:push()
 	return core.run_callbacks(
 		core.registered_globalsteps,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
@@ -165,6 +175,7 @@ function mineunit:execute_shutdown()
 end
 
 function mineunit:execute_on_joinplayer(player, options)
+	hooks:pop()
 	assert.is_Player(player, "mineunit:execute_on_joinplayer 1st arg should be Player")
 	if options == nil then
 		options = {}
@@ -186,7 +197,7 @@ function mineunit:execute_on_joinplayer(player, options)
 		local data = core.get_auth_handler().get_auth(name)
 		core.set_player_privs(name, data.privileges)
 		mineunit:debugf("Auth privileges: %s, %t", player, player._privs)
-		local message = core.run_callbacks(
+		local message = hooks:get(core.run_callbacks,
 			core.registered_on_prejoinplayers,
 			RunCallbacksMode.RUN_CALLBACKS_MODE_OR,
 			name,
@@ -194,11 +205,13 @@ function mineunit:execute_on_joinplayer(player, options)
 		)
 		if message then
 			mineunit:debugf("Kicked %s (%s) by 'on_prejoinplayers': %s", player, address, message)
+			hooks:push()
 			return message
 		end
 		mineunit:execute_globalstep()
 	end
 	player._online = true
+	hooks:push()
 	return core.run_callbacks(
 		core.registered_on_joinplayers,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_FIRST,
@@ -219,8 +232,8 @@ function mineunit:execute_on_leaveplayer(player, timeout)
 end
 
 function mineunit:execute_on_chat_message(sender, message)
-	assert(type(sender) == "string", "Invalid call to mineunit:execute_modchannel_message")
-	assert(type(message) == "string", "Invalid call to mineunit:execute_modchannel_message")
+	assert(type(sender) == "string", "Invalid call to mineunit:execute_on_chat_message")
+	assert(type(message) == "string", "Invalid call to mineunit:execute_on_chat_message")
 	return core.run_callbacks(
 		core.registered_on_chat_messages,
 		RunCallbacksMode.RUN_CALLBACKS_MODE_OR_SC,

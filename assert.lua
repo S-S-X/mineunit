@@ -1,3 +1,28 @@
+-- Debug hook control fallback (dynamic debug hooks)
+
+local function noop() end
+mineunit.debughooks = mineunit.debughooks or {
+	call = function(_, fn, ...) fn(...) end,
+	get = function(_, fn, ...) return fn(...) end,
+	noop = noop,
+	restore = noop,
+	delete = noop,
+	push = noop,
+	pop = noop,
+	reset = noop,
+	enable = noop,
+	disable = noop,
+}
+
+local hooks = mineunit.debughooks
+
+-- TODO: Consider either removing dynamic hooks here or complete test coverage for possible scenarios
+local function hooks_restore_if(hooks_enabled)
+	if hooks_enabled then
+		hooks:restore()
+	end
+end
+
 -- Load and configure required modules
 
 local lua_type = type
@@ -10,8 +35,6 @@ assert:set_parameter("TableFormatLevel", 4)
 assert:set_parameter("TableFormatShowRecursion", true)
 
 -- Type overrides
-
-local function noop() end
 
 local function mineunit_type(obj)
 	if lua_type(obj) == "table" then
@@ -334,6 +357,7 @@ end
 -- has_item(coordinate, listname, itemstring|ItemStack)
 -- has_item(coordinate, itemstring|ItemStack)
 local function has_item(state, args)
+	local hooks_enabled = hooks:delete()
 	local inv, list, slot, expected = resolve_args_inv_list_slot_stack(args[1], args[2], args[3], args[4])
 	assert.is_InvRef(inv, "assert.has_item expected Player or coordinates, got "..type(args[1]))
 	assert(type(list) == "string" or list == nil, "Invalid 2nd argument for has_item assertion")
@@ -346,15 +370,22 @@ local function has_item(state, args)
 			local actual = inv:get_stack(list, slot)
 			msg = "Expected %s to have %s but found %s"
 			state.failure_message = msg:format(formatname(args[1]), tostring(expected), tostring(actual))
-			return actual:get_name() == expected:get_name() and actual:get_count() == expected:get_count()
+			local result = actual:get_name() == expected:get_name() and actual:get_count() == expected:get_count()
+			hooks_restore_if(hooks_enabled)
+			return result
+		else
+			local result = inv:contains_item(list, expected)
+			hooks_restore_if(hooks_enabled)
+			return result
 		end
-		return inv:contains_item(list, expected)
 	end
 	for listname in pairs(inv._lists) do
 		if inv:contains_item(listname, expected) then
+			hooks_restore_if(hooks_enabled)
 			return true
 		end
 	end
+	hooks_restore_if(hooks_enabled)
 	return false
 end
 assert:register("assertion", "has_item", has_item)

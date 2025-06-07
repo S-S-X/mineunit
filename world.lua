@@ -1,3 +1,5 @@
+local hooks = mineunit.debughooks
+
 local world = {}
 local world_default_node
 
@@ -26,7 +28,7 @@ world.clear()
 -- Helper to execute callbacks
 local function call(fn, ...)
 	if type(fn) == "function" then
-		return fn(...)
+		return hooks:get(fn, ...)
 	end
 end
 
@@ -51,9 +53,12 @@ end
 
 -- FIXME: Should also execute other related callbacks
 function world.on_dig(pos, node, digger)
+	hooks:pop()
 	node = node or minetest.get_node(pos)
 	local nodedef = minetest.registered_nodes[node.name]
-	return nodedef and call(nodedef.on_dig, pos, node, digger) and true or false
+	local result = nodedef and call(nodedef.on_dig, pos, node, digger) and true or false
+	hooks:push()
+	return result
 end
 
 function world.clear_meta(pos)
@@ -83,6 +88,7 @@ end
 
 -- set_node sets world node without place/dig callbacks
 function world.set_node(pos, node)
+	hooks:pop()
 	node = create_node(node)
 	assert(type(node.name) == "string", "Invalid node name, expected string but got " .. tostring(node.name))
 	local hash = minetest.hash_node_position(pos)
@@ -100,20 +106,24 @@ function world.set_node(pos, node)
 	if nodedef then
 		call(nodedef.on_construct, pos)
 	end
+	hooks:push()
 end
 
 -- swap_node sets world node without any callbacks
 function world.swap_node(pos, node)
+	hooks:pop()
 	local hash = minetest.hash_node_position(pos)
 	node = create_node(node, world.nodes[hash])
 	assert(type(node.name) == "string", "Invalid node name, expected string but got " .. tostring(node.name))
 	world.nodes[hash] = node
+	hooks:push()
 end
 
 -- Called after constructing node when node was placed using
 -- minetest.item_place_node / minetest.place_node.
 -- If return true no item is taken from itemstack.
 function world.place_node(pos, node, placer, itemstack, pointed_thing)
+	hooks:pop()
 	node = create_node(node)
 	world.set_node(pos, node)
 	local nodedef = core.registered_nodes[node.name]
@@ -123,6 +133,7 @@ function world.place_node(pos, node, placer, itemstack, pointed_thing)
 		pointed_thing = pointed_thing or get_pointed_thing(pos)
 		call(nodedef.after_place_node, pos, placer, itemstack, pointed_thing)
 	end
+	hooks:push()
 end
 
 local function has_meta(pos)
@@ -163,6 +174,7 @@ end
 
 -- FIXME: Does not handle node groups at all, groups are completely ignored
 function world.find_nodes_in_area(p1, p2, nodenames, grouped)
+	hooks:pop()
 	assert.is_table(p1, "Invalid p1, table expected")
 	assert.is_table(p2, "Invalid p2, table expected")
 	local sx, sy, sz = math.min(p1.x, p2.x), math.min(p1.y, p2.y), math.min(p1.z, p2.z)
@@ -189,6 +201,7 @@ function world.find_nodes_in_area(p1, p2, nodenames, grouped)
 				end
 			end
 		end
+		hooks:push()
 		return results
 	else
 		local positions = {}
@@ -200,11 +213,13 @@ function world.find_nodes_in_area(p1, p2, nodenames, grouped)
 				end
 			end
 		end
+		hooks:push()
 		return positions, counts
 	end
 end
 
 function world.find_nodes_with_meta(p1, p2)
+	hooks:pop()
 	assert.is_table(p1, "Invalid p1, table expected")
 	assert.is_table(p2, "Invalid p2, table expected")
 	local sx, sy, sz = math.min(p1.x, p2.x), math.min(p1.y, p2.y), math.min(p1.z, p2.z)
@@ -220,6 +235,7 @@ function world.find_nodes_with_meta(p1, p2)
 			end
 		end
 	end
+	hooks:push()
 	return results
 end
 
@@ -251,6 +267,7 @@ local function get_layout_area(def, offset)
 end
 
 function world.add_layout(layout, offset)
+	hooks:pop()
 	for _, node in ipairs(layout) do
 		local p1, p2 = get_layout_area(node[1], offset)
 		for x = p1.x, p2.x do
@@ -261,6 +278,7 @@ function world.add_layout(layout, offset)
 			end
 		end
 	end
+	hooks:push()
 end
 
 _G.world = world

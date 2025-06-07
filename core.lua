@@ -34,7 +34,12 @@ else
 	mineunit("common/serialize")
 end
 
-_G.core.get_translator = function(...) return function(...) mineunit:debug(...) end end
+_G.core.get_translator = function(...)
+	return function(...)
+		mineunit:debug(...)
+		return table.concat({...}, " ")
+	end
+end
 
 assert(core.registered_nodes["air"])
 assert(core.registered_nodes["ignore"])
@@ -114,9 +119,8 @@ do
 	if time_step < 0 then
 		mineunit:info("Running default core.get_us_time using real world wall clock.")
 		_G.core.get_us_time = function()
-			local socket = require 'socket'
 			-- FIXME: Returns the time in seconds, relative to the origin of the universe.
-			return socket.gettime() * 1000 * 1000
+			return os.clock() * 1000 * 1000
 		end
 	else
 		mineunit:info("Running custom core.get_us_time with step increment: "..tostring(time_step))
