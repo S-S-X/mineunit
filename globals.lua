@@ -1,7 +1,7 @@
 -- Load basic libraries and Mineunit assertions
 
+local hooks = mineunit.debughooks
 local assert = require('luassert.assert')
-mineunit.utils = require("mineunit.assert")
 local noop = mineunit.utils.noop
 local _, engine_version_minor = mineunit.utils.explode_version(mineunit:config("engine_version"), -1)
 
@@ -67,6 +67,7 @@ function core.global_exists(name)
 end
 
 function core.log(level, ...)
+	hooks:pop()
 	if level == "error" then
 		mineunit:error(...)
 	elseif level == "warning" then
@@ -76,6 +77,7 @@ function core.log(level, ...)
 	else
 		mineunit:info(...)
 	end
+	hooks:push()
 end
 
 function core.gettext(value)
@@ -135,14 +137,18 @@ end
 local json = require('mineunit.lib.json')
 
 function core.write_json(...)
+	hooks:pop()
 	local args = {...}
 	local success, result = pcall(function() return json.encode(unpack(args)) end)
+	hooks:push()
 	return success and result or nil
 end
 
 function core.parse_json(...)
+	hooks:pop()
 	local args = {...}
 	local success, result = pcall(function() return json.decode(unpack(args)) end)
+	hooks:push()
 	return success and result or nil
 end
 

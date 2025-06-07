@@ -8,6 +8,7 @@
 -- 3. If there are holes in the VoxelManip data due to multiple calls to
 --    read_from_map(), the placeholder data in these holes cannot be changed by
 --    set_data() etc. This is very unlikely to be a problem.
+local hooks = mineunit.debughooks
 
 mineunit("core")
 
@@ -47,6 +48,7 @@ function VoxelManip:get_emerged_area()
 end
 
 function VoxelManip:read_from_map(p1, p2)
+	hooks:pop()
 	local bpmin, bpmax = vector.sort(pos2blockpos(p1), pos2blockpos(p2))
 
 	local minp = block_min_pos(bpmin)
@@ -75,10 +77,12 @@ function VoxelManip:read_from_map(p1, p2)
 		p.z = p.z + 1
 	end
 
+	hooks:push()
 	return self:get_emerged_area()
 end
 
 function VoxelManip:write_to_map()
+	hooks:pop()
 	local vm_nodes, world_nodes = self._nodes, world.nodes
 	local emin, emax = self._emin, self._emax
 	local p = vector.new(emin)
@@ -98,6 +102,7 @@ function VoxelManip:write_to_map()
 		p.y = emin.y
 		p.z = p.z + 1
 	end
+	hooks:push()
 end
 
 function VoxelManip:update_liquids()
@@ -112,6 +117,7 @@ function VoxelManip:get_node_at(pos)
 end
 
 function VoxelManip:set_node_at(pos, node)
+	hooks:pop()
 	local nodedef = core.registered_nodes[node.name]
 	if nodedef == nil then
 		error("Invalid node name '" .. tostring(node.name) .. "'")
@@ -121,9 +127,11 @@ function VoxelManip:set_node_at(pos, node)
 		param1 = node.param1 or 0,
 		param2 = node.param2 or 0,
 	}
+	hooks:push()
 end
 
 function VoxelManip:get_data(buf)
+	hooks:pop()
 	buf = buf or {}
 
 	local vm_nodes = self._nodes
@@ -144,10 +152,12 @@ function VoxelManip:get_data(buf)
 		p.z = p.z + 1
 	end
 
+	hooks:push()
 	return buf
 end
 
 function VoxelManip:get_light_data()
+	hooks:pop()
 	local buf = {}
 
 	local vm_nodes = self._nodes
@@ -168,10 +178,12 @@ function VoxelManip:get_light_data()
 		p.z = p.z + 1
 	end
 
+	hooks:push()
 	return buf
 end
 
 function VoxelManip:get_param2_data(buf)
+	hooks:pop()
 	buf = buf or {}
 
 	local vm_nodes = self._nodes
@@ -192,10 +204,12 @@ function VoxelManip:get_param2_data(buf)
 		p.z = p.z + 1
 	end
 
+	hooks:push()
 	return buf
 end
 
 function VoxelManip:set_data(buf)
+	hooks:pop()
 	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
@@ -220,10 +234,12 @@ function VoxelManip:set_data(buf)
 		p.z = p.z + 1
 	end
 
+	hooks:push()
 	return buf
 end
 
 function VoxelManip:set_light_data(buf)
+	hooks:pop()
 	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
@@ -248,10 +264,12 @@ function VoxelManip:set_light_data(buf)
 		p.z = p.z + 1
 	end
 
+	hooks:push()
 	return buf
 end
 
 function VoxelManip:set_param2_data(buf)
+	hooks:pop()
 	local vm_nodes = self._nodes
 	local emin, emax = self._emin, self._emax
 	local i = 1
@@ -276,6 +294,7 @@ function VoxelManip:set_param2_data(buf)
 		p.z = p.z + 1
 	end
 
+	hooks:push()
 	return buf
 end
 

@@ -2,6 +2,8 @@ mineunit("formspec")
 mineunit("metadata")
 mineunit("entity")
 
+local hooks = mineunit.debughooks
+
 local players = {}
 
 function mineunit:get_players()
@@ -30,6 +32,7 @@ end
 
 if not _G.core.check_player_privs then
 	function _G.core.check_player_privs(player_or_name, ...)
+		hooks:pop()
 		assert.player_or_name(player_or_name, "core.check_player_privs: player_or_name: expected string or Player")
 		local player
 		if type(player_or_name) == "string" then
@@ -53,6 +56,7 @@ if not _G.core.check_player_privs then
 				end
 			end
 		end
+		hooks:push()
 		return #missing_privs == 0, #missing_privs > 0 and missing_privs or ""
 	end
 end
@@ -300,6 +304,7 @@ end
 -- TODO: do_metadata_inventory_put does not follow exact engine behavior but should be fine for testing simple inv moves
 -- TODO: It might be simpler and more useful for tests to just discard leftovers and always clear source inventory
 function Player:do_metadata_inventory_put(pos, tolist, toindex, index_or_stack)
+	hooks:pop()
 	-- Get node name and definition at target position
 	local name = core.get_node(pos).name
 	local def = core.registered_nodes[name]
@@ -321,7 +326,7 @@ function Player:do_metadata_inventory_put(pos, tolist, toindex, index_or_stack)
 	local stack = frominv:get_stack("main", fromindex)
 	local can_put_count
 	if def.allow_metadata_inventory_put then
-		can_put_count = def.allow_metadata_inventory_put(pos, tolist, toindex, stack, self)
+		can_put_count = hooks:get(def.allow_metadata_inventory_put, pos, tolist, toindex, stack, self)
 		assert(type(can_put_count) == "number", "allow_metadata_inventory_put returns invalid value for "..name)
 	else
 		can_put_count = stack:get_count()
@@ -334,20 +339,23 @@ function Player:do_metadata_inventory_put(pos, tolist, toindex, index_or_stack)
 
 		-- Execute callbacks
 		if def.on_metadata_inventory_put and not placedstack:is_empty() then
-			def.on_metadata_inventory_put(pos, tolist, toindex, placedstack, self)
+			hooks:call(def.on_metadata_inventory_put, pos, tolist, toindex, placedstack, self)
 		end
 	end
+	hooks:push()
 	return can_put_count
 end
 
 function Player:do_metadata_inventory_take(pos, listname, index)
+	hooks:pop()
 	-- Test if items can be moved
 	local def = core.registered_nodes[core.get_node(pos).name]
 	local inv = core.get_meta(pos):get_inventory()
 	local stack = inv:get_stack(listname, index)
 	local can_take_count = stack:get_count()
 	if def.allow_metadata_inventory_take then
-		can_take_count = math.min(def.allow_metadata_inventory_take(pos, listname, index, stack, self), can_take_count)
+		local would_take = hooks:get(def.allow_metadata_inventory_take, pos, listname, index, stack, self)
+		can_take_count = math.min(would_take, can_take_count)
 	end
 	-- Move items
 	if can_take_count > 0 then
@@ -360,14 +368,16 @@ function Player:do_metadata_inventory_take(pos, listname, index)
 		inv:set_stack(listname, index, ItemStack(nil))
 		-- Callbacks
 		if def.on_metadata_inventory_put then
-			def.on_metadata_inventory_take(pos, listname, index, stack, self)
+			hooks:call(def.on_metadata_inventory_take, pos, listname, index, stack, self)
 		end
 	end
+	hooks:push()
 end
 
 function Player:do_set_wieldslot(inv_slot) self._wield_index = inv_slot end
 
 function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
+	hooks:pop()
 	-- TODO: Default should probably be position in front of player instead of player itself
 	local pointed_thing_or_pos, controls = resolve_player_action_args(...)
 	local item = self:get_wielded_item()
@@ -375,9 +385,8 @@ function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
 	if itemdef and itemdef.on_use then
 		mineunit:debugf("%s:do_use(%s, %s) with %s", self, pointed_thing_or_pos, controls, item)
 		local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos, itemdef.range)
-		local returnstack
 		tempcontrols(self, controls)
-		returnstack = itemdef.on_use(item, self, pointed_thing)
+		local returnstack = hooks:get(itemdef.on_use, item, self, pointed_thing)
 		restorecontrols(self)
 		if returnstack then
 			assert.is_ItemStack(returnstack)
@@ -386,6 +395,7 @@ function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
 	else
 		mineunit:debugf("%s:do_use(%s, %s) with unknown %s", self, pointed_thing_or_pos, controls, item)
 	end
+	hooks:push()
 end
 
 function Player:do_use_from_above(pos, controls)
@@ -400,6 +410,7 @@ function Player:do_use_from_above(pos, controls)
 end
 
 function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
+	hooks:pop()
 	-- TODO: Default should probably be position in front of player instead of player itself
 	local pointed_thing_or_pos, controls = resolve_player_action_args(...)
 	local item = self:get_wielded_item()
@@ -410,9 +421,9 @@ function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
 		local returnstack
 		tempcontrols(self, controls)
 		if itemdef.on_place and pointed_thing.type == "node" then
-			returnstack = itemdef.on_place(item, self, pointed_thing)
+			returnstack = hooks:get(itemdef.on_place, item, self, pointed_thing)
 		elseif itemdef.on_secondary_use and pointed_thing.type ~= "node" then
-			returnstack = itemdef.on_secondary_use(item, self, pointed_thing)
+			returnstack = hooks:get(itemdef.on_secondary_use, item, self, pointed_thing)
 		end
 		restorecontrols(self)
 		if returnstack then
@@ -422,6 +433,7 @@ function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
 	else
 		mineunit:debugf("%s:do_place(%s, %s) with unknown %s", self, pointed_thing_or_pos, controls, item)
 	end
+	hooks:push()
 end
 
 function Player:do_place_from_above(pos, controls)

@@ -34,7 +34,12 @@ else
 	mineunit("common/serialize")
 end
 
-_G.core.get_translator = function(...) return function(...) mineunit:debug(...) end end
+_G.core.get_translator = function(...)
+	return function(...)
+		mineunit:debug(...)
+		return table.concat({...}, " ")
+	end
+end
 
 assert(core.registered_nodes["air"])
 assert(core.registered_nodes["ignore"])
