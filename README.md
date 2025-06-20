@@ -278,10 +278,11 @@ It is recommended to always load `core` module instead of selecting individual a
 ### Command line arguments
 
 ```
-Mineunit v0.14.0 (Lua 5.1)
+Mineunit v0.14.2 (Lua 5.1)
 Usage:
 	mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>]
 		[--engine-version <version>] [--fetch-core <version>] [--core-root <path>]
+		[--[no-]dynamic-debug]
 
 Options:
 	-c, --coverage  Execute luacov test coverage analysis.
@@ -308,11 +309,17 @@ Options:
 	                Download core engine libraries for tag.
 	                This is simple wrapper around `git clone`.
 
+	--[no-]dynamic-debug
+	                Enables or disables dynamic debug hooks. Improves --coverage
+	                performance when enabled. Keeps debug hooks always active when
+	                when disabled. For now disabled by default.
+
 	-v|--verbose    Be more verbose by printing more useless crap to console.
 	                Can be repeated up to six times for even more annoying output.
 	-q|--quiet      Be quiet, most of time keeps your console fairly clean.
 	                Always disables regular Lua print which can make output
 	                somewhat less annoying when combined with --verbose output.
+	                Twice to shut up.
 	-V|--version    Display Lua and Mineunit version information.
 	-h|--help       Display this cheat sheet.
 	--help-assert   Display another cheat sheet, reference for special assertions.
