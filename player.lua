@@ -497,7 +497,6 @@ function Player:do_reset()
 	self._controls = {}
 	self._oldcontrols = nil
 	self._breath = 10
-	self._hp = 20
 	self._wield_index = 1
 	self._meta = MetaDataRef()
 	self._inv = InvRef()
@@ -512,6 +511,7 @@ function Player:do_reset()
 		minimap = false,
 		minimap_radar = false,
 	}
+	self._object._hp = 20
 	local selectionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 }
 	self._object:set_properties({
 		selectionbox = selectionbox,
@@ -604,6 +604,11 @@ function Player:set_look_yaw(radians)
 	error("NOT IMPLEMENTED")
 end
 
+function Player:set_hp(hp, reason)
+	-- TODO: execute callbacks register_on_player_hpchange
+	-- TBD: move hp_max limiter into ObjectRef:set_hp?
+	self._object:set_hp(math.max(hp, self._object:get_properties().hp_max))
+end
 function Player:get_breath() return self._breath end
 function Player:set_breath(value) self._breath = math.max(0, math.min(10, value)) end
 function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMENTED") end
@@ -714,7 +719,6 @@ mineunit.export_object(Player, {
 			_eye_offset_first = {x=0,y=0,z=0},
 			_eye_offset_third = {x=0,y=0,z=0},
 			_breath = nil,
-			_hp = nil,
 		}
 		Player.do_reset(obj)
 		if mineunit:has_module("auth") then
