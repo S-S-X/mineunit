@@ -16,7 +16,7 @@ local default_config = {
 	engine_version = "mineunit",
 	deprecated = "throw",
 	deprecated_mineunit = "error",
-	singleplayer = true
+	singleplayer = false
 }
 
 local mineunit_conf_override = rawget(mineunit, "mineunit_conf_override") or {}
