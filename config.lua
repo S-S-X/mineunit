@@ -75,7 +75,7 @@ local function deep_merge(data, target, defaults)
 	else
 		-- Hash tables merge strategy: preserve keys, override values
 		for key,value in pairs(data) do
-			if defaults[key] then
+			if defaults[key] ~= nil then
 				assert(type(value) == type(defaults[key]), "Configuration: invalid data type for key", key)
 				if type(value) == "table" then
 					target[key] = {}
