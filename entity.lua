@@ -1,5 +1,10 @@
 mineunit("common/vector")
 
+local function assert_range(value, minimum, maximum)
+	assert(type(value) == "number" and value >= minimum and value <= maximum, "assert_range: invalid value")
+	return value
+end
+
 local ObjectRef = {}
 
 function ObjectRef:set_velocity(value) self._velocity = vector.new(value) end
@@ -11,12 +16,10 @@ function ObjectRef:get_pitch() return self._pitch end
 function ObjectRef:set_pitch(value) self._pitch = value end
 function ObjectRef:get_roll() return self._roll end
 function ObjectRef:set_roll(value) self._roll = value end
-
-
-
 function ObjectRef:get_pos() return table.copy(self._pos) end
 function ObjectRef:set_pos(value) self._pos = vector.new(value) end
 function ObjectRef:get_velocity() return table.copy(self._velocity) end
+
 function ObjectRef:add_velocity(vel)
 	-- * `vel` is a vector, e.g. `{x=0.0, y=2.3, z=1.0}`
 	-- * In comparison to using get_velocity, adding the velocity and then using
@@ -44,16 +47,8 @@ end
 function ObjectRef:right_click(clicker)
 	--; `clicker` is another `ObjectRef`
 end
-function ObjectRef:get_hp()
-	--: returns number of health points
-end
-function ObjectRef:set_hp(hp, reason)
-	--: set number of health points
-	-- * See reason in register_on_player_hpchange
-	-- * Is limited to the range of 0 ... 65535 (2^16 - 1)
-	-- * For players: HP are also limited by `hp_max` specified in the player's
-	--   object properties
-end
+function ObjectRef:get_hp() return self._hp end
+function ObjectRef:set_hp(hp) self._hp = assert_range(hp, 0, 65535) end
 function ObjectRef:get_inventory()
 	--: returns an `InvRef` for players, otherwise returns `nil`
 end
