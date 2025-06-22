@@ -85,6 +85,10 @@ function core.gettext(value)
 	return value
 end
 
+function core.get_server_status(name, joined)
+	return ""
+end
+
 function core.is_singleplayer()
 	return mineunit:config("singleplayer")
 end

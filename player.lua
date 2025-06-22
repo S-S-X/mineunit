@@ -648,6 +648,21 @@ end
 function Player:set_formspec_prepend(formspec) self._formspec_prepend = formspec end
 function Player:get_formspec_prepend(formspec) return self._formspec_prepend end
 
+function Player:hud_add(def)
+	mineunit:debugf("noop! %s:hud_add(%t)", self, def)
+end
+function Player:hud_remove(id)
+	mineunit:debugf("noop! %s:hud_remove(%s)", self, id)
+end
+function Player:hud_change(id, stat, value)
+	mineunit:debugf("noop! %s:hud_change(%s, %s, %s)", self, id, stat, value)
+end
+function Player:hud_get(id)
+	mineunit:debugf("noop! %s:hud_get(%s)", self, id)
+end
+function Player:hud_get_all()
+	mineunit:debugf("noop! %s:hud_get_all()", self)
+end
 function Player:hud_get_flags() return self._hud_flags end
 function Player:hud_set_flags(new_flags)
 	for flag, value in pairs(new_flags) do
