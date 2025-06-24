@@ -5,6 +5,7 @@ local args = {
 	quiet = false,
 	output = "utfTerminal",
 	coverage = false,
+	dynamic_debug = false,
 	report = false,
 	runner = {
 		include = nil,
@@ -32,7 +33,7 @@ local args = {
 	Xoutput = {},
 }
 
-mineunit_version = "0.14.2"
+mineunit_version = "0.15.0"
 local luaversion = (function()
 	local jit = rawget(_G, "jit")
 	return jit and jit.version or rawget(_G, "_VERSION")
@@ -42,10 +43,16 @@ mineunit_version_str = "Mineunit v" .. mineunit_version .. " (" .. luaversion ..
 local mineunit_conf_defaults = {}
 local mineunit_conf_override = {}
 
-local pl = { path = require 'pl.path' }
+local pl_path = require("pl.path")
+
 local lua_dofile = dofile
-function _G.dofile(path, ...)
-	return lua_dofile(pl.path.normpath(path), ...)
+function dofile(path, ...)
+	return lua_dofile(pl_path.normpath(path), ...)
+end
+
+local lua_loadfile = loadfile
+function loadfile(path, ...)
+	return lua_loadfile(pl_path.normpath(path), ...)
 end
 
 local function execread(cmd)
@@ -54,13 +61,11 @@ local function execread(cmd)
 	process:close()
 	assert(type(rawout) == "string" and rawout ~= "")
 	local output, status = rawout:match("^(.-)\n?\n([0-9]+)$")
-	--print("output", "'"..output.."'")
-	--print("status", "'"..status.."'")
 	return tonumber(status), output
 end
 
 local function normpathrel(path)
-	return pl.path.relpath(pl.path.normpath(pl.path.abspath(path)))
+	return pl_path.relpath(pl_path.normpath(pl_path.abspath(path)))
 end
 
 local function run_report()
@@ -157,8 +162,8 @@ local function fetch_core_libraries(tag, target)
 		print("Refusing to use target with spaces double quotes or control characters (sorry for being lazy): " .. target)
 		return false
 	end
-	if pl.path.exists(target) then
-		if pl.path.isdir(target) then
+	if pl_path.exists(target) then
+		if pl_path.isdir(target) then
 			print("Using existing `core` directory for libraries: " .. target)
 		else
 			print("Path `core` exists and is not directory, refusing to continue: " .. target)
@@ -174,8 +179,8 @@ local function fetch_core_libraries(tag, target)
 	end
 
 	-- Check if tag exists
-	local tagdir = pl.path.join(target, tag)
-	if pl.path.exists(tagdir) then
+	local tagdir = pl_path.join(target, tag)
+	if pl_path.exists(tagdir) then
 		print("Path for selected version already exists, remove to download again: " .. tagdir)
 		return true
 	end
@@ -201,8 +206,8 @@ local function fetch_core_libraries(tag, target)
 	end
 
 	-- Get `builtin` from fetchdir, remove fetchdir
-	local libdir = pl.path.join(fetchdir, "builtin")
-	if not pl.path.exists(libdir) then
+	local libdir = pl_path.join(fetchdir, "builtin")
+	if not pl_path.exists(libdir) then
 		print("Seems like `builtin` directory does not exist: " .. libdir)
 		return false
 	end
@@ -239,11 +244,12 @@ do -- Parse cli args
 			print(mineunit_version_str)
 			return
 		elseif v == "-h" or v == "--help" then
-			print(({(mineunit_version_str..[[
-				
+			print(mineunit_version_str)
+			print(({([[\
 				Usage:
 					mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>] \
-					[--engine-version <version>] [--fetch-core <version>] [--core-root <path>]
+					[--engine-version <version>] [--fetch-core <version>] [--core-root <path>] \
+					[--[no-]dynamic-debug]
 				
 				Options:
 					-c, --coverage  Execute luacov test coverage analysis.
@@ -270,14 +276,18 @@ do -- Parse cli args
 					                Download core engine libraries for tag.
 					                This is simple wrapper around `git clone`.
 				
+					--[no-]dynamic-debug
+					                Enables or disables dynamic debug hooks. Improves --coverage
+					                performance when enabled. Keeps debug hooks always active
+					                when disabled. For now disabled by default.
+				
 					-v|--verbose    Be more verbose by printing more useless crap to console.
-					                Can be repeated up to six times for even more annoying output.
+					                Can be repeated up to six times for more annoying output.
 					-q|--quiet      Be quiet, most of time keeps your console fairly clean.
-					                Always disables regular Lua print which can make output
-					                somewhat less annoying when combined with --verbose output.
-					                Twice to shut up.
+					                Always disables regular Lua print making output less annoying
+					                when combined with --verbose output. Twice to shut up.
 					-V|--version    Display Lua and Mineunit version information.
-					-h|--help       Display this cheat sheet.
+					-h|--help       Display this cheat sheet again.
 					--help-assert   Display another cheat sheet, reference for special assertions.
 				
 				Resources:
@@ -294,7 +304,7 @@ do -- Parse cli args
 				
 				License:
 					MIT Expat with LGPL libraries, see LICENSE file for details.
-			]]):gsub("([\r\n])\t\t\t\t?", "%1"):gsub(" \\[\r\n]+\t*", " ")})[1])
+			]]):gsub("([\r\n])\t\t\t\t?", "%1"):gsub("(%s?)\\[\r\n]+\t*", "%1")})[1])
 			return
 		elseif v == "--help-assert" then
 			local doc, indenthdr, indent = nil, "    ", 16
@@ -421,28 +431,28 @@ do -- Parse cli args
 			end
 			table.insert(args.luacov.exclude, arg[i])
 		elseif v == "--demo" then
-			if pl.path.exists("init.lua") then
-				if not pl.path.exists("spec") then
+			if pl_path.exists("init.lua") then
+				if not pl_path.exists("spec") then
 					-- Terrible hack to find mineunit current source directory using mineunit.scwd
 					-- And also more terrible hacks because penlight seems to be broken with dot directories...
-					local source = pl.path.normpath(require("mineunit.scwd")) .. pl.path.sep .. "demo_spec"
-					local target = pl.path.normpath(pl.path.abspath(pl.path.currentdir())) .. pl.path.sep .. "spec"
+					local source = pl_path.normpath(require("mineunit.scwd")) .. pl_path.sep .. "demo_spec"
+					local target = pl_path.normpath(pl_path.abspath(pl_path.currentdir())) .. pl_path.sep .. "spec"
 					local pl_dir = require("pl.dir")
 					local success = true
 					if pl_dir.makepath(target) ~= true then
 						success = false
 					else
 						for path in pl_dir.dirtree(source) do
-							local rpath = path:match("^.*%" .. pl.path.sep .. "demo_spec%" .. pl.path.sep .. "(.-)$")
-							if pl.path.isdir(path) then
-								print("Create:", "spec" .. pl.path.sep .. rpath)
-								if pl_dir.makepath(pl.path.join(target, rpath)) ~= true then
+							local rpath = path:match("^.*%" .. pl_path.sep .. "demo_spec%" .. pl_path.sep .. "(.-)$")
+							if pl_path.isdir(path) then
+								print("Create:", "spec" .. pl_path.sep .. rpath)
+								if pl_dir.makepath(pl_path.join(target, rpath)) ~= true then
 									success = false
 									break
 								end
 							else
-								print("Copy:", "spec" .. pl.path.sep .. rpath)
-								if pl_dir.copyfile(path, pl.path.join(target, rpath)) ~= true then
+								print("Copy:", "spec" .. pl_path.sep .. rpath)
+								if pl_dir.copyfile(path, pl_path.join(target, rpath)) ~= true then
 									success = false
 									break
 								end
@@ -467,11 +477,11 @@ do -- Parse cli args
 				print("Missing value for " .. v)
 				return
 			end
-			local target = pl.path.normpath(pl.path.abspath(arg[i]))
-			if not pl.path.exists(target) then
+			local target = pl_path.normpath(pl_path.abspath(arg[i]))
+			if not pl_path.exists(target) then
 				print("Path "..v.." does not exist: " .. target)
 				return
-			elseif not pl.path.isdir(target) then
+			elseif not pl_path.isdir(target) then
 				print("Path "..v.." is not directory, refusing to continue: " .. target)
 				return
 			end
@@ -497,6 +507,10 @@ do -- Parse cli args
 				return
 			end
 			args.fetch_core = arg[i]
+		elseif v == "--dynamic-debug" then
+			args.dynamic_debug = true
+		elseif v == "--no-dynamic-debug" then
+			args.dynamic_debug = false
 		elseif v == "--" then
 			break
 		else
@@ -520,7 +534,7 @@ do -- read configuration files
 	args.engine_version = args.engine_version or mineunit_conf_defaults.engine_version
 end
 
-args.core_root = args.core_root or pl.path.normpath(pl.path.abspath(pl.path.join(require("mineunit.scwd"), "core")))
+args.core_root = args.core_root or pl_path.normpath(pl_path.abspath(pl_path.join(require("mineunit.scwd"), "core")))
 if args.fetch_core then
 	if not fetch_core_libraries(args.fetch_core, args.core_root) then
 		print("Operation --fetch-core "..args.fetch_core.." failed, giving up")
@@ -541,8 +555,8 @@ if args.engine_version and args.engine_version ~= "mineunit" then
 		end
 		return
 	end
-	local tagdir = pl.path.join(args.core_root, args.engine_version)
-	if not pl.path.isdir(tagdir) then
+	local tagdir = pl_path.join(args.core_root, args.engine_version)
+	if not pl_path.isdir(tagdir) then
 		print("Libraries for version "..args.engine_version.." not found from "..tagdir)
 		return
 	end
@@ -555,15 +569,124 @@ if args.report then
 	return
 end
 
+mineunit = {
+	debughooks = {},
+	mineunit_conf_defaults = mineunit_conf_defaults,
+	mineunit_conf_override = mineunit_conf_override,
+}
+
+if not args.coverage or not args.dynamic_debug then
+	local hooks = mineunit.debughooks
+	function hooks:call(fn, ...) fn(...) end
+	function hooks:get(fn, ...) return fn(...) end
+	local function noop() end
+	hooks.noop = noop
+	hooks.restore = noop
+	hooks.delete = noop
+	hooks.push = noop
+	hooks.pop = noop
+	hooks.reset = noop
+	hooks.enable = noop
+	hooks.disable = noop
+else
+	local hooks = mineunit.debughooks
+	local debug = require("debug")
+	local stashed_debughook = nil
+	local counter = {0}
+	hooks.available = true
+	function hooks:noop() end
+	function hooks:pass(fn, ...) return fn(...) end
+	function hooks:restore()
+		if stashed_debughook ~= nil then
+			io.flush()
+			assert(stashed_debughook[1], "Invalid function")
+			assert(#stashed_debughook[2] > 0, "Invalid mask")
+			debug.sethook(unpack(stashed_debughook))
+			stashed_debughook = nil
+			assert(debug.gethook() ~= nil)
+			return true
+		end
+	end
+	function hooks:delete()
+		if stashed_debughook == nil then
+			io.flush()
+			local hook = {debug.gethook()}
+			if hook[1] and #hook[2] > 0 then
+				stashed_debughook = hook
+				debug.sethook(nil)
+				return true
+			end
+		end
+	end
+	function hooks:push()
+		if counter[#counter] > 1 then
+			counter[#counter] = counter[#counter] - 1
+		else
+			counter[#counter] = 0
+			self:restore()
+		end
+	end
+	function hooks:pop()
+		self:delete()
+		counter[#counter] = counter[#counter] + 1
+	end
+	function hooks:call(fn, ...)
+		counter[#counter + 1] = 0
+		local hooks_disabled = self:restore()
+		fn(...)
+		if hooks_disabled then
+			self:delete()
+		end
+		counter[#counter] = nil
+	end
+	function hooks:get(fn, ...)
+		counter[#counter + 1] = 0
+		local hooks_disabled = self:restore()
+		local result = {fn(...)}
+		if hooks_disabled then
+			self:delete()
+		end
+		counter[#counter] = nil
+		return unpack(result)
+	end
+	function hooks:reset()
+		self._counter = nil
+		counter = {0}
+		self:enable()
+		self:restore()
+	end
+	function hooks:enable()
+		-- Enables call(), get(), push() and pop() without updating current state
+		if self._call then
+			self._call, self._get, self._push, self._pop, self.call,  self.get,  self.push,  self.pop
+			= nil,      nil,       nil,        nil,       self._call, self._get, self._push, self._pop
+			return true
+		end
+	end
+	function hooks:disable()
+		-- Disables call(), get(), push() and pop() without updating current state
+		if self._call == nil then
+			self._call,   self._get, self._push, self._pop, self.call, self.get,  self.push, self.pop
+			= self.call,  self.get,  self.push,  self.pop,  self.pass, self.pass, self.noop, self.noop
+			return true
+		end
+	end
+	hooks:disable()
+end
+
 local function load_luacov()
 	local luacov_defaults = require("luacov.defaults")
 	local luacov_config = {}
 	for k,v in pairs(luacov_defaults) do luacov_config[k] = v end
 	for k,v in pairs(args.luacov) do luacov_config[k] = v end
 
-	local luacov = require("luacov.runner")
-	luacov(luacov_config)
-	luacov.configuration = luacov_config
+	local runner = require("luacov.runner")
+	runner.load_config(luacov_config)
+	runner(luacov_config)
+	runner.configuration = luacov_config
+	assert(debug.gethook())
+	mineunit.debughooks:delete()
+	return runner
 end
 
 local busted = require("busted.core")()
@@ -573,11 +696,6 @@ local outputHandlerLoader = require("busted.modules.output_handler_loader")()
 
 require("busted")(busted)
 local exit = require("busted.compatibility").exit
-
-mineunit = {
-	mineunit_conf_defaults = mineunit_conf_defaults,
-	mineunit_conf_override = mineunit_conf_override,
-}
 
 -- Mineunit event subscriptions
 local internal_subs = {
@@ -609,8 +727,27 @@ function mineunit:subscribe(what, callback)
 end
 
 internal_subscribe("file_start", function()
+	-- Reset debug hooks
+	mineunit.debughooks:delete()
+	mineunit.debughooks:disable()
 	-- Remove all subscriptions before starting new test set
 	for k, _ in pairs(subs) do subs[k] = {} end
+end)
+
+internal_subscribe("file_end", function()
+	-- Remove debug hooks
+	mineunit.debughooks:delete()
+	mineunit.debughooks:disable()
+end)
+
+internal_subscribe("describe_start", function()
+	-- Reset debug hooks
+	mineunit.debughooks:reset()
+end)
+
+internal_subscribe("test_start", function()
+	-- Reset debug hooks
+	mineunit.debughooks:reset()
 end)
 
 busted.subscribe({'file', 'start'}, function(...) run_subs("file_start", ...) end)
@@ -623,8 +760,9 @@ busted.subscribe({'test', 'end'}, function(...) run_subs("test_end", ...) end)
 require("mineunit.print")
 busted.export('mineunit', mineunit)
 
+local luacov_runner
 if args.coverage then
-	load_luacov()
+	luacov_runner = load_luacov()
 end
 
 -- subscribe for additional output
@@ -788,7 +926,8 @@ execute(args.runs, {
 busted.publish({ 'exit' })
 
 if args.coverage then
-	require("luacov.runner").shutdown()
+	luacov_runner.shutdown()
+	--require("luacov.runner").shutdown()
 end
 
 if failures > 0 or errors > 0 then

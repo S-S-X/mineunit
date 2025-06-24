@@ -1,9 +1,10 @@
-
+local hooks = mineunit.debughooks
 local CM = mineunit('craftmanager')
 
 mineunit.CraftManager = CM
 
 function core.get_all_craft_recipes(output)
+	hooks:pop()
 	assert.is_string(output, "core.get_all_craft_recipes(output): invalid output type, expected string")
 	local results = {}
 	for method, allcrafts in pairs(CM.registered_crafts) do
@@ -23,6 +24,7 @@ function core.get_all_craft_recipes(output)
 			end
 		end
 	end
+	hooks:push()
 	return #results > 0 and results or nil
 end
 
@@ -114,9 +116,11 @@ end
 
 
 function core.register_craft(t)
+	hooks:pop()
 	assert.is_table(t, "core.register_craft: table expected, got %s")
 	t.type = t.type or "shaped"
 	assert.is_function(fn_register[t.type], "Recipe type not supported: " .. tostring(t.type))(t)
+	hooks:push()
 end
 
 function core.clear_craft(t)
@@ -148,6 +152,7 @@ local function items_empty(t)
 end
 
 function core.get_craft_result(t)
+	hooks:pop()
 	assert.is_hashed(t, "core.get_craft_result: hash table expected, got %s")
 	if t.method ~= nil then
 		assert.in_array(t.method, {"normal","cooking","fuel"}, "core.get_craft_result: t.method invalid value")
@@ -178,5 +183,6 @@ function core.get_craft_result(t)
 		items = input.items,
 	}
 
+	hooks:push()
 	return result, leftover
 end

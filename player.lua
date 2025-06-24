@@ -1,10 +1,14 @@
+mineunit("formspec")
+mineunit("metadata")
+mineunit("entity")
+
+local hooks = mineunit.debughooks
+
 local players = {}
 
 function mineunit:get_players()
 	return players
 end
-
-function _G.core.show_formspec(...) mineunit:info("core.show_formspec", ...) end
 
 function _G.core.get_player_privs(name)
 	assert.is_string(name, "core.get_player_privs: name: expected string, got "..type(name))
@@ -28,6 +32,7 @@ end
 
 if not _G.core.check_player_privs then
 	function _G.core.check_player_privs(player_or_name, ...)
+		hooks:pop()
 		assert.player_or_name(player_or_name, "core.check_player_privs: player_or_name: expected string or Player")
 		local player
 		if type(player_or_name) == "string" then
@@ -51,11 +56,13 @@ if not _G.core.check_player_privs then
 				end
 			end
 		end
+		hooks:push()
 		return #missing_privs == 0, #missing_privs > 0 and missing_privs or ""
 	end
 end
 
 function _G.core.get_player_by_name(name)
+	assert.is_string(name, "core.get_player_by_name: name: expected string, got "..type(name))
 	return players[name] and players[name]._online and players[name] or nil
 end
 
@@ -72,6 +79,47 @@ function _G.core.get_connected_players()
 		end
 	end
 	return result
+end
+
+function _G.core.show_formspec(playername, formname, formspec)
+	assert.is_string(formname, "core.show_formspec: formname: expected string, got "..type(formname))
+	assert.is_string(formspec, "core.show_formspec: formspec: expected string, got "..type(formspec))
+	local player = core.get_player_by_name(playername)
+	if player then
+		mineunit:debugf("core.show_formspec(%s, %s, %s)", playername, formname, formspec)
+		if formname == "" or formspec == "" then
+			player._formspec = nil
+			mineunit:warningf("core.show_formspec(%s, %s, <redacted>) destroyed form")
+		else
+			if player._formspec_prepend then
+				player._formspec = mineunit:Form(formname, formspec .. player._formspec_prepend)
+			else
+				player._formspec = mineunit:Form(formname, formspec)
+			end
+		end
+	else
+		mineunit:warningf("core.show_formspec(%s, %s, <redacted>) failed, player not online", playername, formname)
+	end
+end
+
+function _G.core.close_formspec(playername, formname)
+	local player = core.get_player_by_name(playername)
+	if player then
+		if formname == "" or (player._formspec and player._formspec:name() == formname) then
+			player._formspec = nil
+			mineunit:debugf("core.close_formspec(%s, %s) destroyed form")
+		else
+			mineunit:infof("core.close_formspec(%s, %s) failed, this form is not active", playername, formname)
+		end
+	else
+		mineunit:warningf("core.close_formspec(%s, %s) failed, player not online")
+	end
+end
+
+function mineunit:get_player_formspec(player_or_name)
+	assert.player_or_name(player_or_name, "mineunit:get_player_formspec: player_or_name: expected string or Player")
+	local player = type(player_or_name) == "string" and players[player_or_name] or player_or_name
+	return player._formspec
 end
 
 function _G.core.get_player_information(name)
@@ -132,47 +180,7 @@ end
 -- Mineunit player fixture API
 --
 
-mineunit("metadata")
-
 local Player = {}
-
--- Exported while playing default minetest game
-local default_player_properties = {
-	selectionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 },
-	nametag = "",
-	nametag_bgcolor = false,
-	infotext = "",
-	static_save = true,
-	backface_culling = false,
-	makes_footstep_sound = true,
-	is_visible = true,
-	textures = { "character.png" },
-	physical = false,
-	stepheight = 0.60000002384186,
-	collisionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 },
-	initial_sprite_basepos = { y = 0, x = 0 },
-	use_texture_alpha = false,
-	show_on_minimap = true,
-	automatic_face_movement_dir = false,
-	spritediv = { y = 1, x = 1 },
-	breath_max = 10,
-	nametag_color = { a = 255, b = 255, g = 255, r = 255 },
-	visual_size = { y = 1, x = 1, z = 1 },
-	mesh = "character.b3d",
-	visual = "mesh",
-	collide_with_objects = true,
-	damage_texture_modifier = "^[brighten",
-	shaded = true,
-	pointable = true,
-	zoom_fov = 0,
-	eye_height = 1.4700000286102,
-	colors = {{ a = 255, b = 255, g = 255, r = 255 }},
-	automatic_rotate = 0,
-	hp_max = 20,
-	wield_item = "", -- TODO: This should probably be actual item in Player:_wield_index inventory slot
-	automatic_face_movement_max_rotation_per_sec = -1,
-	glow = 0
-}
 
 --
 -- Mineunit player API methods
@@ -296,6 +304,7 @@ end
 -- TODO: do_metadata_inventory_put does not follow exact engine behavior but should be fine for testing simple inv moves
 -- TODO: It might be simpler and more useful for tests to just discard leftovers and always clear source inventory
 function Player:do_metadata_inventory_put(pos, tolist, toindex, index_or_stack)
+	hooks:pop()
 	-- Get node name and definition at target position
 	local name = core.get_node(pos).name
 	local def = core.registered_nodes[name]
@@ -317,7 +326,7 @@ function Player:do_metadata_inventory_put(pos, tolist, toindex, index_or_stack)
 	local stack = frominv:get_stack("main", fromindex)
 	local can_put_count
 	if def.allow_metadata_inventory_put then
-		can_put_count = def.allow_metadata_inventory_put(pos, tolist, toindex, stack, self)
+		can_put_count = hooks:get(def.allow_metadata_inventory_put, pos, tolist, toindex, stack, self)
 		assert(type(can_put_count) == "number", "allow_metadata_inventory_put returns invalid value for "..name)
 	else
 		can_put_count = stack:get_count()
@@ -330,20 +339,23 @@ function Player:do_metadata_inventory_put(pos, tolist, toindex, index_or_stack)
 
 		-- Execute callbacks
 		if def.on_metadata_inventory_put and not placedstack:is_empty() then
-			def.on_metadata_inventory_put(pos, tolist, toindex, placedstack, self)
+			hooks:call(def.on_metadata_inventory_put, pos, tolist, toindex, placedstack, self)
 		end
 	end
+	hooks:push()
 	return can_put_count
 end
 
 function Player:do_metadata_inventory_take(pos, listname, index)
+	hooks:pop()
 	-- Test if items can be moved
 	local def = core.registered_nodes[core.get_node(pos).name]
 	local inv = core.get_meta(pos):get_inventory()
 	local stack = inv:get_stack(listname, index)
 	local can_take_count = stack:get_count()
 	if def.allow_metadata_inventory_take then
-		can_take_count = math.min(def.allow_metadata_inventory_take(pos, listname, index, stack, self), can_take_count)
+		local would_take = hooks:get(def.allow_metadata_inventory_take, pos, listname, index, stack, self)
+		can_take_count = math.min(would_take, can_take_count)
 	end
 	-- Move items
 	if can_take_count > 0 then
@@ -356,14 +368,16 @@ function Player:do_metadata_inventory_take(pos, listname, index)
 		inv:set_stack(listname, index, ItemStack(nil))
 		-- Callbacks
 		if def.on_metadata_inventory_put then
-			def.on_metadata_inventory_take(pos, listname, index, stack, self)
+			hooks:call(def.on_metadata_inventory_take, pos, listname, index, stack, self)
 		end
 	end
+	hooks:push()
 end
 
 function Player:do_set_wieldslot(inv_slot) self._wield_index = inv_slot end
 
 function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
+	hooks:pop()
 	-- TODO: Default should probably be position in front of player instead of player itself
 	local pointed_thing_or_pos, controls = resolve_player_action_args(...)
 	local item = self:get_wielded_item()
@@ -371,9 +385,8 @@ function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
 	if itemdef and itemdef.on_use then
 		mineunit:debugf("%s:do_use(%s, %s) with %s", self, pointed_thing_or_pos, controls, item)
 		local pointed_thing = get_pointed_thing(self, pointed_thing_or_pos, itemdef.range)
-		local returnstack
 		tempcontrols(self, controls)
-		returnstack = itemdef.on_use(item, self, pointed_thing)
+		local returnstack = hooks:get(itemdef.on_use, item, self, pointed_thing)
 		restorecontrols(self)
 		if returnstack then
 			assert.is_ItemStack(returnstack)
@@ -382,6 +395,7 @@ function Player:do_use(...) -- (pointed_thing/pos/controls, controls if arg1)
 	else
 		mineunit:debugf("%s:do_use(%s, %s) with unknown %s", self, pointed_thing_or_pos, controls, item)
 	end
+	hooks:push()
 end
 
 function Player:do_use_from_above(pos, controls)
@@ -396,6 +410,7 @@ function Player:do_use_from_above(pos, controls)
 end
 
 function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
+	hooks:pop()
 	-- TODO: Default should probably be position in front of player instead of player itself
 	local pointed_thing_or_pos, controls = resolve_player_action_args(...)
 	local item = self:get_wielded_item()
@@ -406,9 +421,9 @@ function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
 		local returnstack
 		tempcontrols(self, controls)
 		if itemdef.on_place and pointed_thing.type == "node" then
-			returnstack = itemdef.on_place(item, self, pointed_thing)
+			returnstack = hooks:get(itemdef.on_place, item, self, pointed_thing)
 		elseif itemdef.on_secondary_use and pointed_thing.type ~= "node" then
-			returnstack = itemdef.on_secondary_use(item, self, pointed_thing)
+			returnstack = hooks:get(itemdef.on_secondary_use, item, self, pointed_thing)
 		end
 		restorecontrols(self)
 		if returnstack then
@@ -418,6 +433,7 @@ function Player:do_place(...) -- (pointed_thing/pos/controls, controls if arg1)
 	else
 		mineunit:debugf("%s:do_place(%s, %s) with unknown %s", self, pointed_thing_or_pos, controls, item)
 	end
+	hooks:push()
 end
 
 function Player:do_place_from_above(pos, controls)
@@ -480,13 +496,62 @@ end
 function Player:do_reset()
 	self._controls = {}
 	self._oldcontrols = nil
+	self._breath = 10
 	self._wield_index = 1
 	self._meta = MetaDataRef()
 	self._inv = InvRef()
 	self._inv:set_size("main", 32)
-	self._object:set_properties(table.copy(default_player_properties))
-	self._hud_flags = { hotbar = true, healthbar = true, crosshair = true,
-		wielditem = true, breathbar = true, minimap = false, minimap_radar = false }
+	self._formspec = nil
+	self._hud_flags = {
+		hotbar = true,
+		healthbar = true,
+		crosshair = true,
+		wielditem = true,
+		breathbar = true,
+		minimap = false,
+		minimap_radar = false,
+	}
+	self._object._hp = 20
+	local selectionbox = { -0.3, 0, -0.3, 0.3, 1.7, 0.3 }
+	self._object:set_properties({
+		selectionbox = selectionbox,
+		nametag = "",
+		nametag_bgcolor = false,
+		infotext = "",
+		static_save = true,
+		backface_culling = false,
+		makes_footstep_sound = true,
+		is_visible = true,
+		textures = { "character.png" },
+		physical = false,
+		stepheight = 0.60000002384186,
+		collisionbox = selectionbox,
+		initial_sprite_basepos = { y = 0, x = 0 },
+		use_texture_alpha = false,
+		show_on_minimap = true,
+		automatic_face_movement_dir = false,
+		spritediv = { y = 1, x = 1 },
+		breath_max = 10,
+		nametag_color = { a = 255, b = 255, g = 255, r = 255 },
+		visual_size = { y = 1, x = 1, z = 1 },
+		mesh = "character.b3d",
+		visual = "mesh",
+		collide_with_objects = true,
+		damage_texture_modifier = "^[brighten",
+		shaded = true,
+		pointable = true,
+		zoom_fov = core.settings:get_bool("creative_mode", false) and 15 or 0,
+		eye_height = 1.4700000286102,
+		colors = {{ a = 255, b = 255, g = 255, r = 255 }},
+		automatic_rotate = 0,
+		hp_max = 20,
+		wield_item = "", -- TODO: This should probably be actual item in Player:_wield_index inventory slot
+		automatic_face_movement_max_rotation_per_sec = -1,
+		glow = 0
+	})
+	self._object:set_armor_groups({
+		immortal = core.settings:get_bool("enable_damage") and 1 or nil
+	})
 end
 
 --
@@ -539,10 +604,15 @@ function Player:set_look_yaw(radians)
 	error("NOT IMPLEMENTED")
 end
 
-function Player:get_breath() error("NOT IMPLEMENTED") end
-function Player:set_breath(value) error("NOT IMPLEMENTED") end
+function Player:set_hp(hp, reason)
+	-- TODO: execute callbacks register_on_player_hpchange
+	-- TBD: move hp_max limiter into ObjectRef:set_hp?
+	self._object:set_hp(math.max(hp, self._object:get_properties().hp_max))
+end
+function Player:get_breath() return self._breath end
+function Player:set_breath(value) self._breath = math.max(0, math.min(10, value)) end
 function Player:set_fov(fov, is_multiplier, transition_time) error("NOT IMPLEMENTED") end
-function Player:get_fov() error("NOT IMPLEMENTED") end
+function Player:get_fov() return 0, false, 0 end
 
 function Player:get_eye_offset() return self._eye_offset_first, self._eye_offset_third end
 function Player:set_eye_offset(firstperson, thirdperson)
@@ -564,15 +634,44 @@ function Player:get_attribute(attribute)
 	error("NOT IMPLEMENTED")
 end
 
-function Player:set_inventory_formspec(formspec) end
-function Player:get_inventory_formspec() return "" end
-function Player:set_formspec_prepend(formspec) end
-function Player:get_formspec_prepend(formspec) return "" end
+function Player:set_inventory_formspec(formspec)
+	if formspec == "" then
+		-- Inventory is disabled if formspec is empty.
+		self._inventory_formspec = nil
+	else
+		-- Empty formspec name is player inventory
+		self._inventory_formspec = mineunit:Form("", formspec)
+	end
+end
 
+function Player:get_inventory_formspec()
+	return self._inventory_formspec
+		and self._inventory_formspec:text()
+		or nil
+end
+
+function Player:set_formspec_prepend(formspec) self._formspec_prepend = formspec end
+function Player:get_formspec_prepend(formspec) return self._formspec_prepend end
+
+function Player:hud_add(def)
+	mineunit:debugf("noop! %s:hud_add(%t)", self, def)
+end
+function Player:hud_remove(id)
+	mineunit:debugf("noop! %s:hud_remove(%s)", self, id)
+end
+function Player:hud_change(id, stat, value)
+	mineunit:debugf("noop! %s:hud_change(%s, %s, %s)", self, id, stat, value)
+end
+function Player:hud_get(id)
+	mineunit:debugf("noop! %s:hud_get(%s)", self, id)
+end
+function Player:hud_get_all()
+	mineunit:debugf("noop! %s:hud_get_all()", self)
+end
 function Player:hud_get_flags() return self._hud_flags end
-function Player:set_hud_flags(new_flags)
+function Player:hud_set_flags(new_flags)
 	for flag, value in pairs(new_flags) do
-		if nil ~= self._hud_flags[flag] then
+		if self._hud_flags[flag] ~= nil then
 			self._hud_flags[flag] = not not value
 		end
 	end
@@ -598,7 +697,6 @@ function Player:__tostring()
 	return self._name
 end
 
-mineunit("entity")
 mineunit.export_object(Player, {
 	name = "Player",
 	constructor = function(self, name, privs)
@@ -609,21 +707,18 @@ mineunit.export_object(Player, {
 			-- Players are always online if server module is not loaded
 			_online = not (mineunit.execute_on_joinplayer and true or false),
 			_address = nil,
-			_connection_info = nil, --[[{
-				min_rtt = 0,
-				max_rtt = 0,
-				avg_rtt = 0,
-				min_jitter = 0,
-				max_jitter = 0,
-				avg_jitter = 0,
-			},--]]
+			_connection_info = nil, -- server module injects connection info during join
 			_client_info = nil,
-			_is_player = true,
-			_privs = privs or { server = 1, interact = 1, test_priv = 1 },
+			_is_player = true, -- TODO: Why is this here? Consider removing it.
+			_privs = privs or { server = 1, interact = 1, test_priv = 1 }, -- Auth module can override privs
 			_object = ObjectRef(),
+			_formspec = nil,
+			_inventory_formspec = nil,
+			_formspec_prepend = nil,
 			_look_dir = {x=0,y=-1,z=0}, -- Reflects simplified pointed_thing used to place nodes
 			_eye_offset_first = {x=0,y=0,z=0},
 			_eye_offset_third = {x=0,y=0,z=0},
+			_breath = nil,
 		}
 		Player.do_reset(obj)
 		if mineunit:has_module("auth") then

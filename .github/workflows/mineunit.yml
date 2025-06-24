@@ -13,6 +13,14 @@ jobs:
       name: mineunit
       uses: mt-mods/mineunit-actions@dev
       with:
+        coverage: true
+        working-directory: mineunit
+    - id: mineunitdd
+      name: mineunit dynamic debug
+      uses: mt-mods/mineunit-actions@dev
+      with:
+        coverage: true
+        mineunit-args: --dynamic-debug
         working-directory: mineunit
     - id: mineunit541
       name: mineunit 5.4.1
@@ -62,6 +70,15 @@ jobs:
           ${{ steps.mineunit.outputs.mineunit-stdout }}
           ```
     - uses: KeisukeYamashita/create-comment@v1
+      if: failure() && steps.mineunitdd.conclusion == 'failure' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      with:
+        check-only-first-line: true
+        comment: |
+          ## Some tests failed, test log follows:
+          ```
+          ${{ steps.mineunitdd.outputs.mineunit-stdout }}
+          ```
+    - uses: KeisukeYamashita/create-comment@v1
       if: failure() && steps.mineunit541.conclusion == 'failure' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       with:
         check-only-first-line: true
@@ -103,9 +120,11 @@ jobs:
       with:
         check-only-first-line: true
         comment: |
-          <details><summary><i>Click for detailed source code test coverage report</i></summary>
+          #### Test coverage ${{ steps.mineunit.outputs.coverage-total }} in ${{ steps.mineunit.outputs.coverage-files }} files (higher is better).
           
-          #### Test coverage ${{ steps.mineunit.outputs.coverage-total }} in ${{ steps.mineunit.outputs.coverage-files }} files:
+          **Dynamic debug coverage ${{ steps.mineunitdd.outputs.coverage-total }} in ${{ steps.mineunitdd.outputs.coverage-files }} files (lower is better).**
+          
+          <details><summary><i>Click for detailed source code test coverage report</i></summary>
           
           ```q
           File                                      Hits Missed Coverage

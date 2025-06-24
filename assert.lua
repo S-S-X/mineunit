@@ -1,8 +1,40 @@
--- Type overrides
-
-local lua_type = type
+-- Debug hook control fallback (dynamic debug hooks)
 
 local function noop() end
+mineunit.debughooks = mineunit.debughooks or {
+	call = function(_, fn, ...) fn(...) end,
+	get = function(_, fn, ...) return fn(...) end,
+	noop = noop,
+	restore = noop,
+	delete = noop,
+	push = noop,
+	pop = noop,
+	reset = noop,
+	enable = noop,
+	disable = noop,
+}
+
+local hooks = mineunit.debughooks
+
+-- TODO: Consider either removing dynamic hooks here or complete test coverage for possible scenarios
+local function hooks_restore_if(hooks_enabled)
+	if hooks_enabled then
+		hooks:restore()
+	end
+end
+
+-- Load and configure required modules
+
+local lua_type = type
+local spy = require('luassert.spy')
+local assert = require('luassert.assert')
+local format_argument = require('luassert.state').format_argument
+local say = require("say")
+
+assert:set_parameter("TableFormatLevel", 4)
+assert:set_parameter("TableFormatShowRecursion", true)
+
+-- Type overrides
 
 local function mineunit_type(obj)
 	if lua_type(obj) == "table" then
@@ -19,6 +51,12 @@ function type(value)
 end
 
 -- Utilities
+
+local function explode_version(versionstring, default)
+	local m = versionstring:gmatch("%d+")
+	local major, minor, patch = tonumber(m() or default), tonumber(m() or default), tonumber(m() or default)
+	return major, minor, patch
+end
 
 local function round(value)
 	return (value < 0) and math.ceil(value - 0.5) or math.floor(value + 0.5)
@@ -115,7 +153,6 @@ end
 --
 
 -- Patch spy.on method, see https://github.com/Olivine-Labs/luassert/pull/174
-local spy = require('luassert.spy')
 function spy.on(target_table, target_key)
 	assert(target_table, "Invalid argument #1 for spy.on(target_table, target_key)")
 	local s = spy.new(target_table[target_key])
@@ -125,13 +162,6 @@ function spy.on(target_table, target_key)
 	s.target_key = target_key
 	return s
 end
-
-local assert = require('luassert.assert')
-assert:set_parameter("TableFormatLevel", 4)
-assert:set_parameter("TableFormatShowRecursion", true)
-
-local format_argument = require('luassert.state').format_argument
-local say = require("say")
 
 local function register_positive_fmt(name, fmtstr)
 	say:set("assertion." .. name .. ".positive", fmtstr)
@@ -265,6 +295,7 @@ register("player_or_name", 1, "Expected %s to be player or name", function(args)
 end)
 
 local mineunit_types = {
+	"Form",
 	"ItemStack",
 	"InvRef",
 	"MetaDataRef",
@@ -327,6 +358,7 @@ end
 -- has_item(coordinate, listname, itemstring|ItemStack)
 -- has_item(coordinate, itemstring|ItemStack)
 local function has_item(state, args)
+	local hooks_enabled = hooks:delete()
 	local inv, list, slot, expected = resolve_args_inv_list_slot_stack(args[1], args[2], args[3], args[4])
 	assert.is_InvRef(inv, "assert.has_item expected Player or coordinates, got "..type(args[1]))
 	assert(type(list) == "string" or list == nil, "Invalid 2nd argument for has_item assertion")
@@ -339,15 +371,22 @@ local function has_item(state, args)
 			local actual = inv:get_stack(list, slot)
 			msg = "Expected %s to have %s but found %s"
 			state.failure_message = msg:format(formatname(args[1]), tostring(expected), tostring(actual))
-			return actual:get_name() == expected:get_name() and actual:get_count() == expected:get_count()
+			local result = actual:get_name() == expected:get_name() and actual:get_count() == expected:get_count()
+			hooks_restore_if(hooks_enabled)
+			return result
+		else
+			local result = inv:contains_item(list, expected)
+			hooks_restore_if(hooks_enabled)
+			return result
 		end
-		return inv:contains_item(list, expected)
 	end
 	for listname in pairs(inv._lists) do
 		if inv:contains_item(listname, expected) then
+			hooks_restore_if(hooks_enabled)
 			return true
 		end
 	end
+	hooks_restore_if(hooks_enabled)
 	return false
 end
 assert:register("assertion", "has_item", has_item)
@@ -360,6 +399,7 @@ _G.assert = assert
 
 return {
 	count = count,
+	explode_version = explode_version,
 	format_coordinate = format_coordinate,
 	has_item = has_item,
 	in_array = in_array,

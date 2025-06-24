@@ -7,6 +7,7 @@ exclude_files = {
 	"./core/**",
 	"./common/**",
 	"./game/**",
+	"./.**/**"
 }
 
 local function Writable(what)
@@ -26,12 +27,24 @@ files["./jit-p.lua"].ignore = { "561" }
 
 -- Mineunit source files
 files["./assert.lua"].globals = { "type" }
+files["./assert.lua"].read_globals = Writable{
+	mineunit = {
+		"debughooks",
+	},
+}
 files["./init.lua"].globals = { "mineunit", "fixture", "fixture_path", "sourcefile", }
+files["./config.lua"].read_globals = Writable{
+	mineunit = {
+		"_config",
+		"config",
+		"config_set",
+	},
+}
 files["./globals.lua"].globals = { "INIT", "PLATFORM", "DIR_DELIM" }
 files["./globals.lua"].read_globals = Writable{
 	mineunit = {
 		"utils",
-		"set_timeofday"
+		"set_timeofday",
 	},
 }
 files["./settings.lua"].read_globals = Writable{ mineunit = { "apply_default_settings" } }
@@ -45,7 +58,12 @@ files["./craft.lua"].read_globals = Writable{
 		"get_craft_result",
 	}
 }
-files["./player.lua"].read_globals = Writable{ mineunit = { "get_players" } }
+files["./player.lua"].read_globals = Writable{
+	mineunit = {
+		"get_player_formspec",
+		"get_players",
+	}
+}
 files["./entity.lua"].read_globals = Writable{ mineunit = { "get_entities" } }
 files["./protection.lua"].read_globals = Writable{
 	mineunit = { "protect" },
@@ -57,6 +75,7 @@ files["./protection.lua"].read_globals = Writable{
 files["./print.lua"].globals = { "dump" }
 files["./print.lua"].read_globals = Writable{
 	mineunit = {
+		"format",
 		"prepend_print",
 		"prepend_flush",
 		"debug",
@@ -95,36 +114,48 @@ files["./http.lua"].read_globals = Writable{
 	mineunit = { "http_server" },
 	core = { "request_http_api" },
 }
+files["./formspec.lua"].read_globals = Writable{
+	mineunit = {
+		"Form",
+		"send_formspec_fields",
+		"set_formspec_fields",
+		"set_formspec_field",
+	}
+}
 files["./fs.lua"].read_globals = Writable{
 	mineunit = {
 		"fs_reset",
 		"fs_copy",
 		"fs_getfile",
-		"fs_raw"
+		"fs_raw",
 	},
 	core = {
 		"mkdir",
 		"get_dir_list",
 	}
 }
-
-files["./core.lua"].globals = { "world" }
+files["./core.lua"].read_globals = Writable{
+	core = {
+		"send_join_message",
+		"send_leave_message",
+	}
+}
 files["./voxelmanip.lua"].read_globals = Writable{
 	world = { "nodes" },
 	core = { "get_voxel_manip" },
 }
 
 globals = {
-	-- MTG
+	-- FIXME: MTG
 	"default",
 }
 
 read_globals = {
 	-- luassert
 	assert = { fields = {
-		"string", "table", "player_or_name", "ItemStack", "Player", "coordinate",
-		"is_string", "is_table", "is_player_or_name", "is_ItemStack", "is_Player", "is_coordinate",
-		"not_string", "not_table", "not_player_or_name", "not_ItemStack", "not_Player", "not_coordinate",
+		"string", "table", "player_or_name", "ItemStack", "Player", "coordinate", --"Form",
+		"is_string", "is_table", "is_player_or_name", "is_ItemStack", "is_Player", "is_coordinate", --"is_Form",
+		"not_string", "not_table", "not_player_or_name", "not_ItemStack", "not_Player", "not_coordinate", --"not_Form",
 
 		"itemstring", "itemname", "number", "integer", "indexed", "hashed", "in_array",
 		"is_itemstring", "is_itemname", "is_number", "is_integer", "is_indexed", "is_hashed", "is_in_array",
@@ -140,8 +171,10 @@ read_globals = {
 	"fixture", "fixture_path", "sourcefile",
 	mineunit = { fields = {
 		-- static functions
-		"deep_merge", -- function (data, target, defaults)
+		"dofile", -- function (path, ...)
 		"export_object", -- function (obj, def)
+		"loadfile", -- function (path, ...)
+		"format", -- function (fmtstr, ...)
 		-- instance methods
 		"apply_default_settings", -- function (self, settings)
 		"builtin", -- function (self, name)
@@ -172,6 +205,7 @@ read_globals = {
 		"get_entities", -- function (self, )
 		"get_InvRef_data", -- function (self, thing)
 		"get_modpath", -- function (self, name)
+		"get_player_formspec", -- function (self, player_or_name)
 		"get_players", -- function (self, )
 		"get_worldpath", -- function (self, )
 		"has_module", -- function (self, name)
@@ -193,8 +227,10 @@ read_globals = {
 		"warning", -- function (self, ...)
 		-- subtables and other objects
 		CraftManager = {},
+		Form = {},
 		utils = { fields = {
 			"count", -- function (t)
+			"explode_version", -- function(versionstring, default)
 			"format_coordinate", -- function (t)
 			--"has_item", -- assertion validator, should probably be removed
 			"in_array", -- function (t, value)
@@ -206,7 +242,20 @@ read_globals = {
 			"sequential", -- function (t)
 			"tabletype", -- function (t)
 			"type", -- function (thing)
-		}}
+		}},
+		debughooks = { fields = {
+			"available",
+			"noop",
+			"restore",
+			"delete",
+			"push",
+			"pop",
+			"get",
+			"call",
+			"reset",
+			"enable",
+			"disable",
+		}},
 	}},
 	"world",
 	"NodeTimerRef", "MetaDataRef", "NodeMetaRef", "ObjectRef", "InvRef", "Player",

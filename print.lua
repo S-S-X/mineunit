@@ -4,6 +4,12 @@
 
 local luaprint = _G.print
 local luatype = mineunit.utils and mineunit.utils.luatype or _G.type
+local debug = debug
+
+-- Used in case engine core libraries have not been loaded yet
+function dump(thing)
+	return require('luassert.state').format_argument(thing) or tostring(thing)
+end
 
 function mineunit:prepend_print(s)
 	self._prepend_output = s
@@ -24,6 +30,10 @@ end
 local formatters = {
 	["nil"] = tostring,
 	["xnil"] = tostring,
+	["function"] = tostring,
+	["xfunction"] = tostring,
+	["userdata"] = tostring,
+	["xuserdata"] = tostring,
 	--luacheck: push ignore 561 cyclomatic complexity
 	["table"] = function(thing)
 		local above = rawget(thing, "above")
@@ -51,16 +61,30 @@ local formatters = {
 	--luacheck: pop
 	["xtable"] = tostring,
 	["number"] = tostring,
-	["xnumber"] = tostring,
+	["xnumber"] = function(d) return ("%x"):format(d) end,
+	["string"] = tostring,
+	["xstring"] = function(s)
+		return s:gsub("(.)(.?)", function(a,b)
+			return b == "" and ("%02x"):format(a:byte()) or ("%02x%02x "):format(a:byte(),b:byte())
+		end)
+	end,
 	["boolean"] = tostring,
-	["xboolean"] = tostring,
+	["xboolean"] = function(b) return b and "1" or "0" end,
 }
 
-local function fmtprint(fmtstr, ...)
+local function fmtargs(s)
+	local pos, _, ch = 0
+	return function()
+		pos, _, ch = s:find("%%([sx@t])", pos + 1)
+		return pos, ch
+	end
+end
+
+local function formatter(fmtstr, ...)
 	local args = {...}
-	local matcher = fmtstr:gmatch("%%(.)")
+	local matcher = fmtargs(fmtstr)
 	local index = 0
-	for argtype in matcher do
+	for pos, argtype in matcher do
 		index = index + 1
 		local t = luatype(args[index])
 		if formatters[t] then
@@ -70,10 +94,18 @@ local function fmtprint(fmtstr, ...)
 				args[index] = formatters["x"..t](args[index])
 			elseif argtype == "t" then
 				args[index] = dump(args[index])
+			elseif argtype == "@" then
+				local level = (tonumber(fmtstr:sub(pos + 1, pos + 1)) or 0) + 4
+				local trace = debug.getinfo(level, "Sl")
+				table.insert(args, index, trace.source:sub(2) .. ":" .. tostring(trace.currentline))
 			end
 		end
 	end
-	return printwrapper(fmtstr:gsub("%%t", "%%s"):format(unpack(args)))
+	return fmtstr:gsub("%%[tx@]", "%%s"):format(unpack(args))
+end
+
+local function fmtprint(fmtstr, ...)
+	return printwrapper(formatter(fmtstr, ...))
 end
 
 function mineunit:debug(...)   if self:config("verbose") > 3 then printwrapper("D:",...) end end
@@ -87,5 +119,6 @@ function mineunit:infof(fmtstr, ...)    if self:config("verbose") > 2 then fmtpr
 function mineunit:warningf(fmtstr, ...) if self:config("verbose") > 1 then fmtprint("W: "..fmtstr,...) end end
 function mineunit:errorf(fmtstr, ...)   if self:config("verbose") > 0 then fmtprint("E: "..fmtstr,...) end end
 function mineunit:printf(fmtstr, ...)   if self:config("print")       then fmtprint(fmtstr,...) end end
+mineunit.format = formatter
 
 _G.print = function(...) mineunit:print(...) end

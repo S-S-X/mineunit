@@ -11,7 +11,7 @@ Github integration is available to automatically execute tests when new code is 
 ### How to use mineunit
 
 Recommended way is docker, it keeps both Mineunit and mod code isolated.
-Docker images are also currenlty best way to get latest features.
+Docker images are also current best way to get latest features.
 See https://hub.docker.com/r/mineunit/mineunit for more information.
 
 You can also install Mineunit from luarocks and create spec directory for tests:
@@ -199,16 +199,23 @@ For tests that depend oon players it can be useful to register `before_each` and
 | `mineunit:warning(...)`          | Prints to console if `verbose` option is higher than 1.
 | `mineunit:error(...)`            | Prints to console if `verbose` option is higher than 0.
 | `mineunit:print(...)`            | Prints to console if `print` option is enabled.
-| `mineunit:debugf(fmtstr, ...)`   | Like `debug` but with format string. Based on custom `string.format`, details below.
-| `mineunit:infof(fmtstr, ...)`    | Like `info` but with format string. Based on custom `string.format`, details below.
-| `mineunit:warningf(fmtstr, ...)` | Like `warning` but with format string. Based on custom `string.format`, details below.
-| `mineunit:errorf(fmtstr, ...)`   | Like `error` but with format string. Based on custom `string.format`, details below.
-| `mineunit:printf(fmtstr, ...)`   | Like `print` but with format string. Based on custom `string.format`, details below.
+| `mineunit:debugf(fmtstr, ...)`   | Like `debug` but with format string. Uses `mineunit.format`.
+| `mineunit:infof(fmtstr, ...)`    | Like `info` but with format string. Uses `mineunit.format`.
+| `mineunit:warningf(fmtstr, ...)` | Like `warning` but with format string. Uses `mineunit.format`.
+| `mineunit:errorf(fmtstr, ...)`   | Like `error` but with format string. Uses `mineunit.format`.
+| `mineunit:printf(fmtstr, ...)`   | Like `print` but with format string. Uses `mineunit.format`.
+| `mineunit.format(fmtstr, ...)`   | Formatter used with above methods. Custom formatter similar to `string.format`.
 
-Format strings for above `*f` functions accept default Lua format strings with few exceptions.
-String formatter `%s` can accept any argument type and will do special formatting for some common
-data such as coordinates, pointed_thing and such. This holds for both Lua 5.1 and LuaJIT.
-Additional `%t` formatter simply uses `dump` for everything. Besides that, same as Lua `string.format`.
+Format strings for above `*f` functions accepts default Lua format strings with few exceptions and extras:
+
+* String formatter `%s` can accept any argument type and will do special formatting for some data types
+  like coordinates and pointed_thing. Ability to accept any type is for both Lua 5.1 and LuaJIT versions.
+* Plain hexadecimal formatter `%x` dumps strings as hexadecimal sequences.
+* Additional `%@` formatter expands to source file path and line number, does not consume arguments.
+  Accepts additional number to get source line at different level in call stack, for example `%@1`.
+* Additional `%t` formatter simply uses `dump` for everything.
+
+Besides that, same as Lua `string.format`.
 
 #### Mostly internal / questionable / possibly unstable utility functions
 
@@ -259,6 +266,95 @@ Anyway, these might help a bit. And taking a look at other mods utilizing mineun
 
 It is recommended to always load `core` module instead of selecting individual automatically loaded modules.
 
+#### formspec module
+
+(!) EXPERIMENTAL / UNSTABLE FEATURE, api might change at any time without warning.
+
+`mineunit("formspec")` will load formspec module which provides `Form` class, formspec parsing and formspec actions.
+This module is also loaded as a dependency for `player` module.
+
+Constructor for `Form` class instances:
+
+* `mineunit:Form(formname, formspec)` returns new `Form` instance based on two strings: form name and formspec.
+* `mineunit:Form()` returns constructor. This constructor can be called as above or can be used to call static functions.
+
+API for `Form` instances:
+
+| Method                                | Description
+| ------------------------------------- | -----------------------------------------------------------------
+| `form:find(namepattern, typepattern)` | Find elements based on Lua patterns. Requires at least one arguent. Returns iterator.
+| `form:one(namepattern, typepattern)`  | Find element based on Lua patterns. Requires at least one arguent. Returns element.
+| `form:all(namepattern, typepattern)`  | Find elements based on Lua patterns. Requires at least one arguent. Returns array.
+| `form:fields()`                       | Find elements based on Lua patterns. Requires at least one arguent. Returns iterator.
+| `form:value(name, data)`              | Get or set value of named form field.
+| `form:data()`                         | Return direct reference to backing storage table for form elements.
+| `form:text()`                         | Return raw formspec string / text content.
+| `form:name()`                         | Return form name.
+| `form:version()`                      | Not implemented.
+| `form:send(player)`                   | Send formspec to player with current fields.
+| `form:send(player, fields)`           | Send formspec to player with one time custom fields.
+
+Static `Form` functions:
+
+| Function                    | Description
+| --------------------------- | -----------------------------------------------------------------
+| `Form.send(player)`         | Submit open formspec with current fields. Throws error if formspec is not active.
+| `Form.send(player, fields)` | Submit open formspec with one time custom fields. Throws error if formspec is not active.
+
+Mineunit formspec control API:
+
+| Method                                                  | Description
+| ------------------------------------------------------- | ------------------------------------------------------------
+| mineunit:get_player_formspec(player_or_name)            | Return current `Form` of player or `nil` if no formspec is active.
+| mineunit:send_formspec_fields(player_or_name, fields)   | Should be avoided, likely removed in future releases.
+| mineunit:set_formspec_fields(player_or_name, fields)    | Should be avoided, likely removed in future releases.
+| mineunit:set_formspec_field(player_or_name, key, value) | Should be avoided, likely removed in future releases.
+
+Example use:
+
+Tested mod should be able to receive formspec, check if the `"query"` field value is `"Meaning of life?"` and
+respond with a form that has textarea named `"answer"` containing `"42"` as an answer to the query.
+
+Player gets response form when query form is submitted, check that response form has expected elements and values.
+
+```lua
+describe("my query form", function()
+	local Sam = Player("Sam")
+
+	before_each(function()
+		mineunit:execute_on_joinplayer(Sam)
+	end)
+
+	after_each(function()
+		mineunit:execute_on_leaveplayer(Sam)
+	end)
+
+	it("gives correct answer", function()
+		-- Close response form after test has completed, also if test has failed
+		finally(function()
+			core.close_formspec(Sam:get_player_name())
+		end)
+
+		-- Open formspec, depending on mod this could be replaced with chat command or maybe right click on node
+		core.show_formspec("Sam", "myform", "field[query;Ask something;ask anything]")
+
+		-- Player should have received a from, set query field value and submit form
+		local queryform = mineunit:get_player_formspec(Sam)
+		assert.is_Form(queryform)
+		local queryfield = queryform:one("query", "field")
+		queryfield:value("Meaning of life?")
+		queryform:send("Sam")
+
+		-- Get response form and make sure it contains textarea named mytext with expected value
+		local responseform = mineunit:get_player_formspec(Sam)
+		assert.is_Form(responseform)
+		local textarea = responseform:one("answer", "textarea")
+		assert.not_nil(textarea)
+		assert.match("Answer is 42", textarea:value())
+	end)
+end)
+```
+
 #### Additional modules
 
 | Module name         | Description
@@ -278,10 +374,10 @@ It is recommended to always load `core` module instead of selecting individual a
 ### Command line arguments
 
 ```
-Mineunit v0.14.0 (Lua 5.1)
+Mineunit v0.15.0 (Lua 5.1)
 Usage:
-	mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>]
-		[--engine-version <version>] [--fetch-core <version>] [--core-root <path>]
+	mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>] [--engine-version <version>]
+		[--fetch-core <version>] [--core-root <path>] [--[no-]dynamic-debug]
 
 Options:
 	-c, --coverage  Execute luacov test coverage analysis.
@@ -308,13 +404,18 @@ Options:
 	                Download core engine libraries for tag.
 	                This is simple wrapper around `git clone`.
 
+	--[no-]dynamic-debug
+	                Enables or disables dynamic debug hooks. Improves --coverage
+	                performance when enabled. Keeps debug hooks always active
+	                when disabled. For now disabled by default.
+
 	-v|--verbose    Be more verbose by printing more useless crap to console.
-	                Can be repeated up to six times for even more annoying output.
+	                Can be repeated up to six times for more annoying output.
 	-q|--quiet      Be quiet, most of time keeps your console fairly clean.
-	                Always disables regular Lua print which can make output
-	                somewhat less annoying when combined with --verbose output.
+	                Always disables regular Lua print making output less annoying
+	                when combined with --verbose output. Twice to shut up.
 	-V|--version    Display Lua and Mineunit version information.
-	-h|--help       Display this cheat sheet.
+	-h|--help       Display this cheat sheet again.
 	--help-assert   Display another cheat sheet, reference for special assertions.
 
 Resources:
@@ -347,7 +448,7 @@ test coverage report called `luacov.report.out`. File is placed in current worki
 With LuaJIT, reports generated by luacov will be broken.
 Run `mineunit -V` to check used Lua version and make sure it is Lua 5.1 instead of LuaJIT.
 
-So basically to get code coverage report you have to run `mineunit` twice, example follows:
+To get code coverage report, you have to run `mineunit` twice, example follows:
 
 ```
 $ mineunit --coverage
@@ -356,8 +457,17 @@ $ mineunit --report
 
 First command executes tests, collects test coverage information and produces coverage data file.
 Second command does not execute tests but reads coverage data file and formats it with source
-code to produce human readable test coverage report file called `luacov.report.out`. Use any
-text editor to read this file.
+code to produce human readable test coverage report file called `luacov.report.out`. Use your
+favorite text editor to read this file.
+
+Collecting coverage information is expensive and reduces performance significantly, it
+is possible to get better performance with _experimental_ `--dynamic-debug` option.
+
+Feature is experimental but works without issues in most cases, expected performance boost would
+be around 20% to 200% depending on nature of tested mod. For example from 1 minute to 30 seconds.
+
+In future `--dynamic-debug` will be enabled by default. If you have to make sure it stays
+disabled in future, use `--no-dynamic-debug` command line option.
 
 ### Known issues
 
