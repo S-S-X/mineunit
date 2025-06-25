@@ -83,7 +83,7 @@ normpath = function(path)
 	return #path > 0 and path or "."
 end
 
-local fs = require('mineunit.lib.fs')
+local fs = require('mineunit.lib.fs')(lua_io)
 local File = require('mineunit.lib.file')(fs)
 
 fs:reset()
@@ -111,9 +111,9 @@ os = {
 	rename = function(oldname, newname)
 		local file1, fs1, refname1 = fs:get(normpath(oldname))
 		local file2, fs2, refname2 = fs:get(normpath(newname))
-		if file1 == nil then
+		if not file1 then
 			return nil, "ENOENT"
-		elseif file2 ~= nil and type(file1) ~= type(file2) then
+		elseif file2 ~= nil and file2 ~= false and type(file1) ~= type(file2) then
 			return nil, "Is " .. (({table = "directory", string = "file"})[type(file1)])
 		end
 		fs2[refname2], fs1[refname1] = file1, nil
@@ -172,7 +172,7 @@ function core.mkdir(path)
 	path = normpath(path)
 	if fs:is_dir(path) then
 		return true
-	elseif fs:get(path) == nil then
+	elseif not fs:get(path) then
 		fs:mkdir(path)
 		return true
 	end

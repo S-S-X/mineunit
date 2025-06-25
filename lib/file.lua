@@ -162,7 +162,7 @@ return function(fs)
 				end,
 				a = function()
 					local data, parent, fpath = fs:get(file._path)
-					if data == nil then
+					if not data then
 						parent[fpath] = ""
 					end
 					file._mode = 3
