@@ -188,10 +188,58 @@ test set loading or soon after to make sure that all initial registrations, glob
 For tests that depend oon players it can be useful to register `before_each` and `after_each` with calls to
 `mineunit:execute_on_joinplayer(player, options)` and `mineunit:execute_on_leaveplayer(player, timeout)`.
 
+#### File system utilities
+
+By default, Mineunit uses fake file system. This means that most I/O done either with `io`, `os` or engine API will
+end up only modifying fake temporary in memory file system instead of gaining access to real file system.
+
+| Function                     | Description
+| ---------------------------- | ---------------------------------------------------------------------------------------
+| `mineunit:builtin(name)`     | Get builtin Lua module if overridden by Mineunit. Either `os`, `io` or `debug`.
+| `mineunit:fs_reset()`        | Reset fake file system. Creates fresh root and destroys everything else.
+| `mineunit:fs_copy(src, dst)` | Copy path from real file system into fake file system, recursive when src is directory.
+| `mineunit:fs_getfile(path)`  | Retrieve file from fake file system. Returns directory, regular file or `nil`.
+
+If your tests requires data file fixtures you should probably use fake filesystem, put files into fixture directory and
+load initial files into fake filesystem using `mineunit:fs_copy(src, dst)`.
+
+For example, tests could do something like this:
+
+(file used for testing should be stored in `spec/fixtures/data/testfile.txt`)
+
+```lua
+require("mineunit")
+describe("my text storage mod", function()
+
+	-- Recursively copy data directory from fixtures into fake file system
+	mineunit:fs_copy("spec/fixtures/data", "data")
+
+	-- Load my text storage mod
+	sourcefile("init")
+
+	-- Make sure it reads data files correctly
+	it("reads files", function()
+		local contents = my_text_storage.read_file("data/testfile.txt")
+		assert.equals("Hello World!", contents)
+	end)
+
+end)
+```
+
+Files can be created, written into, moved, etc. within fake file system but state is reset for every run.
+You can however use `local io = mineunit:builtin("io")` and to use real filesystem if you really have to.
+Underlying fake file system accepts only relative paths, any absolute path will be transformed into relative
+path by dropping absolute path of real working directory before using path within fake file system.
+
+Fake file system is not designed to be secure, simple `mineunit:builtin("io")` can be used to bypass fake file system.
+
+See command line flag `--real-filesystem` for bypassing fake file system completely.
+
 #### Debug, info, warning and error formatting / output
 
 | Function                         | Description
 | -------------------------------- | -----------------------------------------------------------------------------------
+| `dump(thing)`                    | Either luassert formatter or engine `dump(...)`. Formats `thing` and returns string.
 | `print(...)`                     | Same as `mineunit:print(...)`. Use `io` module if you want to get around this.
 | `printf(...)`                    | Sorry, this function does not exist.
 | `mineunit:debug(...)`            | Prints to console if `verbose` option is higher than 3.
@@ -254,6 +302,7 @@ Anyway, these might help a bit. And taking a look at other mods utilizing mineun
 | settings            | Provides `Settings` class. `core` module will also load engine configuration file from fixtures directory if present.
 | metadata            | Provides metadata and inventory manipulation for tests.
 | itemstack           | Provides `ItemStack` class.
+| fs                  | Provides real or fake file system and engine file system API.
 | game/constants      | Engine library.
 | game/item           | Engine library.
 | game/misc           | Engine library.
@@ -262,9 +311,11 @@ Anyway, these might help a bit. And taking a look at other mods utilizing mineun
 | common/misc_helpers | Engine library.
 | common/vector       | Engine library.
 | common/serialize    | Engine library.
-| common/fs           | Engine library.
 
 It is recommended to always load `core` module instead of selecting individual automatically loaded modules.
+
+This module is also providing some functionality by itself and API will be incomplete without `core` module.
+This limitation is considered to be incorrect / bug and will be changed in future.
 
 #### formspec module
 
@@ -376,8 +427,13 @@ end)
 ```
 Mineunit v0.15.0 (Lua 5.1)
 Usage:
-	mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>] [--engine-version <version>]
-		[--fetch-core <version>] [--core-root <path>] [--[no-]dynamic-debug]
+	mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-p|--pattern <pattern>]
+		[-F|--filter <pattern>] [-x|--exclude <pattern>] [--core-root <path>]
+		[--engine-version <version>] [--fetch-core <version>]
+		[--[no-]dynamic-debug] [--real-filesystem]
+	mineunit -r|--report [-x|--exclude <pattern>]
+	mineunit --demo
+	mineunit -V|-h|--help|--help-assert
 
 Options:
 	-c, --coverage  Execute luacov test coverage analysis.
@@ -408,6 +464,9 @@ Options:
 	                Enables or disables dynamic debug hooks. Improves --coverage
 	                performance when enabled. Keeps debug hooks always active
 	                when disabled. For now disabled by default.
+	--real-filesystem
+	                Mineunit fs module and tested mods get unrestricted access to
+	                real filesystem instead of default simulated fake filesystem.
 
 	-v|--verbose    Be more verbose by printing more useless crap to console.
 	                Can be repeated up to six times for more annoying output.

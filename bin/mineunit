@@ -33,6 +33,9 @@ local args = {
 	Xoutput = {},
 }
 
+local io = io
+local os = os
+
 mineunit_version = "0.15.0"
 local luaversion = (function()
 	local jit = rawget(_G, "jit")
@@ -247,9 +250,13 @@ do -- Parse cli args
 			print(mineunit_version_str)
 			print(({([[\
 				Usage:
-					mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-x|--exclude <pattern>] \
-					[--engine-version <version>] [--fetch-core <version>] [--core-root <path>] \
-					[--[no-]dynamic-debug]
+					mineunit [-c|--coverage] [-v|--verbose] [-q|--quiet] [-p|--pattern <pattern>]
+						[-F|--filter <pattern>] [-x|--exclude <pattern>] [--core-root <path>]
+						[--engine-version <version>] [--fetch-core <version>]
+						[--[no-]dynamic-debug] [--real-filesystem]
+					mineunit -r|--report [-x|--exclude <pattern>]
+					mineunit --demo
+					mineunit -V|-h|--help|--help-assert
 				
 				Options:
 					-c, --coverage  Execute luacov test coverage analysis.
@@ -280,6 +287,9 @@ do -- Parse cli args
 					                Enables or disables dynamic debug hooks. Improves --coverage
 					                performance when enabled. Keeps debug hooks always active
 					                when disabled. For now disabled by default.
+					--real-filesystem
+					                Mineunit fs module and tested mods get unrestricted access to
+					                real filesystem instead of default simulated fake filesystem.
 				
 					-v|--verbose    Be more verbose by printing more useless crap to console.
 					                Can be repeated up to six times for more annoying output.
@@ -511,6 +521,8 @@ do -- Parse cli args
 			args.dynamic_debug = true
 		elseif v == "--no-dynamic-debug" then
 			args.dynamic_debug = false
+		elseif v == "--real-filesystem" then
+			mineunit_conf_override.use_real_fs = true
 		elseif v == "--" then
 			break
 		else

@@ -1,3 +1,4 @@
+local io = io
 local pl_path = require('pl.path')
 
 local lua_dofile = dofile
@@ -47,6 +48,18 @@ end
 
 function _G.loadfile(path, ...)
 	return hooks:get(mineunit.loadfile, path, ...)
+end
+
+local builtins = {
+	debug = debug,
+	os = os,
+	io = io,
+}
+
+local alternative_modules = {}
+local function add_alternative_module(name)
+	assert(alternative_modules[name] == nil)
+	alternative_modules[name] = require("mineunit."..name)
 end
 
 local _mineunits = {}
@@ -140,16 +153,23 @@ setmetatable(mineunit, {
 		end
 		hooks:pop()
 		if _mineunits[name] == nil then
-			-- FIXME: hack to get around bad choices around module loader choices
-			local strict = options and options.strict
-			_mineunits[name] = {require_mineunit(
-				name, mineunit:config("core_root"), mineunit:config("engine_version"), strict
-			)}
+			if alternative_modules[name] then
+				_mineunits[name] = {alternative_modules[name]()}
+			else
+				local core_root = mineunit:config("core_root")
+				local engine_version = mineunit:config("engine_version")
+				local strict = options and options.strict
+				_mineunits[name] = {require_mineunit(name, core_root, engine_version, strict)}
+			end
 		end
 		hooks:push()
 		return unpack(_mineunits[name])
 	end,
 })
+
+function mineunit:builtin(name)
+	return builtins[name]
+end
 
 function mineunit:has_module(name)
 	return _mineunits[name] and true
@@ -318,6 +338,9 @@ function mineunit.export_object(obj, def)
 		_G[def.name] = obj
 	end
 end
+
+-- Prepare alternative modules
+add_alternative_module("fs")
 
 -- Set modpath
 mineunit:set_modpath(mineunit:config("modname"), mineunit:config("root"))
